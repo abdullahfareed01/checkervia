@@ -5,8 +5,9 @@
 2. **State** (`src/state`): game state and transitions (reducer). Holds board, current player, selection, mode, status. Calls the engine.
 3. **UI** (`src/ui`): React components. Render state, dispatch actions. No rule logic.
 4. **AI** (`src/ai`): builds the prompt from engine output, calls the proxy, validates the reply against the legal list, handles retries.
+5. **Leaderboard shared** (`src/leaderboard`): pure rules used by both the browser and the leaderboard functions: username rules, UTC periods, the ranking order, the country list and the wire format (D56). Imports only the engine and `src/ai` (the word lists and the level type).
 
-Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `state`/`ui` trigger `ai`. The engine imports nothing from other layers.
+Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `leaderboard` → `ai`, `engine`; `state`/`ui` trigger `ai`. The engine imports nothing from other layers. Server code in `netlify/` may import `src/engine` and `src/leaderboard`; nothing in `src/` imports `netlify/`.
 
 ## Folder structure
 ```
@@ -152,6 +153,11 @@ Stale replies: New game, a mode change and Retry all change `aiRequestId`. The r
 - If the provider refuses `response_format` (status 400, 404 or 422), the proxy asks once more without it. An empty reply or a missing message is an error, so the client throws and `chooseMove` retries.
 - Timeouts: Netlify stops the function at 60 s (fixed), the provider call at 55 s, the browser request at 65 s.
 - Rate limit: best effort, in function memory (see `ai-opponent.md` for what that can and cannot do).
+
+## Leaderboard functions (`netlify/leaderboard`, D56)
+- One pure handler per function in `netlify/leaderboard/handlers/`, each a one line wrapper in `netlify/functions/` through `serve()` in `netlify/leaderboard/netlify.ts`, the same split as the AI proxy.
+- Storage sits behind `LeaderboardStore` (`store.ts`): `supabaseStore.ts` for Postgres (service role key, the SQL in `docs/07-deployment/leaderboard-migration.sql`) and `memoryStore.ts` for tests.
+- `replay.ts` replays a claimed win through the real engine from the starting position; `security.ts` makes tokens and hashes with Web Crypto; `http.ts` holds body parsing, errors, the token check and the rate limits (kept in the store, so they hold across function instances).
 
 ## Rules
 - Engine never mutates inputs.

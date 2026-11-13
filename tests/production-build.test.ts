@@ -54,4 +54,13 @@ describe("production build", () => {
   it("ships no audio files (every sound is synthesized)", () => {
     expect(files.filter((file) => /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(file))).toEqual([]);
   });
+
+  // The Supabase client and its service role key belong to the Netlify
+  // functions only (D56).
+  it("has no Supabase client, no leaderboard server code and no service key name", () => {
+    expect(code).not.toMatch(/supabase/i);
+    expect(code).not.toContain("SERVICE_ROLE");
+    expect(code).not.toContain("LEADERBOARD_HASH_SALT");
+    expect(code).not.toContain("hit_rate_limit");
+  });
 });

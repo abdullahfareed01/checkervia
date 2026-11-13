@@ -65,12 +65,12 @@ const MASKS = "*#%";
 const EDGE_PUNCTUATION = /^[.,!?;:'"()[\]]+|[.,!?;:'"()[\]]+$/g;
 
 // Lower case with accents removed.
-function lowerPlain(text: string): string {
+export function lowerPlain(text: string): string {
   return text.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 }
 
 // Look-alikes replaced by their letters.
-const unLeet = (text: string) => [...text].map((char) => LOOK_ALIKES[char] ?? char).join("");
+export const unLeet = (text: string) => [...text].map((char) => LOOK_ALIKES[char] ?? char).join("");
 
 // A pattern for one listed word inside one token: each letter may be
 // stretched (shiiit), hidden by a mask (f*ck) or split by dots or dashes

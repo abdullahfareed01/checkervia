@@ -4,7 +4,7 @@
 >
 > Notice version for the Strongest consent: 1 (`NOTICE_VERSION` in `src/ui/consent.ts`). Changing the Strongest notice text means bumping it, so everyone is asked again.
 >
-> The leaderboard (phases 3 and 4) is not built yet, so its section is marked "Coming soon" and written in the future tense. When it is built, reword it as live and remove the label.
+> The leaderboard's server side is built (phase 3, D56) but its screens are not (phase 4), and nothing is live, so its section stays marked "Coming soon" and written in the future tense. When phase 4 is approved, reword it as live and remove the label. "Reported" (games played and losses are not replay checked) is said here, not on the screens, as the owner asked.
 
 ## Entertainment only
 - Checkervia is a free checkers game made for fun. Nothing in it is advice of any kind.
@@ -30,10 +30,14 @@
 
 ## Leaderboard (shown as "Coming soon")
 - The worldwide leaderboard is not open yet, and nothing is sent to it. When it opens, these rules will apply:
-- If you submit a win, your nickname, a short tag and your game stats will be shown publicly. Please do not use your real name. Nicknames will be filtered, and entries that break these rules may be hidden or removed.
-- Only when you submit a win, our server will store your nickname and tag, the level, the moves of the game, the stats worked out from them, a scrambled (hashed) form of a random device id kept in your browser, and the date.
-- Your IP address may be used, in a scrambled form, to limit how often wins can be submitted. It will never be shown.
-- To have an entry removed, you will be able to email checkvia.games@gmail.com with the nickname and tag and roughly when you submitted it.
+- To join, you will choose a username. Usernames are public and unique, and there is no tag. Please do not use your real name. Usernames are filtered, and names or entries that break these rules may be hidden or removed.
+- Only wins against the AI will count, and our server will check each one by replaying all of its moves. Two player games and resigned games never count.
+- Your profile will show your games played, wins, losses and win rate. Wins are checked by replay. Games played and losses are reported by the game in your browser and are not checked by replay.
+- Our server will store your username, your flag, the level, moves and stats of each win you submit, the results of your finished games against the AI, and the dates. It will also store scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It will never store your raw IP address, your age or your email.
+- Your flag will be suggested from the country your connection comes from. You can change it or choose No flag.
+- The scrambled device id and IP address are used only to limit how often requests can be made. They are never shown.
+- Your profile belongs to the secret key kept in this browser. Clearing your browser data loses the profile, and its username stays taken.
+- To have a profile or an entry removed, you will be able to email checkvia.games@gmail.com with the username and roughly when you submitted it.
 
 ## Contact
 - Questions about these notices: checkvia.games@gmail.com.

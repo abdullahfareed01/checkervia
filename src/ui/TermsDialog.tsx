@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-// The contact for the notices (and, later, leaderboard entry removals).
+// The contact for the notices and, once the leaderboard opens, removal requests.
 export const CONTACT_EMAIL = "checkvia.games@gmail.com";
 
 // The Terms and notices, in plain words. DRAFT text (D45): the owner should
@@ -50,10 +50,14 @@ export const TERMS_SECTIONS: readonly { title: string; soon?: boolean; points: r
     soon: true,
     points: [
       "The worldwide leaderboard is not open yet, and nothing is sent to it. When it opens, these rules will apply:",
-      "If you submit a win, your nickname, a short tag and your game stats will be shown publicly. Please do not use your real name. Nicknames will be filtered, and entries that break these rules may be hidden or removed.",
-      "Only when you submit a win, our server will store your nickname and tag, the level, the moves of the game, the stats worked out from them, a scrambled (hashed) form of a random device id kept in your browser, and the date.",
-      "Your IP address may be used, in a scrambled form, to limit how often wins can be submitted. It will never be shown.",
-      `To have an entry removed, you will be able to email ${CONTACT_EMAIL} with the nickname and tag and roughly when you submitted it.`,
+      "To join, you will choose a username. Usernames are public and unique, and there is no tag. Please do not use your real name. Usernames are filtered, and names or entries that break these rules may be hidden or removed.",
+      "Only wins against the AI will count, and our server will check each one by replaying all of its moves. Two player games and resigned games never count.",
+      "Your profile will show your games played, wins, losses and win rate. Wins are checked by replay. Games played and losses are reported by the game in your browser and are not checked by replay.",
+      "Our server will store your username, your flag, the level, moves and stats of each win you submit, the results of your finished games against the AI, and the dates. It will also store scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It will never store your raw IP address, your age or your email.",
+      "Your flag will be suggested from the country your connection comes from. You can change it or choose No flag.",
+      "The scrambled device id and IP address are used only to limit how often requests can be made. They are never shown.",
+      "Your profile belongs to the secret key kept in this browser. Clearing your browser data loses the profile, and its username stays taken.",
+      `To have a profile or an entry removed, you will be able to email ${CONTACT_EMAIL} with the username and roughly when you submitted it.`,
     ],
   },
   {
