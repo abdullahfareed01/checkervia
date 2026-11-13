@@ -26,10 +26,13 @@ export function useInterfaceFeedback(): void {
       if (settingsStore().get().voice.enabled) voiceEngine().unlock();
     };
     const onClick = (event: MouseEvent) => {
-      const target = event.target instanceof Element ? event.target.closest("button, [role='switch']") : null;
+      const target = event.target instanceof Element ? event.target.closest("button, [role='switch'], input[type='radio'], input[type='checkbox']") : null;
       if (!target || target.closest(".board") || (target as HTMLButtonElement).disabled) return;
       const toggle =
-        target.getAttribute("role") === "switch" || target.hasAttribute("aria-pressed") || target.classList.contains("segment");
+        target.getAttribute("role") === "switch" ||
+        target.hasAttribute("aria-pressed") ||
+        target.classList.contains("segment") ||
+        target.matches("input[type='radio'], input[type='checkbox']");
       playFeedback(toggle ? "toggle" : "button");
     };
     document.addEventListener("pointerdown", unlock, true);

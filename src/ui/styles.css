@@ -717,7 +717,7 @@ button.square:focus-visible {
 
 /* The squares the last move started and ended on: a lighter tint. */
 .square-last-move.square-dark {
-  background: #95653d;
+  background: var(--last-move-square, #95653d); /* per board theme (settings.css) */
 }
 
 /* The selected square: a solid inner ring. */

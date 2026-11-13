@@ -91,3 +91,6 @@
 
 ## AI voice (D54)
 - Off by default. When on, the AI reads its lines aloud with the device's own voices (no cost): reactions, greetings and the game over taunt by default; idle lines and Tips and Why only when chosen. It never speaks before the first tap, stops when you start your next move, and lowers the sound effects while it speaks. People who use a screen reader should keep it off: the bubble is already announced.
+
+## Settings (D55)
+- From the game's Menu and the home screen. Sections: Sound (on or off, volume, game sounds, interface sounds, Test sound), Haptics (Off, Light, Standard, Strong, Test; hidden with a reason on iPhone), AI voice (on or off, voice, speed, pitch, volume, what is read aloud, Test voice; advice for screen reader users), Animation (Off, Reduced, Standard, Cinematic, speed), Board and pieces (four themes, three piece styles, coordinates Off, Edge or In squares, legal moves, last move), AI chat (show chat bubbles), Reset to defaults. Changes apply at once and are saved on the device.

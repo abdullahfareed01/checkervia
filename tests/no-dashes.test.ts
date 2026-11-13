@@ -19,6 +19,7 @@ import { RulesDialog } from "../src/ui/RulesDialog";
 import { WhyContent } from "../src/ui/WhyContent";
 import { describeLookahead } from "../src/state/moveFacts";
 import { TermsDialog } from "../src/ui/TermsDialog";
+import { SettingsSheet } from "../src/ui/SettingsSheet";
 import { StatusBar } from "../src/ui/StatusBar";
 import { Learn } from "../src/ui/Learn";
 import { judgeMove } from "../src/ai/judge";
@@ -44,6 +45,8 @@ const screens: [string, ReactElement][] = [
   ["level dialog", createElement(LevelDialog, { initial: 2, onStart: noop, onCancel: noop })],
   ["rules dialog", createElement(RulesDialog, { onClose: noop })],
   ["terms", createElement(TermsDialog, { onClose: noop })],
+  ["settings", createElement(SettingsSheet, { onClose: noop })],
+  ["home with the settings link", createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop, onSettings: noop })],
   [
     "result",
     createElement(ResultDialog, {

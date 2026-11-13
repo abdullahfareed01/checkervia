@@ -351,11 +351,11 @@
 
 /* Dark on the light squares, light on the dark ones. */
 .square-light .coord {
-  color: #6e4123;
+  color: var(--coord-on-light, #6e4123);
 }
 
 .square-dark .coord {
-  color: #efd8ad;
+  color: var(--coord-on-dark, #efd8ad);
 }
 
 /* ---------- "Why?": a 44 x 44 hit area of its own ---------- */

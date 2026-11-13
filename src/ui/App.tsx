@@ -26,6 +26,7 @@ import { LANDSCAPE_PHONE, useMediaQuery } from "./useMediaQuery";
 import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
 import { TermsDialog } from "./TermsDialog";
+import { SettingsSheet } from "./SettingsSheet";
 import { TopBar } from "./TopBar";
 import { ActionBar } from "./ActionBar";
 import type { EndAction } from "./ActionBar";
@@ -136,6 +137,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player), [state.mode]);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   useHistoryKeys(goHistory, !result.open && !why.open && !askLevel && !rulesOpen && !termsOpen);
@@ -153,6 +155,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const menuItems = useMemo(
     () => [
       { label: "How to play", onSelect: openRules },
+      { label: "Settings", onSelect: () => setSettingsOpen(true) },
       { label: "Terms and notices", onSelect: openTerms },
       ...(onMenu ? [{ label: "Main menu", onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
     ],
@@ -207,7 +210,8 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // dots stay (the same bubble, so nothing flickers). Worked out during the
   // render from the move's animation key, so no effect (the bubble's pop, the
   // voice) ever sees the line early.
-  const animatedLevel = useSettings().animation.level;
+  const settings = useSettings();
+  const animatedLevel = settings.animation.level;
   const aiLanding =
     state.mode === "vs-ai" &&
     state.viewIndex === null &&
@@ -225,7 +229,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
       ? { kind: "resign", question: resignQuestion, highlight: personality.hintActive, onResign: resign }
       : { kind: "result", onShow: result.reopen };
   // Sounds and vibrations that follow from what is on screen.
-  const sheets = [menuOpen && "menu", why.open && "why", termsOpen && "terms", rulesOpen && "rules", languageOpen && "language", askLevel && "level"]
+  const sheets = [menuOpen && "menu", why.open && "why", termsOpen && "terms", rulesOpen && "rules", languageOpen && "language", askLevel && "level", settingsOpen && "settings"]
     .filter(Boolean)
     .join(" ");
   useGameFeedback({ state, resultOpen: result.open, sheets, bubble: result.open ? null : bubble });
@@ -235,7 +239,9 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     why.open && why.explanation ? [...why.explanation.facts.map((fact) => fact.text), why.explanation.reason ?? ""].join(" ") : null;
   useVoice({ bubble: result.open ? null : bubble, level: state.aiLevel, startedMove, endLine, why: whyText });
   const speakTips = useSpeakTips(state.aiLevel);
-  const chat = state.mode === "vs-ai" && (
+  // Chat bubbles can be hidden (Settings); the AI says the same either way.
+  const showBubbles = settings.chat.bubbles;
+  const chat = state.mode === "vs-ai" && showBubbles && (
     <ChatBubble
       message={result.open ? null : bubble}
       placement={landscapePhone ? "side" : "card"}
@@ -245,7 +251,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   );
 
   return (
-    <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}`}>
+    <main className={`app${state.mode === "vs-ai" && showBubbles ? " app-ai" : ""}`}>
       <header className="topbar">
         <TopBar title="Checkervia" />
         <ModeSelector mode={state.mode} needsConfirmation={inProgress} onChange={chooseMode} />
@@ -322,6 +328,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
         />
       )}
       {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
+      {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}
     </main>
   );
 }

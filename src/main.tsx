@@ -12,6 +12,7 @@ import "./ui/bubble.css";
 import "./ui/layout.css";
 import "./ui/result.css";
 import "./ui/motion.css";
+import "./ui/settings.css";
 
 async function start() {
   let initial: GameOptions | undefined;
