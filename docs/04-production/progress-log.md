@@ -168,3 +168,11 @@
 - Levels Easy (1 turn, all moves, random slips), Medium (2 turns, best 5), Hard (4, best 4), Strongest (6, best 3). The model only sees the offered moves; its number is checked against them. Prompt v7. A level is fixed per game; stored on AI history entries; chip on the AI card; Menu sheet with mode and level.
 - Search time measured: up to 268 ms at 6 turns (median 25 ms).
 - Tests: 559 passing in 43 files. Typecheck clean. Live: 8 real AI turns across the four levels, 0 failures.
+
+## 2026-11-13: Leaderboard work, phase 2: 18+ consent, language rules, notices (D45)
+- Language rules in code (`src/ai/language.ts`): clean at Easy to Hard; at Strongest insults, and mild swearing only after an engine verified blunder; the hard line everywhere; disguised spellings normalised; clean fallback lines. Prompt v8.
+- Two step 18+ consent before Strongest, stored with time and notice version; "18+ · Strong language" label on the AI card; Terms and notices sheet (draft) from the Menu, home screen and the notice. Contact checkvia.games@gmail.com.
+- No hyphens or dashes in player visible text: test over every screen; two old ones fixed; dashes stripped from the AI's lines.
+- Browser checks (headless Edge): the consent flow at 1280x800 and 375x667 (No, Cancel, Terms over the notice, accept, not asked again); the 18+ label at 10 sizes from 320x568 to 1920x1080 and two landscape phones.
+- Live: 8 real AI turns at Strongest and Medium, rules held; a non breaking hyphen slipped through once and is now caught.
+- Tests: 666 passing in 46 files. Typecheck and build clean.

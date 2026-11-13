@@ -1,5 +1,6 @@
 // Small helpers that turn game state into what the game screen shows.
 import { AI_LEVELS } from "../ai";
+import { strongLanguage } from "../ai/language";
 import { opponentOf } from "../engine";
 import type { Board as BoardType, Player } from "../engine";
 import { AI_PLAYER, canHumanAct } from "../state/gameReducer";
@@ -51,6 +52,9 @@ export function nameOf(mode: GameMode, player: Player): string {
   return player === "black" ? "Black" : "White";
 }
 
+// The chip on the AI card at Strongest (D45). No dashes.
+export const STRONG_LANGUAGE_TAG = "18+ · Strong language";
+
 // Card details for one side. Piece counts follow the board on screen, so they
 // match the position being reviewed. The AI's card shows its level.
 export function cardFor(state: GameState, board: BoardType, player: Player, placement: "top" | "bottom") {
@@ -64,6 +68,7 @@ export function cardFor(state: GameState, board: BoardType, player: Player, plac
       name={nameOf(state.mode, player)}
       robot={isAi}
       level={isAi ? AI_LEVELS[state.aiLevel].name : undefined}
+      tag={isAi && strongLanguage(state.aiLevel) ? STRONG_LANGUAGE_TAG : undefined}
       pieces={counts[player]}
       captured={PIECES_PER_SIDE - counts[opponentOf(player)]}
       toMove={toMove}

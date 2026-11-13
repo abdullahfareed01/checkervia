@@ -23,6 +23,7 @@ const home = (overrides: Partial<ComponentProps<typeof Home>> = {}) =>
       onHowToPlay: noop,
       onLearn: noop,
       onRecheck: noop,
+      onTerms: noop,
       ...overrides,
     }),
   );

@@ -4,7 +4,7 @@
 
 ## Features
 - Two-player hot-seat play: click a piece, then click its destination
-- Play vs AI at four levels (Easy, Medium, Hard, Strongest): the engine looks 1 to 6 turns ahead (a turn is one move by one side) and offers the model only its best few moves; the AI explains itself in a speech bubble, and trash-talks you like a cocky rival (roasting blunders, grudging respect for great moves)
+- Play vs AI at four levels (Easy, Medium, Hard, Strongest): the engine looks 1 to 6 turns ahead (a turn is one move by one side) and offers the model only its best few moves; the AI explains itself in a speech bubble, and reacts to your moves: clean, playful banter at Easy to Hard; trash talk at Strongest, behind an 18+ notice
 - Learn mode (two robots play scripted lessons), How to play, move history, result popup
 - A framed board with A to H / 1 to 8 labels; all move names use them (e.g. E3 → G5)
 - Full rules: forced capture, multi jumps, Kings, winner announcement
@@ -48,4 +48,4 @@ Notes:
 - Progress: `docs/04-production/task-backlog.md`
 
 ## Status
-All features are built and tested (559 tests). Left: GitHub push, Netlify deploy (see `docs/07-deployment/deployment-guide.md`), and a screen recording. Progress: `docs/04-production/task-backlog.md`.
+All features are built and tested (666 tests). Left: GitHub push, Netlify deploy (see `docs/07-deployment/deployment-guide.md`), and a screen recording. Progress: `docs/04-production/task-backlog.md`.

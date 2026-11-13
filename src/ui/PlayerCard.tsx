@@ -10,7 +10,8 @@ interface PlayerCardProps {
   player: Player;
   name: string; // "You", "AI", "Black", "White"
   robot: boolean; // the AI gets a robot, people get a person icon
-  level?: string | undefined; // the AI's level, e.g. "Expert"
+  level?: string | undefined; // the AI's level, e.g. "Hard"
+  tag?: string | undefined; // a notice chip, e.g. "18+ · Strong language"
   pieces: number; // pieces left on the board
   captured: number; // opponent pieces this side has taken
   toMove: boolean;
@@ -58,6 +59,7 @@ export const PlayerCard = memo(function PlayerCard({
   name,
   robot,
   level,
+  tag,
   pieces,
   captured,
   toMove,
@@ -80,7 +82,10 @@ export const PlayerCard = memo(function PlayerCard({
     .join(" ");
 
   return (
-    <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.`}>
+    <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.${tag ? ` ${tag}.` : ""}`}>
+      {/* On the card's top edge, so it takes no room inside the card and
+          fits on every screen (D45). */}
+      {tag && <span className="badge badge-adult">{tag}</span>}
       <div className="avatar">{robot ? <RobotAvatar thinking={thinking} /> : <HumanIcon />}</div>
 
       <div className="card-text">
@@ -105,6 +110,7 @@ export const PlayerCard = memo(function PlayerCard({
             {text}
             {state === "thinking" && <span className="dots" aria-hidden="true" />}
           </span>
+
         </p>
       </div>
 

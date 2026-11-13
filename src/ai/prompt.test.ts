@@ -144,7 +144,7 @@ describe("buildPrompt", () => {
 
 describe("prompt version and retry note", () => {
   it("has a version label", () => {
-    expect(PROMPT_VERSION).toBe("v7");
+    expect(PROMPT_VERSION).toBe("v8");
   });
 
   it("the retry note contains the reason and repeats the reply format", () => {

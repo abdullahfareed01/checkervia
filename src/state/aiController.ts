@@ -3,6 +3,7 @@
 import { chooseMove, judgeMove } from "../ai";
 import { analyze } from "../ai/analyzer";
 import type { CallModel, MoveJudgement } from "../ai";
+import { strongLanguage } from "../ai/language";
 import type { OpponentMove } from "../ai/prompt";
 import { squareName } from "../engine";
 import type { GameAction, GameState } from "./gameReducer";
@@ -19,7 +20,12 @@ async function lastOpponentMove(state: GameState): Promise<OpponentMove | undefi
   if (!last?.move || !last.player || !before) return undefined;
   const judgement: MoveJudgement | null = await judgeMove(before.board, last.move, last.player, analyze);
   const recentLines = state.history.flatMap((entry) => (entry.reaction ? [entry.reaction] : [])).slice(-RECENT_LINES);
-  return { label: [last.move.from, ...last.move.path].map(squareName).join(" -> "), judgement, recentLines };
+  return {
+    label: [last.move.from, ...last.move.path].map(squareName).join(" -> "),
+    judgement,
+    recentLines,
+    strongLanguage: strongLanguage(state.aiLevel),
+  };
 }
 
 // Starts asking the model for a move, for a state whose AI phase is

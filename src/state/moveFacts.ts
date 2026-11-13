@@ -112,7 +112,7 @@ export function describeLookahead(lookahead: ChosenLookahead, level: AiLevel | n
   ];
   lines.push(
     score >= best
-      ? { tone: "good", text: "It is one of the engine's top-scored moves." }
+      ? { tone: "good", text: "It is one of the engine's best scored moves." }
       : { tone: "bad", text: `The engine's best move scored ${describeScore(best)}.` },
   );
   return lines;

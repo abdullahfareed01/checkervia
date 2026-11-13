@@ -55,6 +55,7 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 │   │   ├── health.ts         # GET health check: ready / offline / unreachable
 │   │   ├── difficulty.ts     # the four AI levels: turns ahead, moves offered, Easy slips
 │   │   ├── candidates.ts     # the level's best few moves (deterministic, for the server too)
+│   │   ├── language.ts       # word lists and language rules per level and verdict (D45)
 │   │   ├── search.ts         # look-ahead: negamax + alpha-beta, scores every legal move
 │   │   ├── searchWorker.ts   # runs the search in a Web Worker
 │   │   ├── analyzer.ts       # worker with timeout and fallbacks; never fails a turn
@@ -73,6 +74,9 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 │       ├── LevelDialog.tsx   # asks for the AI level when Play vs AI is chosen
 │       ├── LevelOptions.tsx  # the four levels as a radio list (dialog and Menu sheet)
 │       ├── MenuSetup.tsx     # mode and level at the top of the game's Menu sheet
+│       ├── consent.ts        # 18+ consent steps and the stored acceptance (version, time)
+│       ├── ConsentDialog.tsx # the consent steps, and the gate in front of Strongest
+│       ├── TermsDialog.tsx   # Terms and notices (draft text, contact email)
 │       ├── TopBar.tsx        # back arrow, crowned title (GameTitle), Menu list
 │       ├── ConfirmDialog.tsx # "are you sure?" popup for actions that lose a game
 │       ├── RulesDialog.tsx   # the rules over the game (from the Menu)

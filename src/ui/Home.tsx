@@ -10,6 +10,7 @@ interface HomeProps {
   onHowToPlay: () => void;
   onLearn: () => void;
   onRecheck: () => void;
+  onTerms: () => void;
 }
 
 // What the AI badge says for each health check result.
@@ -27,7 +28,7 @@ const AI_HELP: Partial<Record<AiStatus, string>> = {
 };
 
 // The home menu: Play vs AI, 2 Players, Learn and How to play.
-export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck }: HomeProps) {
+export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerms }: HomeProps) {
   const badge = AI_BADGES[aiStatus];
   const help = aiStatus === "checking" ? undefined : AI_HELP[aiStatus];
 
@@ -93,6 +94,12 @@ export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck }: Home
           </span>
         </button>
       </nav>
+
+      <footer className="home-foot">
+        <button type="button" className="link-button" onClick={onTerms}>
+          Terms and notices
+        </button>
+      </footer>
     </main>
   );
 }

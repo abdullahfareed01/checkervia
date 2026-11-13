@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import type { AiLevel, AiStatus } from "../ai";
 import type { GameMode, GameOptions } from "../state/gameReducer";
 import { App } from "./App";
+import { useStrongestGate } from "./ConsentDialog";
 import { Home } from "./Home";
 import { HowToPlay } from "./HowToPlay";
 import { LevelDialog } from "./LevelDialog";
 import { Learn } from "./Learn";
 import { Splash } from "./Splash";
+import { TermsDialog } from "./TermsDialog";
 import { useAiLevel } from "./useAiLevel";
 import { useAiStatus, useSplash } from "./useAiStatus";
 
@@ -36,6 +38,7 @@ export function Root({ initial, checkAi }: RootProps) {
   );
 
   const [askLevel, setAskLevel] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
 
   const start = (mode: GameMode, level = aiLevel) =>
     setScreen((current) => ({
@@ -45,10 +48,18 @@ export function Root({ initial, checkAi }: RootProps) {
     }));
   // Playing the AI first asks for its level; two players start at once.
   const play = (mode: GameMode) => (mode === "vs-ai" ? setAskLevel(true) : start(mode));
+  const startAt = useCallback(
+    (level: AiLevel) => {
+      setAiLevel(level);
+      start("vs-ai", level);
+    },
+    [setAiLevel],
+  );
+  // Strongest asks the 18+ consent first (D45).
+  const [requestLevel, consent] = useStrongestGate(startAt);
   const startVsAi = (level: AiLevel) => {
     setAskLevel(false);
-    setAiLevel(level);
-    start("vs-ai", level);
+    requestLevel(level);
   };
   const home = () => setScreen({ name: "home" });
 
@@ -61,12 +72,15 @@ export function Root({ initial, checkAi }: RootProps) {
           onHowToPlay={() => setScreen({ name: "rules" })}
           onLearn={() => setScreen({ name: "learn" })}
           onRecheck={ai.recheck}
+          onTerms={() => setTermsOpen(true)}
         />
       )}
       {screen.name === "rules" && <HowToPlay onBack={home} onPlay={play} onLearn={() => setScreen({ name: "learn" })} />}
       {screen.name === "learn" && <Learn onMenu={home} />}
       {screen.name === "game" && <App key={screen.id} initial={screen.options} onMenu={home} onAiLevel={setAiLevel} />}
       {askLevel && <LevelDialog initial={aiLevel} onStart={startVsAi} onCancel={() => setAskLevel(false)} />}
+      {consent}
+      {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
       {splash !== "gone" && <Splash leaving={splash === "leaving"} />}
     </>
   );

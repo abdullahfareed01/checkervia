@@ -6,6 +6,7 @@ import type { Board, Move, Player } from "../engine";
 import { analyzeHere } from "./analyzer";
 import type { Analyze, Lookahead } from "./analyzer";
 import { pickCandidates } from "./candidates";
+import { checkReaction, checkReason } from "./language";
 import { AI_LEVELS } from "./difficulty";
 import type { AiLevel } from "./difficulty";
 import { parseReply } from "./parseReply";
@@ -27,10 +28,12 @@ export interface ChosenLookahead {
 }
 
 export type ChooseMoveResult =
-  // `reason` is the model's own explanation, if it gave one (not verified).
+  // `reason` is the model's own explanation, if it gave one (not verified,
+  // but always clean: see language.ts).
   // `lookahead` is present when the level used the engine's look-ahead.
-  // `reaction` is the model's line about the opponent's last move (its
-  // trash talk); only kept when there was a move to react to.
+  // `reaction` is the model's line about the opponent's last move; only kept
+  // when there was a move to react to, and replaced by a clean line if it
+  // breaks the level's language rules (D45).
   | { ok: true; move: Move; attempts: number; reason?: string; reaction?: string; lookahead?: ChosenLookahead }
   | { ok: false; reasons: string[]; attempts: number };
 
@@ -160,12 +163,13 @@ export async function chooseMove(
     const result = await attempt(callModel, prompt, retryNote, offer.choices);
     if ("move" in result) {
       const { move, index, explanation, reaction } = result;
+      const verdict = options.opponent?.judgement?.verdict ?? null;
       return {
         ok: true,
         move,
         attempts: call,
-        ...(explanation === undefined ? {} : { reason: explanation }),
-        ...(wantsReaction && reaction !== undefined ? { reaction } : {}),
+        ...(explanation === undefined ? {} : { reason: checkReason(explanation) }),
+        ...(wantsReaction && reaction ? { reaction: checkReaction(reaction, options.level, verdict) } : {}),
         ...(offer.info && offer.scoreOf ? { lookahead: { ...offer.info, score: offer.scoreOf[index]! } } : {}),
       };
     }

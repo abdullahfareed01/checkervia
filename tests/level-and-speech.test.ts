@@ -39,7 +39,7 @@ describe("LevelDialog", () => {
 describe("the difficulty bar is gone", () => {
   it("is not on the home menu", () => {
     const home = renderToStaticMarkup(
-      createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop }),
+      createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop }),
     );
     expect(home).not.toContain('type="range"');
   });

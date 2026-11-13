@@ -8,6 +8,7 @@ import type { MoveListItem } from "../state/history";
 import type { GameMode, GameOptions } from "../state/gameReducer";
 import { AiMoveNote } from "./AiMoveNote";
 import { AiReasonDialog } from "./AiReasonDialog";
+import { useStrongestGate } from "./ConsentDialog";
 import { Board } from "./Board";
 import { boardViewOf, cardFor, nameOf, winReasonOf } from "./gameView";
 import { HistoryControls } from "./HistoryControls";
@@ -20,6 +21,7 @@ import { RulesDialog } from "./RulesDialog";
 import { SpeechBubble } from "./SpeechBubble";
 import type { SpeechMessage } from "./SpeechBubble";
 import { StatusBar } from "./StatusBar";
+import { TermsDialog } from "./TermsDialog";
 import { TopBar } from "./TopBar";
 import type { MenuRun } from "./TopBar";
 import { useAiExplanation } from "./useAiExplanation";
@@ -48,28 +50,40 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const moves = useMemo(() => moveList(state), [state.history]);
   const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player), [state.mode]);
   const [rulesOpen, setRulesOpen] = useState(false);
-  useHistoryKeys(goHistory, !result.open && !why.open && !askLevel && !rulesOpen);
+  const [termsOpen, setTermsOpen] = useState(false);
+  useHistoryKeys(goHistory, !result.open && !why.open && !askLevel && !rulesOpen && !termsOpen);
   const loseQuestion = (what: string) => (inProgress ? `${what} The current game will be lost.` : undefined);
 
   // Switching to "Play vs AI" first asks for the AI's level.
   const chooseMode = useCallback((mode: GameMode) => (mode === "vs-ai" ? setAskLevel(true) : setMode(mode)), [setMode]);
   const openRules = useCallback(() => setRulesOpen(true), []);
+  const openTerms = useCallback(() => setTermsOpen(true), []);
   const menuItems = useMemo(
     () => [
       { label: "New game", onSelect: newGame, confirm: loseQuestion("Start a new game?") },
       { label: "How to play", onSelect: openRules },
+      { label: "Terms and notices", onSelect: openTerms },
       ...(onMenu ? [{ label: "Main menu", onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
     ],
-    [inProgress, newGame, openRules, onMenu],
+    [inProgress, newGame, openRules, openTerms, onMenu],
   );
-  // A new game against the AI at `level` (from the level dialog or the Menu).
-  const startVsAi = useCallback(
+  // A new game against the AI at `level` (from the level dialog or the
+  // Menu). Strongest asks the 18+ consent first (D45); after No or Cancel the
+  // current game and level stay as they were.
+  const startAt = useCallback(
     (level: AiLevel) => {
-      setAskLevel(false);
       playAi(level);
       onAiLevel?.(level);
     },
     [playAi, onAiLevel],
+  );
+  const [requestLevel, consent] = useStrongestGate(startAt);
+  const startVsAi = useCallback(
+    (level: AiLevel) => {
+      setAskLevel(false);
+      requestLevel(level);
+    },
+    [requestLevel],
   );
   // The Menu sheet's mode and level controls.
   const setup = useCallback(
@@ -192,6 +206,8 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
       {rulesOpen && <RulesDialog onClose={() => setRulesOpen(false)} />}
 
       {askLevel && <LevelDialog initial={state.aiLevel} onStart={startVsAi} onCancel={() => setAskLevel(false)} />}
+      {consent}
+      {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
     </main>
   );
 }

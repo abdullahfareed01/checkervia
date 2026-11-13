@@ -84,7 +84,7 @@ export function ResultDialog(props: ResultDialogProps) {
     { label: "Pieces left", value: (p) => pieces[p] },
     { label: "Pieces captured", value: (p) => stats[p].captured },
     { label: "Kings made", value: (p) => stats[p].kingsMade },
-    { label: "Best multi jump", value: (p) => (stats[p].bestChain > 1 ? `${stats[p].bestChain} in one move` : "–") },
+    { label: "Best multi jump", value: (p) => (stats[p].bestChain > 1 ? `${stats[p].bestChain} in one move` : "None") },
     { label: "Moves", value: (p) => stats[p].moves },
   ];
 

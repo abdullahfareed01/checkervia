@@ -51,4 +51,8 @@ describe("react scenario", () => {
     const judgement = await judgeMove(start.board, after.history.at(-1)!.move!, "black");
     expect(judgement?.verdict).toBe("blunder");
   });
+
+  it("react-strong is the same position at Strongest (D45)", () => {
+    expect(scenario("react-strong")).toEqual({ ...scenario("react"), aiLevel: 4 });
+  });
 });

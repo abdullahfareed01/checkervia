@@ -7,7 +7,7 @@ import type { Lookahead } from "./analyzer";
 import type { MoveJudgement } from "./judge";
 import { isForced, turnsToResult } from "./search";
 
-export const PROMPT_VERSION = "v7";
+export const PROMPT_VERSION = "v8";
 
 const SYSTEM_RULES = `You are playing checkers on an 8x8 board.
 
@@ -72,12 +72,19 @@ export interface OpponentMove {
   readonly label: string; // e.g. "C3 -> D4"
   readonly judgement: MoveJudgement | null; // null: the engine found nothing special
   readonly recentLines?: readonly string[]; // the AI's last reactions, newest last
+  // Strongest level, after the player accepted the 18+ notice (D45).
+  readonly strongLanguage?: boolean;
 }
 
-// The AI's voice for its reactions: a cocky, savage, funny rival with a free
-// hand. The only limits keep it about the game (see D43).
-const PERSONA =
-  'For "reaction" you are a cocky, trash-talking checkers rival. Say whatever you like about your opponent\'s play: roast their mistakes hard, brag about your own moves, taunt them, mock their plan, give grudging respect when they play well. Be savage, confident and funny; mild swearing is fine. Vary your wording every time: never open with "Nice try". It is checkers: say pieces and kings, never pawns. Keep it about the game: no slurs, no hate, nothing about real-world looks, family, identity or sex, no threats. One short line, at most 20 words. Use "" only if you really have nothing to say.';
+// Rules shared by both voices. src/ai/language.ts enforces them in code.
+const LIMITS =
+  'Vary your wording every time: never open with "Nice try". It is checkers: say pieces and kings, never pawns. Do not use hyphens or dashes. Keep it about the game: no slurs, no hate, nothing about real world looks, family, identity or sex, no threats. One short line, at most 20 words. Use "" only if you really have nothing to say.';
+
+// The AI's voice at Easy, Medium and Hard: playful and clean (D45).
+const CLEAN_PERSONA = `For "reaction" you are a friendly, playful checkers rival. Tease lightly: a confident quip, a gentle joke about a mistake, honest praise for a good move. No swearing, no insults, no name calling. ${LIMITS}`;
+
+// The AI's voice at Strongest, for adults who accepted the notice (D45).
+const STRONG_PERSONA = `For "reaction" you are a cocky, trash-talking checkers rival; the player is an adult who chose strong language. Roast their play hard, brag, taunt them, mock their plan; insults about their play are fine. Mild swearing (damn, hell, crap, shit) only when the engine judged their move a blunder; otherwise no swearing at all. Never the f-word or anything stronger. Give grudging respect, without swearing, when they play well. ${LIMITS}`;
 
 // The AI's own recent lines, so it does not repeat itself.
 function describeRecentLines(lines: readonly string[] | undefined): string {
@@ -88,14 +95,19 @@ function describeRecentLines(lines: readonly string[] | undefined): string {
 // What the AI is reacting to: the opponent's last move and, when the engine
 // found it remarkable, its verdict (so a roast or a compliment is deserved).
 function describeOpponentMove(opponent: OpponentMove | undefined): string {
-  if (!opponent) return 'This is the first move of the game: set "reaction" to "" or open with some confident trash talk.';
+  if (!opponent) return 'This is the first move of the game: set "reaction" to "" or open with one confident, clean line.';
+  const strong = opponent.strongLanguage === true;
+  const persona = strong ? STRONG_PERSONA : CLEAN_PERSONA;
   const about = `Your opponent's last move was ${opponent.label}.`;
   const recent = describeRecentLines(opponent.recentLines);
-  if (!opponent.judgement) return `${about} The game engine found nothing special about it. ${PERSONA}${recent}`;
+  if (!opponent.judgement) return `${about} The game engine found nothing special about it. ${persona}${recent}`;
   const { verdict, detail } = opponent.judgement;
-  return verdict === "blunder"
-    ? `${about} The game engine judged it a blunder: ${detail} Roast them for it. ${PERSONA}${recent}`
-    : `${about} The game engine judged it an excellent move: ${detail} Give them grudging respect, with a dig. ${PERSONA}${recent}`;
+  if (verdict === "blunder") {
+    const ask = strong ? "Roast them for it." : "Tease them lightly about it.";
+    return `${about} The game engine judged it a blunder: ${detail} ${ask} ${persona}${recent}`;
+  }
+  const ask = strong ? "Give them grudging respect, with a dig." : "Praise them for it, with a playful dig.";
+  return `${about} The game engine judged it an excellent move: ${detail} ${ask} ${persona}${recent}`;
 }
 
 // One line of the move list, e.g. "3: C3 -> E5 | captures D4".
