@@ -1,0 +1,1464 @@
+:root {
+  --light-square: #f0cf9d;
+  --dark-square: #7a4a2a;
+  --page-bg: #2b2018;
+  --panel-bg: #3a2b20;
+  --text: #f5e9d8;
+  --text-soft: #e9d8bd;
+  --highlight: #f2c94c;
+  --capture: #ff5a5f;
+  --choice: #4cc9f0;
+  --route-black: #e3b341; /* route colour for Black's moves */
+  --route-white: #7fb3d9; /* route colour for White's moves */
+
+  --gap: 10px;
+  --card-h: 60px;
+  --sidebar-w: 320px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+/* ---------- Page layout ----------
+   Phones and narrow windows: one column (header, game, sidebar); the page
+   may scroll. Desktop (wide and tall enough): two columns that always fit
+   the window, so the page never scrolls. The board size is worked out from
+   the space that is left. */
+
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "header"
+    "game"
+    "side";
+  justify-items: center;
+  align-content: start;
+  gap: var(--gap);
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  --board-size: min(calc(100vw - 32px), 560px);
+}
+
+.topbar {
+  grid-area: header;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px 16px;
+  width: 100%;
+  max-width: var(--board-size);
+}
+
+h1 {
+  margin: 0;
+  font-size: 1.6rem;
+  letter-spacing: 0.08em;
+}
+
+.game {
+  grid-area: game;
+  width: var(--board-size);
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.sidebar {
+  grid-area: side;
+  width: 100%;
+  max-width: var(--board-size);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (min-width: 900px) and (min-height: 600px) {
+  html,
+  body {
+    height: 100%;
+    overflow: hidden; /* desktop: the page itself never scrolls */
+  }
+
+  .app {
+    height: 100vh;
+    height: 100dvh;
+    grid-template-columns: auto var(--sidebar-w);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "game header"
+      "game side";
+    justify-content: center;
+    align-content: center;
+    align-items: start;
+    column-gap: 32px;
+    row-gap: 16px;
+    padding: 16px 24px;
+    /* Height left after the two cards, the gaps and the padding; width left
+       after the sidebar. The smaller wins. */
+    --board-size: min(
+      calc(100vh - 2 * var(--card-h) - 2 * var(--gap) - 40px),
+      calc(100vw - var(--sidebar-w) - 32px - 48px),
+      800px
+    );
+    --board-size: min(
+      calc(100dvh - 2 * var(--card-h) - 2 * var(--gap) - 40px),
+      calc(100vw - var(--sidebar-w) - 32px - 48px),
+      800px
+    );
+  }
+
+  .topbar {
+    flex-direction: column;
+    align-items: stretch;
+    max-width: none;
+  }
+
+  h1 {
+    font-size: 2rem;
+    text-align: center;
+  }
+
+  .sidebar {
+    max-width: none;
+    max-height: 100%;
+    overflow-y: auto; /* only the sidebar scrolls, if it ever has to */
+  }
+}
+
+/* Phones turned sideways (wide but short): two columns as on desktop, with
+   slimmer cards and the board sized from the height, so nothing scrolls
+   except the sidebar. Selectors start with .app because this block comes
+   before the base rules for the same elements. */
+@media (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {
+  :root {
+    --card-h: 46px;
+  }
+
+  html,
+  body {
+    height: 100%;
+    overflow: hidden;
+  }
+
+  .app {
+    height: 100vh;
+    height: 100dvh;
+    grid-template-columns: auto minmax(220px, 300px);
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas:
+      "game header"
+      "game side";
+    justify-content: center;
+    align-content: center;
+    align-items: start;
+    column-gap: 20px;
+    row-gap: 8px;
+    padding: 8px calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));
+    --board-size: min(
+      calc(100vh - 2 * var(--card-h) - 2 * var(--gap) - 16px),
+      calc(100vw - 300px - 20px - 24px)
+    );
+    --board-size: min(
+      calc(100dvh - 2 * var(--card-h) - 2 * var(--gap) - 16px),
+      calc(100vw - 300px - 20px - 24px)
+    );
+  }
+
+  .topbar {
+    max-width: none;
+    gap: 6px 10px;
+  }
+
+  h1 {
+    font-size: 1.3rem;
+  }
+
+  .app .mode-note {
+    display: none; /* the cards already say who plays which side */
+  }
+
+  .sidebar {
+    max-width: none;
+    max-height: 100%;
+    overflow-y: auto;
+  }
+
+  /* Sidebar sections keep their size and the sidebar scrolls, instead of
+     sections being squeezed on top of each other. */
+  .sidebar > * {
+    flex-shrink: 0;
+  }
+
+  .app .history-list {
+    max-height: 120px;
+  }
+
+  .app .card {
+    gap: 8px;
+    padding: 4px 10px 4px 4px;
+  }
+
+  /* Narrow cards: keep the piece count, drop the twelve markers. */
+  .app .meter {
+    display: none;
+  }
+
+  .app .card-status {
+    white-space: nowrap;
+  }
+
+  .app .card-name {
+    font-size: 0.95rem;
+  }
+
+  .app .status {
+    min-height: 0;
+  }
+
+  .app .status-main {
+    font-size: 1.05rem;
+  }
+}
+
+/* ---------- Mode selector ---------- */
+
+.mode {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.mode-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mode-note {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+
+/* ---------- Player cards ---------- */
+
+.card {
+  --side: #d9ab3a; /* the side's accent: gold for Black */
+  --side-soft: rgba(217, 171, 58, 0.35);
+  height: var(--card-h);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 14px 6px 6px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(58, 43, 32, 0.95), rgba(36, 27, 20, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.card-white {
+  --side: #7aa7c7; /* muted blue for White */
+  --side-soft: rgba(122, 167, 199, 0.35);
+}
+
+/* The side to move: a quiet accent bar on the left edge. */
+.card {
+  position: relative; /* for the accent bar below */
+}
+
+/* The side to move: an accent bar that slides in on the card's left edge. */
+.card-to-move::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--side);
+  animation: bar-in 0.3s ease-out backwards;
+}
+
+/* The winner: no green glow; a gold crown next to the name says it, and
+   the result popup tells the story. */
+.card-winner {
+  box-shadow: 0 0 0 1px rgba(255, 214, 120, 0.35);
+}
+
+.card-name .icon-crown {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  color: #d9ab3a;
+}
+
+/* Avatar: a dark tile with a thin ring in the side's colour. */
+.avatar {
+  position: relative;
+  flex: none;
+  width: calc(var(--card-h) - 14px);
+  height: calc(var(--card-h) - 14px);
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(circle at 50% 35%, #2c3440, #12161c 75%);
+  color: #cfd6df;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 1px var(--side-soft);
+}
+
+.card-to-move .avatar {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 0 1.5px var(--side);
+}
+
+.card-robot .avatar {
+  color: #9fb8c8; /* the robot: a calm steel blue */
+  background: #1b2730;
+}
+
+/* Icons have no size of their own: each place sets it. (A bare `.icon` size
+   here once overrode the 18px winner crown and made it huge: DEV-005.) */
+.avatar .icon {
+  width: 78%;
+  height: 78%;
+}
+
+.icon-robot .robot-eye,
+.icon-robot .robot-mouth {
+  fill: #1b2730; /* dark cut-outs in the head */
+}
+
+.card-thinking .icon-robot .robot-eye {
+  fill: #ffffff;
+}
+
+.icon-robot .robot-light {
+  fill: #ff5a8a;
+}
+
+.robot-thinking .robot-light {
+  animation: blink 0.9s ease-in-out infinite;
+}
+
+.robot-thinking .robot-eyes {
+  animation: scan 1.6s ease-in-out infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes scan {
+  25% {
+    transform: translateX(-2.5px);
+  }
+  75% {
+    transform: translateX(2.5px);
+  }
+}
+
+.card-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.card-text p {
+  margin: 0;
+}
+
+.card-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+}
+
+.card-name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.badge {
+  padding: 1px 6px;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: #9fb8c8;
+  background: rgba(159, 184, 200, 0.12);
+}
+
+.card-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.82rem;
+  color: var(--text-soft);
+}
+
+.card-status .disc {
+  width: 0.75em;
+  height: 0.75em;
+}
+
+.card-dot {
+  opacity: 0.5;
+}
+
+.card-to-move .card-state {
+  color: var(--side);
+  font-weight: 600;
+}
+
+/* "Thinking..." with three dots that appear one after another. */
+.dots::after {
+  content: "...";
+  display: inline-block;
+  width: 1.2em;
+  overflow: hidden;
+  vertical-align: bottom;
+  animation: dots 1.2s steps(4, end) infinite;
+  color: var(--side);
+}
+
+@keyframes dots {
+  from {
+    width: 0;
+  }
+  to {
+    width: 1.2em;
+  }
+}
+
+.card-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}
+
+.card-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-left strong {
+  min-width: 1.4em;
+  text-align: right;
+  font-size: 1.1rem;
+  color: var(--text);
+}
+
+/* Twelve small markers; lit ones are pieces still on the board. */
+.meter {
+  display: grid;
+  grid-template-columns: repeat(6, 6px);
+  gap: 2px;
+}
+
+.pip {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.pip-on {
+  background: var(--side);
+}
+
+.card-took {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 12px;
+}
+
+/* Captured enemy pieces as small overlapping discs. */
+.captures {
+  display: flex;
+}
+
+.mini {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  margin-left: -5px;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5);
+}
+
+.mini:first-child {
+  margin-left: 0;
+}
+
+.mini-black {
+  background: radial-gradient(circle at 35% 30%, #6a6a6a, #1b1b1b 70%);
+}
+
+.mini-white {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #bdbdbd 70%);
+}
+
+@media (max-width: 420px) {
+  .meter {
+    display: none; /* small phones: keep the number, drop the markers */
+  }
+}
+
+/* ---------- Status ---------- */
+
+.status {
+  min-height: 4.2em;
+  text-align: center;
+}
+
+.status p {
+  margin: 0;
+}
+
+.status-main {
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.status-hint {
+  margin-top: 4px;
+  font-size: 0.95rem;
+  color: var(--text-soft);
+}
+
+.status-hint-capture {
+  color: #ffb3b5;
+}
+
+.status-winner .status-main {
+  font-size: 1.6rem;
+  color: var(--highlight);
+}
+
+.status-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-failed .status-main {
+  color: #ffb3b5;
+}
+
+.status-details {
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  text-align: left;
+}
+
+.player-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disc {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.disc-black {
+  background: #1b1b1b;
+}
+
+.disc-white {
+  background: #f2f2f2;
+  border-color: rgba(0, 0, 0, 0.5);
+}
+
+.spinner {
+  display: inline-block;
+  width: 0.9em;
+  height: 0.9em;
+  margin-right: 8px;
+  border: 3px solid rgba(245, 233, 216, 0.3);
+  border-top-color: var(--highlight);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+  vertical-align: -0.1em;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- Buttons and confirmations ---------- */
+
+.button {
+  font: inherit;
+  min-height: 44px; /* comfortable touch target */
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 2px solid #8b6b4a;
+  background: #3d2e22;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.button:hover {
+  background: #4d3b2c;
+}
+
+.button-primary {
+  background: #a8681f;
+  border-color: #d89a4b;
+}
+
+.button-primary:hover {
+  background: #bf7826;
+}
+
+.button-selected {
+  background: #a8681f;
+  border-color: var(--highlight);
+}
+
+.button-danger {
+  background: #8c2f33;
+  border-color: #d9686d;
+}
+
+.confirm {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.confirm p {
+  margin: 0;
+  width: 100%;
+}
+
+/* ---------- Board ---------- */
+
+.board {
+  position: relative; /* the route and the moving piece sit on top */
+  width: var(--board-size);
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  border: 8px solid #4a2c17;
+  border-radius: 4px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.board-locked {
+  opacity: 0.85;
+}
+
+.board-row {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.square {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Dark squares are buttons: strip the default button look. */
+button.square {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: default;
+}
+
+.square-light {
+  background: var(--light-square);
+}
+
+.square-dark {
+  background: var(--dark-square);
+}
+
+.square-selectable {
+  cursor: pointer;
+}
+
+button.square:focus-visible {
+  outline: 3px solid var(--choice);
+  outline-offset: -3px;
+}
+
+/* The squares the last move started and ended on: a lighter tint. */
+.square-last-move.square-dark {
+  background: #95653d;
+}
+
+/* The selected square: a solid inner ring. */
+.square-selected {
+  box-shadow: inset 0 0 0 3px #e3b341;
+}
+
+/* A plain destination: a small dot. */
+.square-destination::after {
+  content: "";
+  width: 24%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+/* A capture destination: a red ring, so it differs from a plain move by
+   shape and colour. */
+.square-destination-capture::after {
+  content: "";
+  width: 62%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 3px solid #d64545;
+}
+
+/* A route choice: a dashed blue ring. */
+.square-route-choice::after {
+  content: "";
+  width: 66%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 4px dashed var(--choice);
+}
+
+/* Pieces that must capture: a red ring around the piece. */
+.square-must-capture .piece {
+  box-shadow:
+    0 0 0 3px var(--capture),
+    0 3px 5px rgba(0, 0, 0, 0.55);
+}
+
+/* ---------- Last move: route overlay ---------- */
+
+.route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* clicks go through to the squares */
+  z-index: 2;
+}
+
+/* The last move: a plain line with an arrow, in the mover's colour. */
+.route-black {
+  --route-color: var(--route-black);
+}
+
+.route-white {
+  --route-color: var(--route-white);
+}
+
+.route polyline,
+.route circle,
+.route line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.route-line {
+  stroke: var(--route-color);
+  stroke-width: 0.06;
+  opacity: 0.85;
+}
+
+.route-arrow {
+  fill: none;
+  stroke: var(--route-color);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Start of the move: a small hollow ring. */
+.route-start {
+  stroke: var(--route-color);
+  stroke-width: 0.045;
+  opacity: 0.85;
+}
+
+/* Landing squares of a multi jump: numbered rings. */
+.route-stop circle {
+  stroke: var(--route-color);
+  stroke-width: 0.04;
+  fill: rgba(20, 15, 10, 0.8);
+}
+
+.route-stop text {
+  font-size: 0.24px;
+  font-weight: 700;
+  fill: var(--route-color);
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+/* Captured pieces: a red cross. */
+.route-capture line {
+  stroke: #d64545;
+  stroke-width: 0.06;
+  stroke-linecap: round;
+}
+
+/* ---------- Last move: animation ---------- */
+
+.move-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.ghost {
+  position: absolute;
+  width: 12.5%;
+  height: 12.5%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ghost-mover {
+  z-index: 2;
+  will-change: transform;
+}
+
+/* The moving piece is lifted: a deeper shadow while it travels. */
+.ghost-mover .piece {
+  box-shadow: 0 10px 14px rgba(0, 0, 0, 0.5);
+}
+
+/* A captured piece shows until the mover passes over it, then fades. */
+.ghost-captured {
+  animation: capture-out 220ms ease-in forwards;
+}
+
+@keyframes capture-out {
+  to {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+/* ---------- Pieces ---------- */
+
+/* A disc with an inner ring, drawn with CSS only. */
+.piece {
+  width: 80%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  box-shadow:
+    0 3px 5px rgba(0, 0, 0, 0.55),
+    inset 0 2px 3px rgba(255, 255, 255, 0.35);
+  position: relative;
+}
+
+.piece-hidden {
+  visibility: hidden;
+}
+
+.piece::after {
+  content: "";
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.piece-black {
+  background: radial-gradient(circle at 35% 30%, #5a5a5a, #1b1b1b 70%);
+}
+
+.piece-white {
+  background: radial-gradient(circle at 35% 30%, #ffffff, #c9c9c9 70%);
+}
+
+.piece-black::after {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Kings: a gold crown in the middle and a gold ring, so they do not rely on
+   colour alone. */
+.piece-king {
+  outline: 3px solid #c9a227;
+  outline-offset: -5px;
+}
+
+.piece-king::before {
+  content: "\265B"; /* black chess queen, used as a crown */
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--board-size) / 15); /* about two thirds of the disc */
+  line-height: 1;
+  color: #e3b341;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.piece-white.piece-king::before {
+  color: #9a6b00;
+  text-shadow: 0 1px 1px rgba(255, 255, 255, 0.6);
+}
+
+/* ---------- Less motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner,
+  .robot-thinking .robot-light,
+  .robot-thinking .robot-eyes,
+  .ghost-captured {
+    animation: none;
+  }
+}
+
+/* ---------- Result popup ---------- */
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.result-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(8, 6, 4, 0.62);
+  backdrop-filter: blur(6px);
+  animation: fade-in 0.25s ease-out both;
+}
+
+.result {
+  --accent: #e3b341;
+  --accent-soft: rgba(227, 179, 65, 0.25);
+  position: relative;
+  overflow: hidden;
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: 28px 24px 22px;
+  border-radius: 20px;
+  text-align: center;
+  background: #241b14;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 24px 60px rgba(0, 0, 0, 0.6);
+  animation: pop-in 0.3s ease-out both;
+}
+
+/* The AI won: a cool steel-blue theme instead of gold. */
+.result-defeat {
+  --accent: #9fb8c8;
+  --accent-soft: rgba(159, 184, 200, 0.2);
+  background: #18212a;
+}
+
+.result-emblem {
+  width: 92px;
+  height: 92px;
+  margin: 0 auto 10px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--accent);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 1px var(--accent-soft);
+}
+
+.result-emblem .icon {
+  width: 64%;
+  height: 64%;
+}
+
+.icon-trophy .trophy-shine {
+  stroke: rgba(255, 255, 255, 0.7);
+}
+
+.result-defeat .icon-robot .robot-eye,
+.result-defeat .icon-robot .robot-mouth {
+  fill: #18212a;
+}
+
+.result-title {
+  margin: 0;
+  font-size: 2.1rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+
+.result-subtitle {
+  margin: 6px 0 2px;
+  font-size: 1rem;
+  color: var(--text);
+}
+
+.result-reason {
+  margin: 0 0 16px;
+  font-size: 0.9rem;
+  color: var(--text-soft);
+}
+
+.result-stats {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.92rem;
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.result-stats th,
+.result-stats td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.result-stats tbody tr:last-child th,
+.result-stats tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.result-stats thead th {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-soft);
+}
+
+.result-stats thead th .disc {
+  margin-right: 6px;
+  vertical-align: -0.1em;
+}
+
+.result-stats tbody th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--text-soft);
+}
+
+.result-stats td {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.result-stats .result-col-winner {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.result-meta {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 12px 0 18px;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+
+.result-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.result-actions .button-primary {
+  min-width: 150px;
+}
+
+/* Confetti: thin strips falling through the popup. */
+.confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.confetti span {
+  position: absolute;
+  top: -12px;
+  width: 6px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0.9;
+  animation-name: confetti-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.95;
+  }
+  100% {
+    transform: translateY(560px) rotate(540deg);
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.92);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result,
+  .result-backdrop,
+  .dots::after {
+    animation: none;
+  }
+
+  .confetti {
+    display: none;
+  }
+}
+
+/* ---------- History: arrows and move list ---------- */
+
+.history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.history-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-where {
+  flex: 1;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-arrow {
+  flex: none;
+  width: 44px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  font: inherit;
+  font-size: 1rem;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.history-arrow:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.history-arrow:focus-visible {
+  outline: 2px solid var(--choice);
+  outline-offset: 2px;
+}
+
+/* Disabled arrows stay in place but look switched off. */
+.history-arrow:disabled {
+  cursor: default;
+  opacity: 0.3;
+  color: var(--text-soft);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+/* While reviewing, a clear way back to the game. */
+.history-return {
+  font: inherit;
+  font-size: 0.85rem;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text);
+  background: rgba(122, 167, 199, 0.15);
+  box-shadow: inset 0 0 0 1px rgba(122, 167, 199, 0.5);
+}
+
+.history-reviewing {
+  box-shadow: inset 0 0 0 1px rgba(122, 167, 199, 0.5);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.history-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  color: var(--text);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.history-item[aria-current="step"] {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 2px 0 0 #d9ab3a;
+}
+
+.history-item-white[aria-current="step"] {
+  box-shadow: inset 2px 0 0 #7aa7c7;
+}
+
+.history-number {
+  min-width: 2em;
+  color: var(--text-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.history-item .disc {
+  width: 0.7em;
+  height: 0.7em;
+}
+
+.history-who {
+  min-width: 3.2em;
+  color: var(--text-soft);
+}
+
+.history-move {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Desktop: the move list takes the space left in the sidebar and scrolls
+   inside itself, so the page never does. */
+@media (min-width: 900px) and (min-height: 600px) {
+  .history {
+    flex: 1 1 auto;
+  }
+
+  .history-list {
+    flex: 1 1 auto;
+    max-height: none;
+    min-height: 60px;
+  }
+}
+
+/* ---------- Motion (calm: movement, no glow) ---------- */
+
+/* A picked-up piece lifts a little. */
+.piece {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.square-selected .piece {
+  transform: translateY(-3px) scale(1.06);
+  box-shadow:
+    0 8px 10px rgba(0, 0, 0, 0.45),
+    inset 0 2px 3px rgba(255, 255, 255, 0.35);
+}
+
+/* Move hints appear with a small pop. */
+.square-destination::after,
+.square-destination-capture::after {
+  animation: pop-in-small 0.18s ease-out backwards;
+}
+
+/* A route choice gently pulses, so it is easy to spot. */
+.square-route-choice::after {
+  animation: soft-pulse 1.2s ease-in-out infinite;
+}
+
+/* Pieces that must capture: the red ring breathes slowly (no blur). */
+.square-must-capture .piece {
+  animation: ring-breathe 1.6s ease-in-out infinite;
+}
+
+/* The last move's line draws itself from start to end; the landing numbers
+   and the crosses on captured pieces pop in after it. */
+.route {
+  animation: fade-in 0.2s ease-out backwards;
+}
+
+.route-line {
+  stroke-dasharray: 1;
+  animation: route-draw 0.45s ease-out backwards;
+}
+
+.route-start,
+.route-stop,
+.route-capture {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.route-stop {
+  animation: pop-in-small 0.25s 0.2s ease-out backwards;
+}
+
+.route-capture {
+  animation: pop-in-small 0.3s 0.3s cubic-bezier(0.2, 1.5, 0.5, 1) backwards;
+}
+
+/* The result popup's emblem floats gently. */
+.result-emblem {
+  animation: emblem-float 3s ease-in-out infinite;
+}
+
+@keyframes bar-in {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes pop-in-small {
+  from {
+    opacity: 0;
+    transform: scale(0.3);
+  }
+}
+
+@keyframes soft-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+@keyframes ring-breathe {
+  50% {
+    box-shadow:
+      0 0 0 5px rgba(214, 69, 69, 0.55),
+      0 3px 5px rgba(0, 0, 0, 0.55);
+  }
+}
+
+@keyframes route-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes emblem-float {
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .piece,
+  .square-selected .piece {
+    transition: none;
+  }
+
+  .card-to-move::before,
+  .square-destination::after,
+  .square-destination-capture::after,
+  .square-route-choice::after,
+  .square-must-capture .piece,
+  .route,
+  .route-line,
+  .route-stop,
+  .route-capture,
+  .result-emblem {
+    animation: none;
+  }
+}

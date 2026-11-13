@@ -1,0 +1,143 @@
+/* Learn mode: the lesson panel, playback controls and lesson list. The page
+   reuses the game layout (.app, .game, .sidebar from styles.css). */
+
+/* Gold Bot plays Black: a gold robot instead of the AI's steel blue. */
+.learn .card-black.card-robot .avatar {
+  color: #d9ab3a;
+  background: #2b2216;
+}
+
+.learn .card-black .icon-robot .robot-eye,
+.learn .card-black .icon-robot .robot-mouth {
+  fill: #2b2216;
+}
+
+.lesson {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--panel-bg);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.lesson p {
+  margin: 0;
+}
+
+.lesson-count {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.lesson-step {
+  color: #d9ab3a;
+}
+
+.lesson-title {
+  margin: 4px 0 8px;
+  font-size: 1.2rem;
+  color: var(--text);
+}
+
+.lesson-caption {
+  font-size: 1rem;
+  line-height: 1.5;
+  /* Keeps the panel from jumping in height between short and long captions. */
+  min-height: 4.5em;
+  animation: fade-in 0.3s ease-out both;
+}
+
+.lesson-facts {
+  margin-top: 12px;
+  padding-top: 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.lesson-facts h3 {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.lesson-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+}
+
+.lesson-play {
+  min-width: 130px;
+}
+
+.history-arrow:disabled {
+  cursor: default;
+}
+
+.lesson-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+}
+
+.lesson-link {
+  width: 100%;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.92rem;
+  text-align: left;
+  color: var(--text-soft);
+  background: rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.lesson-link:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.lesson-link:focus-visible {
+  outline: 2px solid var(--choice);
+  outline-offset: 2px;
+}
+
+.lesson-link-current {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 2px 0 0 #d9ab3a;
+}
+
+.lesson-link-number {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #d9ab3a;
+  box-shadow: inset 0 0 0 1px rgba(217, 171, 58, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lesson-caption {
+    animation: none;
+  }
+}

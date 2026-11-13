@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# Used by `netlify dev`: runs Vite and serves the function next to it.
+[dev]
+  framework = "#custom"
+  command = "npm run dev"
+  targetPort = 5173
