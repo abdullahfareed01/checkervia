@@ -33,7 +33,8 @@ function sameMove(a: Move, b: Move): boolean {
   );
 }
 
-const label = (move: Move) => [move.from, ...move.path].map(squareName).join(" -> ");
+// Shown to players (in "Why?") and sent to the model: an arrow, no hyphens.
+const label = (move: Move) => [move.from, ...move.path].map(squareName).join(" → ");
 
 function piecesText(score: number): string {
   const amount = (Math.abs(score) / 100).toFixed(1);

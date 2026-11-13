@@ -122,20 +122,44 @@ export function classify(text: string): WordClass[] {
   return WORD_CLASSES.map(([wordClass]) => wordClass).filter((wordClass) => found.has(wordClass));
 }
 
+// Every hyphen-like character, read as a plain hyphen; every dash-like
+// character, read as an em dash. (Written as escapes so they are visible.)
+const HYPHENS = /[\u2010\u2011\u2012\u00ad\u2043\ufe63\uff0d]/g;
+const DASHES = /[\u2013\u2014\u2015\u2212\ufe58]/g;
+const EM = "\u2014";
+
+// One line without hyphens or dashes (see withoutDashes).
+function lineWithoutDashes(line: string): string {
+  let text = line.replace(HYPHENS, "-").replace(DASHES, EM);
+  text = text
+    .replace(/<-+/g, "\u2190") // arrows in move notation
+    .replace(/-+>/g, "\u2192")
+    .replace(/(\d)\s*(?:-+|\u2014)\s*(?=\d)/g, "$1 to ") // ranges: 3-4 is "3 to 4"
+    .replace(/(^|[\s(])-(?=\d)/g, "$1minus ") // a negative number
+    .replace(/([\p{L}\p{N}])-(?=[\p{L}\p{N}])/gu, "$1 ") // brain-fart is "brain fart" (one hyphen only)
+    .replace(/^[\s\-\u2014]+/, "") // a dash starting the line
+    .replace(/[\s\-\u2014]+$/, "") // or ending it
+    .replace(/(^|\s)-+(?=\S)/g, "$1") // a word starting with a hyphen: -ish
+    .replace(/(\S)-+(?=\s)/g, "$1"); // or ending with one: pre- and post game
+  // What is left joins two parts of a sentence: a full stop before a capital
+  // letter, otherwise a comma.
+  text = text.replace(/\s*(?:-+|\u2014+)\s*(?=(\S))/g, (_, next: string) => (/\p{Lu}/u.test(next) ? ". " : ", "));
+  return text
+    .replace(/([.,!?;:])\s*[.,](?=\s|$)/g, "$1") // "!," or ".." after a joint
+    .replace(/\s+([.,!?;:])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
 /**
- * Hyphens and dashes taken out of a line shown to players: "brain-fart"
- * becomes "brain fart", "mine—now" becomes "mine, now".
+ * Text without hyphens or dashes, for anything players read (the owner's
+ * rule, D45): "brain-fart" becomes "brain fart", "mine—now" becomes
+ * "mine, now", "3-4" becomes "3 to 4", "E3 -> D4" becomes "E3 → D4", and a
+ * dash before a new sentence becomes a full stop. Every kind of hyphen and
+ * dash character counts (the non breaking hyphen too). Line by line.
  */
 export function withoutDashes(text: string): string {
-  return text
-    .replace(/\s*[–-―−]\s*/g, ", ") // en and em dashes, minus
-    .replace(/[‐-‒­]/g, "-") // other hyphens (e.g. the non breaking one) read as "-"
-    .replace(/\s+-+\s+/g, ", ")
-    .replace(/(\w)-+(\w)/g, "$1 $2")
-    .replace(/-+/g, " ")
-    .replace(/\s+,/g, ",")
-    .replace(/\s{2,}/g, " ")
-    .trim();
+  return text.split("\n").map(lineWithoutDashes).join("\n").trim();
 }
 
 // Clean lines used when the model's line breaks a rule. No dashes.
@@ -144,6 +168,29 @@ const FALLBACKS: Readonly<Record<Verdict | "plain", readonly string[]>> = {
   great: ["Well played. I did not see that coming.", "Good move. You made me think there.", "Fine, that was a strong move."],
   plain: ["Your move is noted. Let us see where this goes.", "Interesting choice. My turn now.", "All right, let us keep going."],
 };
+
+// The longest reaction line shown (Change 3): it fits the chat bubble.
+export const MAX_LINE_LENGTH = 140;
+
+/**
+ * A line cut to at most `max` characters at a word boundary, never in the
+ * middle of a word, ending with "…" when it was cut.
+ */
+export function capLength(text: string, max = MAX_LINE_LENGTH): string {
+  if (text.length <= max) return text;
+  const room = text.slice(0, max); // "…" takes the last place
+  const lastSpace = room.lastIndexOf(" ");
+  const cut = (lastSpace > 0 ? room.slice(0, lastSpace) : room.slice(0, max - 1)).replace(/[\s,;:.]+$/, "");
+  return `${cut}\u2026`;
+}
+
+/**
+ * Every AI line shown to players goes through here: no hyphens or dashes,
+ * then the length cap. (The language rules come first, in checkReaction.)
+ */
+export function tidyLine(text: string, max = MAX_LINE_LENGTH): string {
+  return capLength(withoutDashes(text), max);
+}
 
 /** A clean line for when the model's line was not allowed. */
 export function fallbackLine(verdict: Verdict | null, seed: number): string {
@@ -166,7 +213,7 @@ export function checkReaction(text: string, level: AiLevel | undefined, verdict:
   const allowed = (wordClass: WordClass) =>
     (wordClass === "insult" && strong) || (wordClass === "mild" && strong && verdict === "blunder");
   if (found.some((wordClass) => !allowed(wordClass))) return fallbackLine(verdict, text.length);
-  return withoutDashes(text);
+  return tidyLine(text);
 }
 
 // Shown instead of a reason that is not clean (the reason is always clean).

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import type { AiLevel } from "../ai";
 import { useGame } from "../state/useGame";
@@ -7,7 +7,6 @@ import { canGoBack, canGoForward, displayedPosition, moveList } from "../state/h
 import type { MoveListItem } from "../state/history";
 import type { GameMode, GameOptions } from "../state/gameReducer";
 import { AiMoveNote } from "./AiMoveNote";
-import { AiReasonDialog } from "./AiReasonDialog";
 import { useStrongestGate } from "./ConsentDialog";
 import { Board } from "./Board";
 import { boardViewOf, cardFor, nameOf, winReasonOf } from "./gameView";
@@ -18,8 +17,10 @@ import { ModeSelector } from "./ModeSelector";
 import { NewGameButton } from "./NewGameButton";
 import { ResultDialog } from "./ResultDialog";
 import { RulesDialog } from "./RulesDialog";
-import { SpeechBubble } from "./SpeechBubble";
-import type { SpeechMessage } from "./SpeechBubble";
+import { ChatBubble } from "./ChatBubble";
+import { reactionBubble } from "./bubble";
+import { LANDSCAPE_PHONE, PHONE, useMediaQuery } from "./useMediaQuery";
+import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
 import { TermsDialog } from "./TermsDialog";
 import { TopBar } from "./TopBar";
@@ -45,13 +46,15 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const shown = displayedPosition(state);
   const moveKey = useAnimationKey(shown.index);
   const why = useAiExplanation(state.mode, shown);
+  const phone = useMediaQuery(PHONE);
+  const landscapePhone = useMediaQuery(LANDSCAPE_PHONE);
   const [askLevel, setAskLevel] = useState(false);
   // The move list only changes when the history does (DEV-010).
   const moves = useMemo(() => moveList(state), [state.history]);
   const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player), [state.mode]);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
-  useHistoryKeys(goHistory, !result.open && !why.open && !askLevel && !rulesOpen && !termsOpen);
+  useHistoryKeys(goHistory, !result.open && !(why.open && phone) && !askLevel && !rulesOpen && !termsOpen);
   const loseQuestion = (what: string) => (inProgress ? `${what} The current game will be lost.` : undefined);
 
   // Switching to "Play vs AI" first asks for the AI's level.
@@ -100,25 +103,25 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     [state.mode, state.aiLevel, inProgress, setMode, startVsAi],
   );
 
-  // The AI's speech bubble: typing dots while it thinks, then its reason,
-  // which stays until the player plays their move (or its time runs out).
-  // While the player holds a piece it fades so the board stays visible.
-  const thinking = state.mode === "vs-ai" && state.aiPhase === "thinking" && shown.live;
-  const reason = why.explanation?.reason ?? null;
-  const reaction = why.explanation?.reaction ?? null;
-  const speech: SpeechMessage | null = thinking
-    ? { key: `thinking-${state.aiRequestId}`, text: null }
-    : reason
-      ? {
-          key: `move-${shown.index}`,
-          text: reason,
-          lead: reaction ?? undefined,
-          leadTone: shown.judgement ? (shown.judgement.verdict === "great" ? "praise" : "tease") : "banter",
-        }
-      : null;
+  // The AI's chat bubble (Change 3): typing dots while it thinks, then its
+  // reaction, until the player picks up a piece for their next move.
+  const [dismissedAt, setDismissedAt] = useState(0);
+  const startedMove = state.selected !== null || state.pendingRoutes.length > 0;
+  useEffect(() => {
+    if (startedMove) setDismissedAt(state.history.length);
+  }, [startedMove, state.history.length]);
+  const bubble = reactionBubble(state, dismissedAt);
+  const chat = state.mode === "vs-ai" && (
+    <ChatBubble
+      message={result.open ? null : bubble}
+      placement={landscapePhone ? "side" : "card"}
+      whyOpen={why.open}
+      onWhy={why.toggleWhy}
+    />
+  );
 
   return (
-    <main className="app">
+    <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}`}>
       <header className="topbar">
         <TopBar
           title="Draft"
@@ -132,17 +135,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
 
       <section className="game" aria-label="Game">
         {cardFor(state, shown.board, "white", "top")}
+        {!landscapePhone && chat}
         <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} />
         {cardFor(state, shown.board, "black", "bottom")}
-        <SpeechBubble
-          message={speech}
-          faded={state.selected !== null}
-          hidden={result.open}
-          onWhy={reason ? why.openWhy : undefined}
-        />
       </section>
 
       <aside className="sidebar">
+        {landscapePhone && chat}
         <StatusBar
           currentPlayer={state.currentPlayer}
           winner={state.winner}
@@ -153,7 +152,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           aiFailureReasons={state.aiFailureReasons}
           onRetryAi={retryAi}
         />
-        <AiMoveNote explanation={why.explanation} onWhy={why.openWhy} />
+        <AiMoveNote explanation={why.explanation} open={why.open} inline={!phone} onToggle={why.toggleWhy} />
         <HistoryControls
           index={shown.index}
           total={shown.total}
@@ -188,20 +187,9 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
         />
       )}
 
-      {/* Rendered under <body> so no stacking layer can trap it under the
-          board's route line (BUG-002). */}
-      {why.open &&
-        why.explanation &&
-        createPortal(
-          <AiReasonDialog
-            moveLabel={why.explanation.label}
-            moveNumber={why.explanation.index}
-            reason={why.explanation.reason}
-            facts={why.explanation.facts}
-            onClose={why.closeWhy}
-          />,
-          document.body,
-        )}
+      {/* Phones: "Why?" floats above the page. Rendered under <body> so no
+          stacking layer can trap it under the board's route line (BUG-002). */}
+      {phone && why.open && why.explanation && createPortal(<WhySheet explanation={why.explanation} onClose={why.closeWhy} />, document.body)}
 
       {rulesOpen && <RulesDialog onClose={() => setRulesOpen(false)} />}
 

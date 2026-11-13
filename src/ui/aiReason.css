@@ -1,311 +1,47 @@
-/* Everything the AI "says": its speech bubble over the board, the sidebar
-   note, the "Why this move?" popup and the level dialog. Kept apart from
+/* The sidebar note for the AI's move, the engine facts list, and the
+   dialogs (level choice and others). The chat bubble is in bubble.css. Kept apart from
    styles.css, which is already long. Flat and quiet: no glows. */
-
-/* ---------- Speech bubble ---------- */
-
-/* The bubble is placed relative to the board column. */
-.game {
-  position: relative;
-}
-
-/* A white rounded bubble under the AI's card, with a curved tail pointing
-   up at the robot's avatar (its centre is 29px from the column's left).
-   One soft shadow falls under body and tail together, so they read as one
-   shape. Clicks go through to the board, except on its buttons. */
-.speech {
-  position: absolute;
-  z-index: 6;
-  top: calc(var(--card-h) + 14px);
-  left: 4px;
-  width: max-content;
-  max-width: min(400px, calc(100% - 8px));
-  pointer-events: none;
-  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.35)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.2));
-  transform-origin: 25px -12px; /* grows out of the tail */
-  animation: speech-pop 0.36s cubic-bezier(0.2, 1.4, 0.45, 1) backwards;
-  transition: opacity 0.2s ease;
-}
-
-.speech button {
-  pointer-events: auto;
-}
-
-/* The tail: a smooth curve, not a sharp triangle. */
-.speech::before {
-  content: "";
-  position: absolute;
-  top: -13px;
-  left: 14px;
-  width: 24px;
-  height: 14px;
-  background: #ffffff;
-  clip-path: path("M0 14 C 9 14, 10 1, 12 1 C 14 1, 15 14, 24 14 Z");
-}
-
-.speech-body {
-  padding: 10px 16px 8px;
-  border-radius: 18px;
-  color: #1f1a15;
-  background: linear-gradient(#ffffff, #f4f1eb);
-  box-shadow:
-    inset 0 1px 0 #ffffff,
-    inset 0 -2px 0 rgba(0, 0, 0, 0.07);
-}
-
-/* Who is speaking: small, above the message. */
-.speech-from {
-  display: block;
-  margin-bottom: 2px;
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #8a7e72;
-}
-
-.speech-text {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 500;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-  animation: speech-text-in 0.25s ease-out backwards;
-}
-
-/* While the player holds a piece: see-through, so the board shows. */
-.speech-faded {
-  opacity: 0.28;
-}
-
-/* Leaving: shrinks back into the tail. */
-.speech-leaving {
-  animation: speech-out 0.2s ease-in forwards;
-}
-
-@keyframes speech-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.35) translateY(-6px);
-  }
-}
-
-@keyframes speech-out {
-  to {
-    opacity: 0;
-    transform: scale(0.7) translateY(-6px);
-  }
-}
-
-@keyframes speech-text-in {
-  from {
-    opacity: 0;
-    transform: translateY(3px);
-  }
-}
-
-.speech-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.speech-why,
-.speech-close {
-  min-height: 30px;
-  padding: 2px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  font: inherit;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.speech-why {
-  font-weight: 700;
-  color: #245c86;
-}
-
-.speech-close {
-  font-size: 1.2rem;
-  line-height: 1;
-  color: #8a8178;
-}
-
-.speech-why:hover,
-.speech-close:hover {
-  background: rgba(0, 0, 0, 0.07);
-}
-
-.speech-why:focus-visible,
-.speech-close:focus-visible {
-  outline: 2px solid #245c86;
-  outline-offset: 1px;
-}
-
-/* Typing dots while the AI thinks: a gentle wave. */
-.speech-typing {
-  display: flex;
-  gap: 6px;
-  margin: 4px 0 6px;
-}
-
-.speech-typing span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #9a9087;
-  animation: typing 1.2s ease-in-out infinite;
-}
-
-.speech-typing span:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.speech-typing span:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes typing {
-  0%,
-  60%,
-  100% {
-    opacity: 0.35;
-    transform: translateY(0);
-  }
-  30% {
-    opacity: 1;
-    transform: translateY(-4px);
-  }
-}
-
-/* Phones held upright: the bubble sits above the AI's card, over the header,
-   with its tail pointing down at the robot, so it never covers the board.
-   Compact: no label, and the buttons sit beside the text. */
-@media (max-width: 599px) and (orientation: portrait) {
-  .speech {
-    top: auto;
-    bottom: calc(100% + 14px);
-    transform-origin: 25px calc(100% + 14px);
-  }
-
-  .speech::before {
-    top: auto;
-    bottom: -13px;
-    transform: scaleY(-1);
-  }
-
-  .speech-body {
-    display: flex;
-    align-items: flex-end;
-    gap: 6px;
-    padding: 8px 6px 6px 12px;
-    border-radius: 16px;
-  }
-
-  .speech-from {
-    display: none;
-  }
-
-  .speech-text {
-    flex: 1;
-    font-size: 0.98rem;
-    line-height: 1.4;
-    padding-bottom: 3px;
-  }
-
-  .speech-actions {
-    flex: none;
-    margin-top: 0;
-    gap: 0;
-  }
-
-  .speech-why,
-  .speech-close {
-    padding: 2px 6px;
-  }
-
-  .speech-typing {
-    margin: 4px 6px 4px 0;
-  }
-}
-
-/* Short landscape screens: compact, over the top edge of the board. */
-@media (orientation: landscape) and (max-height: 599px) {
-  .speech {
-    max-width: min(320px, calc(100% - 8px));
-    top: calc(var(--card-h) + 12px);
-  }
-
-  .speech-from {
-    display: none;
-  }
-
-  .speech-body {
-    padding: 8px 12px 6px;
-  }
-
-  .speech-text {
-    font-size: 0.95rem;
-    line-height: 1.4;
-  }
-}
 
 /* ---------- Sidebar note ---------- */
 
 .ai-note {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 8px 10px;
   padding: 10px 12px;
   border-radius: 12px;
   background: rgba(0, 0, 0, 0.18);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
-.ai-note p {
+.ai-note-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   margin: 0;
 }
 
-.ai-note-avatar,
-.ai-reason-avatar {
+.ai-note-avatar {
   flex: none;
   display: grid;
   place-items: center;
+  width: 32px;
+  height: 32px;
   border-radius: 10px;
   color: #9fb8c8;
   background: #1b2730;
 }
 
-.ai-note-avatar {
-  width: 32px;
-  height: 32px;
-}
-
-.ai-note-avatar .icon,
-.ai-reason-avatar .icon {
+.ai-note-avatar .icon {
   width: 78%;
   height: 78%;
 }
 
 .ai-note-move {
+  flex: 1;
   font-size: 0.9rem;
   font-weight: 600;
 }
 
-.ai-note-button {
-  grid-column: 1 / -1;
-  justify-self: stretch;
-}
+/* ---------- Dialogs ---------- */
 
-/* ---------- Dialogs: "Why this move?" and the level choice ---------- */
-
-.ai-reason,
 .dialog {
   width: min(440px, 100%);
   max-height: calc(100dvh - 32px);
@@ -320,71 +56,16 @@
   animation: pop-in 0.25s ease-out both;
 }
 
-.ai-reason-head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 14px;
-}
-
-.ai-reason-avatar {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-}
-
-.ai-reason-title,
 .dialog-title {
   margin: 0;
   font-size: 1.25rem;
   color: var(--text);
 }
 
-.ai-reason-move,
 .dialog-subtitle {
   margin: 2px 0 0;
   font-size: 0.9rem;
   color: var(--text-soft);
-}
-
-.ai-reason-section {
-  margin-bottom: 14px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.ai-reason-section h3 {
-  margin: 0 0 8px;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-soft);
-}
-
-.ai-reason-quote {
-  margin: 0;
-  padding-left: 12px;
-  font-size: 1rem;
-  line-height: 1.45;
-  color: var(--text);
-  box-shadow: inset 2px 0 0 #9fb8c8;
-  overflow-wrap: anywhere;
-}
-
-.ai-reason-empty {
-  margin: 0;
-  font-style: italic;
-  color: var(--text-soft);
-}
-
-.ai-reason-caption {
-  margin: 8px 0 0;
-  font-size: 0.78rem;
-  color: var(--text-soft);
-  opacity: 0.8;
 }
 
 .ai-facts {
@@ -426,10 +107,6 @@
 .ai-fact-info .ai-fact-mark {
   color: var(--text-soft);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
-}
-
-.ai-reason .result-actions .button-primary {
-  min-width: 150px;
 }
 
 /* ---------- Level dialog ---------- */
@@ -537,43 +214,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .speech,
-  .speech-text,
-  .speech-typing span,
-  .ai-reason,
   .dialog {
     animation: none;
   }
-
-  /* No shrinking: just gone. */
-  .speech-leaving {
-    animation: none;
-    opacity: 0;
-  }
-}
-
-/* ---------- The AI's reaction to the player's move ---------- */
-
-.speech-text p {
-  margin: 0;
-}
-
-/* The reaction comes first, a little bolder, in a warm colour for a tease
-   and a green one for praise; then the AI's reason for its own move. */
-.speech-lead {
-  margin-bottom: 4px !important;
-  font-weight: 700;
-}
-
-.speech-lead-tease {
-  color: #a0461c;
-}
-
-.speech-lead-praise {
-  color: #2f7a46;
-}
-
-/* Plain trash talk (no engine verdict behind it): dark, like the rest. */
-.speech-lead-banter {
-  color: #3a2a1c;
 }

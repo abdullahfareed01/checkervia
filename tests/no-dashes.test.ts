@@ -15,9 +15,14 @@ import { HowToPlay } from "../src/ui/HowToPlay";
 import { LevelDialog } from "../src/ui/LevelDialog";
 import { ResultDialog } from "../src/ui/ResultDialog";
 import { RulesDialog } from "../src/ui/RulesDialog";
-import { AiReasonDialog } from "../src/ui/AiReasonDialog";
+import { WhyContent } from "../src/ui/WhyContent";
 import { describeLookahead } from "../src/state/moveFacts";
 import { TermsDialog } from "../src/ui/TermsDialog";
+import { StatusBar } from "../src/ui/StatusBar";
+import { Learn } from "../src/ui/Learn";
+import { judgeMove } from "../src/ai/judge";
+import { getLegalMoves } from "../src/engine";
+import { scenario } from "../src/ui/devScenarios";
 
 const noop = () => {};
 const DASHES = /[-‐-―−]/;
@@ -53,13 +58,33 @@ const screens: [string, ReactElement][] = [
     }),
   ],
   [
-    "why this move",
-    createElement(AiReasonDialog, {
-      moveLabel: "E3 → F4",
-      moveNumber: 4,
-      reason: "Keeps the centre.",
-      facts: describeLookahead({ depth: 6, score: 100, best: 100, offered: 3, legal: 7, scoresShown: true }, 4),
-      onClose: noop,
+    "why content",
+    createElement(WhyContent, {
+      explanation: {
+        index: 4,
+        label: "E3 → F4",
+        reason: "Keeps the centre.",
+        reaction: null,
+        facts: describeLookahead({ depth: 6, score: 100, best: 100, offered: 3, legal: 7, scoresShown: true }, 4),
+      },
+    }),
+  ],
+  ["learn", createElement(Learn, { onMenu: noop })],
+  [
+    "AI failure details (texts from the code, and a model error with hyphens)",
+    createElement(StatusBar, {
+      currentPlayer: "white",
+      winner: null,
+      winReason: null,
+      captureMandatory: false,
+      choosingRoute: false,
+      aiPhase: "failed",
+      aiFailureReasons: [
+        "The engine's look ahead failed, so the AI's moves could not be listed.",
+        'No JSON object with a "move" field was found.',
+        "The model call failed: rate-limited \u2014 try again in 3-4 s",
+      ],
+      onRetryAi: noop,
     }),
   ],
   ["consent: age", createElement(ConsentDialog, { step: "age", onAnswer: noop })],
@@ -72,6 +97,14 @@ describe("no hyphens or dashes in text shown to players", () => {
     const texts = visibleText(element);
     expect(texts.length).toBeGreaterThan(2); // really read the screen
     expect(texts.filter((text) => DASHES.test(text))).toEqual([]);
+  });
+
+  it("the engine's verdict on a blunder (shown in Why?)", async () => {
+    const board = scenario("react")!.board!;
+    const blunder = getLegalMoves(board, "black").find((move) => move.to.row === 4 && move.to.col === 3)!;
+    const judgement = await judgeMove(board, blunder, "black");
+    expect(judgement?.detail).toContain("\u2192");
+    expect(judgement?.detail).not.toMatch(DASHES);
   });
 
   it("level names and descriptions, and the 18+ tag", () => {

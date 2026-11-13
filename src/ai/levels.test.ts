@@ -193,7 +193,7 @@ describe("chooseMove at each level", () => {
     const { callModel, prompts } = recordingModel('{"move": 3}');
     const result = await chooseMove(board, "black", callModel, 3, { level: 4, analyze: broken });
 
-    expect(result).toEqual({ ok: false, attempts: 0, reasons: ["The engine's look-ahead failed, so the AI's moves could not be listed."] });
+    expect(result).toEqual({ ok: false, attempts: 0, reasons: ["The engine's look ahead failed, so the AI's moves could not be listed."] });
     expect(prompts).toHaveLength(0);
   });
 

@@ -150,7 +150,7 @@ export async function chooseMove(
 
   const offer = await offerFor(board, player, moves, options);
   if (!offer) {
-    return { ok: false, reasons: ["The engine's look-ahead failed, so the AI's moves could not be listed."], attempts: 0 };
+    return { ok: false, reasons: ["The engine's look ahead failed, so the AI's moves could not be listed."], attempts: 0 };
   }
   const prompt = buildPrompt(board, player, offer.choices, offer.shown, options.opponent, moves.length);
   // A reaction only counts when there was a move to react to.

@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { App } from "../src/ui/App";
 import { Home } from "../src/ui/Home";
 import { LevelDialog } from "../src/ui/LevelDialog";
-import { SpeechBubble, bubbleTimeMs } from "../src/ui/SpeechBubble";
+import { ChatBubble } from "../src/ui/ChatBubble";
+import type { BubbleMessage } from "../src/ui/ChatBubble";
 
 const noop = () => {};
 
@@ -60,57 +61,48 @@ describe("the chosen level is visible in the game", () => {
   });
 });
 
-describe("SpeechBubble", () => {
-  const bubble = (text: string | null, options: { faded?: boolean; hidden?: boolean; why?: boolean } = {}) =>
-    renderToStaticMarkup(
-      createElement(SpeechBubble, {
-        message: { key: "k", text },
-        faded: options.faded ?? false,
-        hidden: options.hidden ?? false,
-        onWhy: options.why === false ? undefined : noop,
-      }),
-    );
+describe("ChatBubble (Change 3)", () => {
+  const message = (text: string | null, tone: BubbleMessage["tone"] = "banter", why = true): BubbleMessage => ({ key: "k", text, tone, why });
+  const bubble = (value: BubbleMessage | null, onWhy: (() => void) | undefined = noop) =>
+    renderToStaticMarkup(createElement(ChatBubble, { message: value, placement: "card", onWhy }));
 
-  it("shows the AI's words as plain text, with Why? and Close", () => {
-    const html = bubble("I take the centre.");
-    expect(html).toContain('class="speech"');
+  it("shows the AI's line as plain text with a collapsed Why?", () => {
+    const html = bubble(message("I take the centre."));
+    expect(html).toContain('class="speech speech-banter"');
     expect(html).toContain("I take the centre.");
-    expect(html).toContain("Why?");
-    expect(html).toContain('aria-label="Close"');
+    expect(html).toMatch(/aria-expanded="false" aria-controls="why-panel">Why\?</);
   });
 
-  it("can leave out Why? (for future lines that need no explanation)", () => {
-    expect(bubble("Nice move!", { why: false })).not.toContain("Why?");
+  it("leaves out Why? for lines that need no explanation", () => {
+    expect(bubble(message("Hello there.", "banter", false))).not.toContain("Why?");
   });
 
   it("shows typing dots while the AI is thinking, with no buttons", () => {
-    const html = bubble(null);
+    const html = bubble(message(null));
     expect(html).toContain("speech-typing");
-    expect(html).toContain("The AI is thinking");
     expect(html).not.toContain("Why?");
   });
 
-  it("fades (but stays) while the player holds a piece", () => {
-    const html = bubble("Hello", { faded: true });
-    expect(html).toContain("speech speech-faded");
-    expect(html).toContain("Hello");
-  });
-
-  it("can be hidden (for example under the result popup)", () => {
-    expect(bubble("Hello", { hidden: true })).toBe("");
-  });
-
-  it("shows nothing when there is no message", () => {
-    expect(renderToStaticMarkup(createElement(SpeechBubble, { message: null }))).toBe("");
+  it("keeps its slot when there is nothing to say, so the board never moves", () => {
+    const html = bubble(null);
+    expect(html).toContain('class="speech-slot speech-slot-card"');
+    expect(html).not.toContain('class="speech ');
   });
 
   it("never renders the model's text as HTML", () => {
-    expect(bubble("<b>bold</b>")).toContain("&lt;b&gt;bold&lt;/b&gt;");
+    expect(bubble(message("<b>bold</b> <script>x</script>"))).toContain("&lt;b&gt;bold&lt;/b&gt; &lt;script&gt;");
   });
 
-  it("stays at least 20 s if the player does not move, longer for long text, at most 40 s", () => {
-    expect(bubbleTimeMs("Ok.")).toBe(20_000);
-    expect(bubbleTimeMs("word ".repeat(20))).toBe(26_000);
-    expect(bubbleTimeMs("word ".repeat(100))).toBe(40_000);
+  it("colour and a label for a roast or respect; plain banter has neither", () => {
+    expect(bubble(message("Oops.", "roast"))).toMatch(/speech-roast[\s\S]*<span class="speech-label">Your slip<\/span>Oops\./);
+    expect(bubble(message("Fine.", "respect"))).toMatch(/speech-respect[\s\S]*>Respect</);
+    expect(bubble(message("Hi.", "banter"))).not.toContain("speech-label");
+  });
+
+  it("announces a new line once through a polite live region", () => {
+    const html = bubble(message("Your move."));
+    expect(html).toMatch(/<p class="sr-only" aria-live="polite">Your move\.<\/p>/);
+    expect(html.match(/aria-live/g)).toHaveLength(1);
+    expect(bubble(message(null))).toMatch(/<p class="sr-only" aria-live="polite"><\/p>/);
   });
 });

@@ -5,7 +5,7 @@ import type { Frame } from "../learn/frames";
 import { LESSONS } from "../learn/lessons";
 import type { HistoryTarget } from "../state/gameReducer";
 import { pieceCounts } from "../state/selectors";
-import { FactList } from "./AiReasonDialog";
+import { FactList } from "./WhyContent";
 import { Board } from "./Board";
 import type { BoardView } from "./Board";
 import { PlayerCard } from "./PlayerCard";

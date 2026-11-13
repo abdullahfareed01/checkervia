@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { withoutDashes } from "../ai/language";
 import type { Player } from "../engine";
 import type { AiPhase } from "../state/gameReducer";
 
@@ -55,7 +56,8 @@ function AiFailed({ reasons, onRetry }: { reasons: readonly string[]; onRetry: (
           <summary>Details</summary>
           <ul>
             {reasons.map((reason, index) => (
-              <li key={index}>{reason}</li>
+              // Reasons can quote the model or the network: no dashes shown.
+              <li key={index}>{withoutDashes(reason)}</li>
             ))}
           </ul>
         </details>

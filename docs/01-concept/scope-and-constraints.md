@@ -1,7 +1,7 @@
 # Scope and Constraints
 
 ## In scope
-- 8x8 board, 12 pieces each, hot-seat play
+- 8x8 board, 12 pieces each, hot seat play
 - Forced capture, multi jumps, Kings, win detection
 - AI mode via LLM with legal move list, validation, retries
 - Turn display, piece counts, New game

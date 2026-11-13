@@ -95,7 +95,8 @@ function describeOffer(level: AiLevel | null, { depth, offered, legal, scoresSho
   const name = level ? `${AI_LEVELS[level].name} level` : "This level";
   const turns = `${depth} ${depth === 1 ? "turn" : "turns"}`;
   if (!scoresShown) return { tone: "info", text: `${name}: a deliberate slip. The AI chose without the engine's scores this time.` };
-  const choice = offered < legal ? `its best ${offered} of ${legal} moves` : `all ${legal} legal moves`;
+  const choice =
+    legal === 1 ? "its only legal move" : offered < legal ? `its best ${offered} of ${legal} moves` : `all ${legal} legal moves`;
   return { tone: "info", text: `${name}: the engine looked ${turns} ahead and offered the AI ${choice}.` };
 }
 

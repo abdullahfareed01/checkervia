@@ -38,5 +38,5 @@
 
 ## Move representation
 - A move has `from` (start square), `to` (final square), `path` (every square landed on, in order) and `captured` (positions of jumped pieces, in order).
-- A simple step has a one-square path and no captures.
+- A simple step has a one square path and no captures.
 - One Move is produced per complete chain, never for a partial chain.

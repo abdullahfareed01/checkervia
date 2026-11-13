@@ -6,7 +6,7 @@
 3. **UI** (`src/ui`): React components. Render state, dispatch actions. No rule logic.
 4. **AI** (`src/ai`): builds the prompt from engine output, calls the proxy, validates the reply against the legal list, handles retries.
 
-Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui` trigger `ai`. The engine imports nothing from other layers.
+Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `state`/`ui` trigger `ai`. The engine imports nothing from other layers.
 
 ## Folder structure
 ```
@@ -122,14 +122,14 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 - `getWinner(board, playerToMove): Player | null`
 
 ## Data flow (human move)
-Click -> UI dispatch `select` / `move` -> reducer asks engine for legal moves -> engine validates and applies -> new state -> UI re-renders.
+Click → UI dispatch `select` / `move` → reducer asks engine for legal moves → engine validates and applies → new state → UI rerenders.
 
 ## Data flow (AI move)
 1. The human (Black) plays a move. The reducer sets `aiPhase = "thinking"` and a new `aiRequestId`. The board is locked.
 2. `useGame` sees the new request id and calls `startAiTurn` (`state/aiController.ts`).
 3. `chooseMove(board, "white", callModel)` builds the prompt and calls `callModel` (`ai/client.ts`).
 4. `callModel` POSTs `{ prompt, retryNote? }` to `/.netlify/functions/ai-move`.
-5. The function (`netlify/aiMoveHandler.ts`) validates and rate-limits the request, adds the retry note, and calls OpenRouter with the key from `OPENROUTER_API_KEY` and the model from `LLM_MODEL`. It returns `{ text }` only.
+5. The function (`netlify/aiMoveHandler.ts`) validates and rate limits the request, adds the retry note, and calls OpenRouter with the key from `OPENROUTER_API_KEY` and the model from `LLM_MODEL`. It returns `{ text }` only.
 6. `parseReply` checks the number against the legal list. Invalid answer or error: retry up to 3 times.
 7. Success: dispatch `aiMoved` with the request id. The reducer plays the move through the same `playMove` as a human move, only if it is in `legalMoves`.
 8. Failure: dispatch `aiFailed`. The UI shows the fallback message and a Retry button; the board stays locked; no move is played. Retry dispatches `aiRetry` (new request id) and runs the flow again.
@@ -146,6 +146,6 @@ Stale replies: New game, a mode change and Retry all change `aiRequestId`. The r
 
 ## Rules
 - Engine never mutates inputs.
-- Moves have a stable id (index in the legal list), so the AI picks an id, not free-form coordinates.
+- Moves have a stable id (index in the legal list), so the AI picks an id, not free form coordinates.
 - The proxy only forwards the prompt; validation is in the app code, not in the function or model.
 - The reducer never decides a move for the AI. It only plays one that is in `legalMoves`.

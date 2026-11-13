@@ -4,7 +4,7 @@
 | Area | Choice | Why |
 |---|---|---|
 | Language | TypeScript (strict) | Types model board and moves; catches rule bugs early |
-| UI | React | Component per board part; state-driven rendering |
+| UI | React | Component per board part; state driven rendering |
 | Build | Vite | Fast dev server, simple config |
 | Tests | Vitest | Same config as Vite, fast, TS native |
 | Hosting | Netlify | Static hosting plus serverless functions in one place |

@@ -118,12 +118,12 @@ h1 {
     /* Height left after the two cards, the gaps and the padding; width left
        after the sidebar. The smaller wins. */
     --board-size: min(
-      calc(100vh - 2 * var(--card-h) - 2 * var(--gap) - 40px),
+      calc(100vh - 2 * var(--card-h) - 2 * var(--gap) - 40px - var(--slot-space, 0px)),
       calc(100vw - var(--sidebar-w) - 32px - 48px),
       800px
     );
     --board-size: min(
-      calc(100dvh - 2 * var(--card-h) - 2 * var(--gap) - 40px),
+      calc(100dvh - 2 * var(--card-h) - 2 * var(--gap) - 40px - var(--slot-space, 0px)),
       calc(100vw - var(--sidebar-w) - 32px - 48px),
       800px
     );

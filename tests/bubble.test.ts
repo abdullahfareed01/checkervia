@@ -1,0 +1,94 @@
+// The chat bubble's life (Change 3): typing dots while the AI thinks, the
+// reaction after its move, cleared when the player picks up a piece for
+// their next move, on New game and on a mode change; nothing while reviewing
+// or in two player games. Plus the 140 character cap on AI lines.
+import { describe, expect, it } from "vitest";
+import { MAX_LINE_LENGTH, capLength, checkReaction, tidyLine } from "../src/ai/language";
+import { createGameState, gameReducer } from "../src/state/gameReducer";
+import type { GameAction, GameState } from "../src/state/gameReducer";
+import { reactionBubble } from "../src/ui/bubble";
+
+const click = (row: number, col: number): GameAction => ({ type: "click", position: { row, col } });
+
+// Black plays C3 → D4, the AI answers with its first legal move and a line.
+function afterAi(reaction?: string): GameState {
+  const thinking = [click(5, 2), click(4, 3)].reduce(gameReducer, createGameState({ mode: "vs-ai" }));
+  return gameReducer(thinking, {
+    type: "aiMoved",
+    requestId: thinking.aiRequestId,
+    move: thinking.legalMoves[0]!,
+    ...(reaction ? { reaction } : {}),
+  });
+}
+
+describe("reactionBubble", () => {
+  it("shows typing dots while the AI thinks", () => {
+    const thinking = [click(5, 2), click(4, 3)].reduce(gameReducer, createGameState({ mode: "vs-ai" }));
+    expect(reactionBubble(thinking, 0)).toMatchObject({ text: null, why: false });
+  });
+
+  it("then the AI's reaction, with Why?", () => {
+    expect(reactionBubble(afterAi("Bold start."), 0)).toMatchObject({ text: "Bold start.", tone: "banter", why: true });
+  });
+
+  it("without a reaction, the compact line of what it played", () => {
+    expect(reactionBubble(afterAi(), 0)?.text).toMatch(/^I played [A-H][1-8] → [A-H][1-8]\.$/);
+  });
+
+  it("clears when the player picks up a piece for the next move", () => {
+    const state = afterAi("Bold start.");
+    expect(reactionBubble(state, state.history.length)).toBeNull();
+  });
+
+  it("is cleared by New game and by a mode change", () => {
+    const state = afterAi("Bold start.");
+    expect(reactionBubble(gameReducer(state, { type: "newGame" }), 0)).toBeNull();
+    expect(reactionBubble(gameReducer(state, { type: "newGame", mode: "vs-ai", level: 4 }), 0)).toBeNull();
+    expect(reactionBubble(gameReducer(state, { type: "setMode", mode: "two-player" }), 0)).toBeNull();
+  });
+
+  it("shows nothing while reviewing an older position", () => {
+    expect(reactionBubble(gameReducer(afterAi("x"), { type: "history", to: "first" }), 0)).toBeNull();
+  });
+
+  it("shows nothing in two player games", () => {
+    const two = [click(5, 2), click(4, 3), click(2, 1), click(3, 0)].reduce(gameReducer, createGameState());
+    expect(reactionBubble(two, 0)).toBeNull();
+  });
+});
+
+describe("the 140 character cap on AI lines", () => {
+  const long = "You walked right into that one and now I am going to take every single piece you have left on this board, one by one, slowly, and enjoy it a lot.";
+
+  it("leaves short lines alone", () => {
+    expect(capLength("Your move.")).toBe("Your move.");
+  });
+
+  it("cuts long lines at a word boundary, never in the middle of a word", () => {
+    const capped = capLength(long);
+    expect(long.length).toBeGreaterThan(MAX_LINE_LENGTH);
+    expect(capped.length).toBeLessThanOrEqual(MAX_LINE_LENGTH);
+    expect(capped.endsWith("…")).toBe(true);
+    const kept = capped.slice(0, -1);
+    expect(long.startsWith(kept)).toBe(true);
+    expect(long[kept.length]).toMatch(/[\s,]/); // the next character was not part of a word
+  });
+
+  it("drops a comma left at the cut", () => {
+    expect(capLength("one two, three four", 10)).toBe("one two…");
+  });
+
+  it("is applied after the hyphen sanitizer, and to every checked reaction", () => {
+    const dashed = "brain-fart ".repeat(20).trim();
+    expect(tidyLine(dashed)).not.toContain("-");
+    expect(tidyLine(dashed).length).toBeLessThanOrEqual(MAX_LINE_LENGTH);
+    expect(checkReaction(long, 2, null).length).toBeLessThanOrEqual(MAX_LINE_LENGTH);
+  });
+
+  it("is asked for in the prompt too", async () => {
+    const { buildPrompt } = await import("../src/ai/prompt");
+    const { getLegalMoves, initialBoard } = await import("../src/engine");
+    const prompt = buildPrompt(initialBoard(), "black", getLegalMoves(initialBoard(), "black"), undefined, { label: "x", judgement: null });
+    expect(prompt).toContain("at most 140 characters");
+  });
+});

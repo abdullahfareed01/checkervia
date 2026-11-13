@@ -114,3 +114,10 @@ describe("the popup says what the AI got at its level", () => {
     );
   });
 });
+
+describe("one legal move reads naturally", () => {
+  it("says its only legal move, not all 1 legal moves", () => {
+    const only = describeLookahead({ depth: 2, score: 100, best: 100, offered: 1, legal: 1, scoresShown: true }, 2);
+    expect(only[0]!.text).toBe("Medium level: the engine looked 2 turns ahead and offered the AI its only legal move.");
+  });
+});

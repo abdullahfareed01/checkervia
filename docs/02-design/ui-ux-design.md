@@ -9,16 +9,16 @@
 
 ## Start and menu
 - Splash: logo (a white and a crowned black piece), "Draft" and a step list. "Loading the game…" shows from the HTML while the JavaScript downloads. Then "Game loaded" gets a tick and "Checking the AI…" spins until the AI health check answers (at most 4 s). After that the splash fades out. There is no fixed timer.
-- Home menu: logo, title, tagline, and three cards. Play vs AI (cyan robot) has a badge: "AI online" (green), "Checking the AI…", "AI not set up" or "AI unreachable" (orange), with a one-line explanation and "Check again". 2 Players (person). How to play (crown). Learn will be added in Phase 6.
+- Home menu: logo, title, tagline, and three cards. Play vs AI (cyan robot) has a badge: "AI online" (green), "Checking the AI…", "AI not set up" or "AI unreachable" (orange), with a one line explanation and "Check again". 2 Players (person). How to play (crown). Learn will be added in Phase 6.
 - How to play: the rules in short sections (goal, moving, capturing, Kings, controls), "← Menu", and buttons to start either mode.
 - Learn (home menu card, and "Watch it played" on the rules page): the game layout with two robot cards, Gold Bot (Black, gold robot) and Cyan Bot (White). The board is view only and shows the same route, animation and red "must capture" glow as a real game. The sidebar shows "Lesson x of 4", "Intro" or "Move x of y", the lesson title, a caption for every move, and "Checked by the game engine" facts. Under it: Previous, Play/Pause ("Watch again" at the end) and Next, plus the list of lessons to jump to. Autoplay waits for the animation plus reading time (3.5 to 10 s); any control pauses it. Keys: Left, Right, Home, End.
-- AI level (D44): Easy, Medium (default), Hard, Strongest, each with a signal-bar meter and one exact line ("Looks 6 turns ahead (3 moves each) and picks from its best 3 moves."). Choosing Play vs AI opens the level dialog (last choice preselected). The game's Menu is a sheet: Mode (Two Players / Play vs AI) and AI level at the top, then New game, How to play, Main menu; a panel under the Menu button on wide screens, a bottom sheet with a dimmed page on phones. A level is fixed for a game: picking another starts a new game, asking first during a game. The AI card shows the level as a chip next to BOT; "Why this move?" says what the AI was offered at its level.
+- AI level (D44): Easy, Medium (default), Hard, Strongest, each with a signal bar meter and one exact line ("Looks 6 turns ahead (3 moves each) and picks from its best 3 moves."). Choosing Play vs AI opens the level dialog (last choice preselected). The game's Menu is a sheet: Mode (Two Players / Play vs AI) and AI level at the top, then New game, How to play, Main menu; a panel under the Menu button on wide screens, a bottom sheet with a dimmed page on phones. A level is fixed for a game: picking another starts a new game, asking first during a game. The AI card shows the level as a chip next to BOT; "Why this move?" says what the AI was offered at its level.
 - AI reactions (D45): after every player move the AI may say one line: a roast or tease after an engine judged blunder (warm red), respect after a great move (green), plain banter otherwise (dark bold). Clean at Easy, Medium and Hard; trash talk at Strongest. Lines that break the level's rules are replaced by a clean line.
 - 18+ consent (D45): choosing Strongest asks "Are you 18 or older?" (Yes, I am 18 or older / No), then the strong language notice (I understand and accept / Cancel) with a link to the Terms. No or Cancel: "No problem. Strongest stays locked and nothing has changed." Focus starts on No or Cancel. Asked once per browser and notice version. During a Strongest game the AI card carries an "18+ · Strong language" label on its top edge.
 - Terms and notices (D45): a sheet with the draft text, from the Menu, the home screen ("Terms and notices" link under the cards) and the Strongest notice.
 - Text rule (D45): no hyphens or dashes in anything players see, including the AI's lines. Checked by `tests/no-dashes.test.ts`.
-- AI speech bubble: a white rounded bubble with a curved tail under the AI's card, pointing at the robot, with a small "AI" label. Typing dots while it thinks; then its reason (large, dark text) with "Why?" and a close button. It stays until you play your move, or leaves after 20 to 40 s if you wait. While you hold a piece it turns see-through and clicks go through it to the board. It pops in from its tail and shrinks away when it leaves.
-- Look: calm and flat (D37), with motion but no glow (D40): the route draws itself, picked-up pieces lift, hints pop in, the turn bar slides in.
+- AI speech bubble: a white rounded bubble with a curved tail under the AI's card, pointing at the robot, with a small "AI" label. Typing dots while it thinks; then its reason (large, dark text) with "Why?" and a close button. It stays until you play your move, or leaves after 20 to 40 s if you wait. While you hold a piece it turns see through and clicks go through it to the board. It pops in from its tail and shrinks away when it leaves.
+- Look: calm and flat (D37), with motion but no glow (D40): the route draws itself, picked up pieces lift, hints pop in, the turn bar slides in.
 - In a game, a Menu button sits left of the title. It asks first if a game is in progress.
 
 ## Layout
@@ -30,7 +30,7 @@
 ## AI reason
 - After each AI move a small cyan card sits in the sidebar under the status: a robot icon, "AI played 3,2 → 4,1" and the start of the model's reason in quotes (or "No reason given."). A "Why this move?" button opens the popup.
 - The popup (cyan robot theme, like the AI's result popup) has the move number and move, then two boxes. "In its own words": the model's sentence, with a note that the game does not check it. "Checked by the game engine": short facts with a green tick (good for the AI), a red "!" (a risk) or a dot (neutral), e.g. "It captured 1 piece. Capturing was mandatory.", "It chose 1 of 7 legal moves.", "The moved piece can be captured next turn." Close, Esc or a click outside closes it.
-- It follows the history: when an older AI move is on screen, the note explains that move. After a human move, and in two-player mode, there is no note.
+- It follows the history: when an older AI move is on screen, the note explains that move. After a human move, and in two player mode, there is no note.
 
 ## History
 - In the sidebar: four arrows (first, back, forward, latest) and "Move x of y". Like chess.com, an arrow that cannot be used stays in place but looks switched off: forward and latest at the live position, first and back at the start.
@@ -49,13 +49,13 @@
 - **Capture destination:** distinct marker (e.g. red ring).
 - **Mandatory capture:** pieces that must capture glow red; other pieces cannot be selected.
 - **Route choice:** when two routes end on the same square, the squares to pick from get a dashed blue ring and the status bar explains what to click.
-- **Visual style:** neon light, not solid borders. Highlights are soft glows (selected square, last-move squares, capture rings, the card of the side to move).
-- **Last move:** a neon trail through every square the piece visited: a soft halo, a thin bright core with an arrow, and white dashes flowing towards the destination. A breathing ring marks the start, numbered hollow rings mark the landings of a multi jump, and each captured piece gets a thin neon-red cross with a burst. Gold for Black's moves, cyan for White's.
+- **Visual style:** neon light, not solid borders. Highlights are soft glows (selected square, last move squares, capture rings, the card of the side to move).
+- **Last move:** a neon trail through every square the piece visited: a soft halo, a thin bright core with an arrow, and white dashes flowing towards the destination. A breathing ring marks the start, numbered hollow rings mark the landings of a multi jump, and each captured piece gets a thin neon red cross with a burst. Gold for Black's moves, cyan for White's.
 - **Move animation:** the piece hops along each landing square, glowing in its side's colour and rising over each captured piece, which fades as it is jumped (about 0.2 s per step, 0.3 s per jump). Users who prefer reduced motion get the trail without movement, flow or pulsing.
 - **Locked:** reduced opacity or cursor change during AI turn and after game over.
 
 ## Feedback
-- Illegal click: no-op, optionally a brief message.
+- Illegal click: no op, optionally a brief message.
 - Forced capture: status text "Capture is mandatory".
 - AI thinking: spinner and text.
 - AI failure: clear message with a Retry button.

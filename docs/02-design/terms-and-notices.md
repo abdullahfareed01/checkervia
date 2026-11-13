@@ -4,7 +4,7 @@
 >
 > Notice version for the Strongest consent: 1 (`NOTICE_VERSION` in `src/ui/consent.ts`). Changing the Strongest notice text means bumping it, so everyone is asked again.
 >
-> Some points describe the leaderboard (phases 3 and 4), which is not built yet. Re-read this text when it is.
+> Some points describe the leaderboard (phases 3 and 4), which is not built yet. Reread this text when it is.
 
 ## Entertainment only
 - Draft is a free checkers game made for fun. Nothing in it is advice of any kind.

@@ -99,6 +99,27 @@ describe("no hyphens or dashes in what players see", () => {
     expect(withoutDashes("A well‐timed, half‒baked plan.")).toBe("A well timed, half baked plan.");
   });
 
+  it.each([
+    ["a dash at the start of a line", "- Wow, really?", "Wow, really?"],
+    ["a dash at the start of the second line", "Line one\n— line two", "Line one\nline two"],
+    ["a word that starts with a hyphen", "That was so -ish.", "That was so ish."],
+    ["a word that ends with a hyphen", "Your pre- and post game plans.", "Your pre and post game plans."],
+    ["several hyphens in a row", "Wait---what?", "Wait, what?"],
+    ["a double hyphen as a dash", "Great move -- really.", "Great move, really."],
+    ["a dash before a new sentence", "Watch this — Boom!", "Watch this. Boom!"],
+    ["a dash at the end", "I see your plan —", "I see your plan"],
+    ["a number range with a hyphen", "Up 3-4 pieces.", "Up 3 to 4 pieces."],
+    ["a number range with an en dash", "Moves 10–12 were sharp.", "Moves 10 to 12 were sharp."],
+    ["a negative score", "A score of -0.6 for you.", "A score of minus 0.6 for you."],
+    ["a move arrow", "E3 -> D4 was a gift.", "E3 → D4 was a gift."],
+    ["the figure dash and minus sign", "Up 1‒2 now − enjoy.", "Up 1 to 2 now, enjoy."],
+    ["a soft hyphen", "check­mate", "check mate"],
+    ["dashes next to punctuation", "Oops! — there it goes.", "Oops! there it goes."],
+  ])("handles %s", (_, input, output) => {
+    expect(withoutDashes(input)).toBe(output);
+    expect(withoutDashes(input)).not.toMatch(/[-‐-―−­]/);
+  });
+
   it("is applied to reactions and reasons", () => {
     expect(checkReaction("Self-destruct mode on?", 2, null)).toBe("Self destruct mode on?");
     expect(checkReason("Keeps the back-row safe.")).toBe("Keeps the back row safe.");

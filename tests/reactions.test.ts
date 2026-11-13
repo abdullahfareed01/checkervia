@@ -1,8 +1,6 @@
 // AI reactions end to end: the engine judges the player's move, the prompt
 // asks for a line only when it is remarkable, and the reaction travels into
 // the game state, the speech bubble and the "Why this move?" facts.
-import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { boardFrom, getLegalMoves, initialBoard } from "../src/engine";
 import type { Board } from "../src/engine";
@@ -15,7 +13,7 @@ import { startAiTurn } from "../src/state/aiController";
 import { createGameState, gameReducer } from "../src/state/gameReducer";
 import type { GameAction, GameState } from "../src/state/gameReducer";
 import { displayedPosition } from "../src/state/history";
-import { SpeechBubble } from "../src/ui/SpeechBubble";
+import { reactionBubble } from "../src/ui/bubble";
 import { explainShown } from "../src/ui/useAiExplanation";
 
 const EMPTY = "........";
@@ -55,7 +53,7 @@ describe("prompt v5: the reaction", () => {
     expect(prompt).toContain("No swearing, no insults, no name calling.");
     expect(prompt).not.toContain("trash-talking");
     expect(prompt).toContain("Keep it about the game: no slurs, no hate");
-    expect(prompt).toContain("Do not use hyphens or dashes.");
+    expect(prompt).toContain("Do not use hyphens, em dashes or en dashes: write compound words as separate words or as one word");
   });
 
   it("Strongest: asks for trash talk in a cocky rival's voice, swearing only after a blunder", () => {
@@ -178,25 +176,15 @@ describe("a blunder against the AI, end to end", () => {
   });
 });
 
-describe("the speech bubble shows the reaction first", () => {
-  const render = (leadTone: "tease" | "praise") =>
-    renderToStaticMarkup(
-      createElement(SpeechBubble, { message: { key: "k", text: "I take it.", lead: "Oops!", leadTone } }),
-    );
+describe("the chat bubble shows the reaction, in the colour of the engine's verdict", () => {
+  it("roast after a blunder, banter after an ordinary move", async () => {
+    const blunder = [click(5, 4), click(4, 3)].reduce(gameReducer, createGameState({ mode: "vs-ai", board: trap }));
+    const { after } = await aiTurn(blunder, '{"move": 1, "reason": "x", "reaction": "Thanks for the gift."}');
+    expect(reactionBubble(after, 0)).toEqual({ key: `move-${after.history.length - 1}`, text: "Thanks for the gift.", tone: "roast", why: true });
 
-  it("as a separate, coloured first line, then the AI's reason", () => {
-    const html = render("tease");
-    expect(html).toContain('<p class="speech-lead speech-lead-tease">Oops!</p>');
-    expect(html.indexOf("Oops!")).toBeLessThan(html.indexOf("I take it."));
-    expect(render("praise")).toContain("speech-lead-praise");
-    expect(render("banter" as "tease")).toContain("speech-lead-banter");
-  });
-
-  it("never renders it as HTML", () => {
-    const html = renderToStaticMarkup(
-      createElement(SpeechBubble, { message: { key: "k", text: "x", lead: "<b>hi</b>" } }),
-    );
-    expect(html).toContain("&lt;b&gt;hi&lt;/b&gt;");
+    const calm = [click(5, 4), click(4, 5)].reduce(gameReducer, createGameState({ mode: "vs-ai", board: trap }));
+    const ordinary = await aiTurn(calm, '{"move": 1, "reason": "x", "reaction": "Bold."}');
+    expect(reactionBubble(ordinary.after, 0)?.tone).toBe("banter");
   });
 });
 
