@@ -5,7 +5,7 @@ import { useGame } from "../state/useGame";
 import { isCaptureMandatory, isGameInProgress, pieceCounts } from "../state/selectors";
 import { canGoBack, canGoForward, displayedPosition, moveList } from "../state/history";
 import type { MoveListItem } from "../state/history";
-import { gameReducer } from "../state/gameReducer";
+import { AI_PLAYER, gameReducer } from "../state/gameReducer";
 import type { GameMode, GameOptions } from "../state/gameReducer";
 import type { Position } from "../engine";
 import { AiMoveNote } from "./AiMoveNote";
@@ -35,6 +35,9 @@ import { useAiExplanation } from "./useAiExplanation";
 import { useGameDuration, useResultPopup } from "./useResultPopup";
 import { useAnimationKey, useHistoryKeys } from "./useHistoryView";
 import { clickFeedback, playFeedback } from "./feedback";
+import type { MoveBeat } from "./feedback";
+import { shakeAt } from "./animation/shake";
+import { settingsStore } from "./settings";
 import { useGameFeedback } from "./useFeedback";
 
 interface AppProps {
@@ -55,11 +58,30 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // when the piece lands (useGameFeedback).
   const current = useRef(state);
   current.current = state;
+  // While the move animation's hops run, the board waits (never longer).
+  const [moving, setMoving] = useState(false);
+  const movingNow = useRef(false);
+  const onMoveLock = useCallback((locked: boolean) => {
+    movingNow.current = locked;
+    setMoving(locked);
+  }, []);
+  // Each landing of a move: its sound and vibration (only for the game as
+  // it is now, not while stepping through the history).
+  const onMoveBeat = useCallback((beat: MoveBeat) => {
+    if (current.current.viewIndex === null) playFeedback(beat.event, beat.options);
+  }, []);
   const click = useCallback(
     (position: Position) => {
+      if (movingNow.current) return;
       const before = current.current;
       const event = clickFeedback(before, gameReducer(before, { type: "click", position }), position);
       if (event) playFeedback(event, { column: position.col });
+      if (event === "invalid" || event === "captureRequired") {
+        // Shake the tapped piece, or the picked up one for an empty square.
+        const level = settingsStore().get().animation.level;
+        const onPiece = before.board[position.row]?.[position.col];
+        shakeAt(onPiece || !before.selected ? position : before.selected, level);
+      }
       game.click(position);
     },
     [game.click],
@@ -172,7 +194,12 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open;
   const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
   const personality = usePersonality(state, playerTurn && !startedMove && !covered);
-  const bubble = reactionBubble(state, dismissedAt, personality);
+  // The AI's line appears after its piece has landed: until then, the typing
+  // dots stay (the same bubble, so nothing flickers).
+  const aiLanding = moving && state.history[state.history.length - 1]?.player === AI_PLAYER && state.mode === "vs-ai";
+  const bubble = aiLanding
+    ? { key: `thinking-${state.aiRequestId}`, text: null, tone: "banter" as const, why: false }
+    : reactionBubble(state, dismissedAt, personality);
   // The action bar's fourth button: Resign during a game, Result after it.
   const endAction: EndAction =
     state.winner === null
@@ -202,7 +229,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
       <section className="game" aria-label="Game">
         {cardFor(state, shown.board, "white", "top", openLanguage)}
         {!landscapePhone && chat}
-        <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} />
+        <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} onMoveBeat={onMoveBeat} onMoveLock={onMoveLock} />
         {cardFor(state, shown.board, "black", "bottom")}
       </section>
 

@@ -11,6 +11,7 @@ import "./ui/sheet.css";
 import "./ui/bubble.css";
 import "./ui/layout.css";
 import "./ui/result.css";
+import "./ui/motion.css";
 
 async function start() {
   let initial: GameOptions | undefined;
@@ -18,7 +19,10 @@ async function start() {
   // Development only: ?scenario=win|lose|duel starts one move from the end.
   // In a production build import.meta.env.DEV is false, so this block and the
   // scenarios file are left out entirely.
-  if (import.meta.env.DEV) {
+  // Also in a "perf" build (vite build --mode perf): production React with
+  // the scenarios, for measuring frame times. A normal production build
+  // drops all of this (MODE is then "production").
+  if (import.meta.env.DEV || import.meta.env.MODE === "perf") {
     const params = new URLSearchParams(window.location.search);
     const name = params.get("scenario");
     if (name) initial = (await import("./ui/devScenarios")).scenario(name);

@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 // nothing.)
 const css = readFileSync(new URL("../src/ui/styles.css", import.meta.url), "utf8");
 // The smaller stylesheets must not bring the bare rule back either.
-const otherCss = ["aiReason.css", "menu.css", "learn.css", "chrome.css", "sheet.css", "bubble.css", "layout.css", "result.css"].map((name) =>
+const otherCss = ["aiReason.css", "menu.css", "learn.css", "chrome.css", "sheet.css", "bubble.css", "layout.css", "result.css", "motion.css"].map((name) =>
   readFileSync(new URL(`../src/ui/${name}`, import.meta.url), "utf8"),
 );
 

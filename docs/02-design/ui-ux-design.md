@@ -84,3 +84,7 @@
 - Restrained and tactile: short wooden clacks for moves, a heavier clack and a low thud for captures, rising clacks for each hop of a multi jump, a soft chime for a King, a dull thud for a tap that does nothing (softer when a capture is mandatory), a soft pop for the AI's lines, a settle of pieces for a new game, a warm rising two note motif for a win and a soft falling one for a loss, very soft clicks for buttons and toggles, an air whoosh for sheets. Nothing for turn changes or the AI thinking.
 - Vibrations match: 8 ms to pick up, 12 ms to land, 25 ms to capture, a pattern for a King, a win and an error; none on phones that cannot vibrate (iPhone).
 - Every sound is synthesized; tune them in `src/ui/sound/soundConfig.ts` and listen at `?sounds` in development.
+
+## Move animation (D53)
+- Levels: Off (instant), Reduced (instant, the moved piece fades in over 100 ms; the default when the system asks for less motion), Standard, Cinematic (adds a faint ring where a piece was captured and shows legal destinations nearest first). Speed 0.75 to 1.5.
+- A move slides along its path with a gentle lift in the middle of each hop and lands with a tiny settle, in time with the clack and the vibration. A jumped piece shrinks and fades as the capturing piece lands; a multi jump goes hop by hop. A new King gets a short crown drop and a soft light sweep. The last move's tint fades in after the landing; the AI's line appears after its piece has landed. A tap that does nothing gives a small shake.

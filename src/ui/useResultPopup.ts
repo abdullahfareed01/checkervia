@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Move, Player } from "../engine";
-import { moveDuration } from "./moveGeometry";
-import { prefersReducedMotion } from "./MovingPiece";
+import { moveAnimationTime } from "./animation/plan";
+import { settingsStore } from "./settings";
 
 // Short pause after the final move's animation, so the last capture is seen
 // before the popup covers the board.
@@ -37,7 +37,7 @@ export function useResultPopup(winner: Player | null, lastMove: Move | null) {
       setOpen(false);
       return undefined;
     }
-    const animation = lastMove && !prefersReducedMotion() ? moveDuration(lastMove) : 0;
+    const animation = lastMove ? moveAnimationTime(lastMove, settingsStore().get().animation) : 0;
     const timer = setTimeout(() => setOpen(true), animation + PAUSE_AFTER_LAST_MOVE_MS);
     return () => clearTimeout(timer);
   }, [winner, lastMove]);

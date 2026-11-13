@@ -1,10 +1,12 @@
 import { memo } from "react";
+import type React from "react";
 import type { Piece as PieceType, Position } from "../engine";
 import { FILE_LABELS, RANK_LABELS } from "./notation";
 import { Piece } from "./Piece";
 
 // Everything the board wants a square to show. Computed by the state layer.
 export interface SquareMarks {
+  order: number; // Cinematic: when a legal destination appears (by distance)
   selected: boolean;
   selectable: boolean;
   mustCapture: boolean;
@@ -91,6 +93,7 @@ function SquareView({ row, col, dark, piece, marks, locked, hidePiece = false, o
       aria-label={describe(row, col, piece, marks)}
       aria-pressed={marks.selected}
       disabled={locked}
+      style={marks.destination ? ({ "--order": marks.order } as React.CSSProperties) : undefined}
       onClick={() => onClick({ row, col })}
     >
       <Coords row={row} col={col} />
@@ -102,6 +105,7 @@ function SquareView({ row, col, dark, piece, marks, locked, hidePiece = false, o
 // True when two sets of marks look the same.
 export function sameMarks(a: SquareMarks, b: SquareMarks): boolean {
   return (
+    a.order === b.order &&
     a.selected === b.selected &&
     a.selectable === b.selectable &&
     a.mustCapture === b.mustCapture &&

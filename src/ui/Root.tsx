@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AiLevel, AiStatus } from "../ai";
 import type { GameMode, GameOptions } from "../state/gameReducer";
 import { App } from "./App";
@@ -12,6 +12,7 @@ import { TermsDialog } from "./TermsDialog";
 import { useAiLevel } from "./useAiLevel";
 import { useAiStatus, useSplash } from "./useAiStatus";
 import { useInterfaceFeedback } from "./useFeedback";
+import { useSettings } from "./settings";
 
 // Which screen is showing. A game gets a fresh `id` each time one is started
 // from the menu, so the board always starts clean.
@@ -33,6 +34,13 @@ interface RootProps {
 export function Root({ initial, checkAi }: RootProps) {
   const ai = useAiStatus(checkAi);
   useInterfaceFeedback(); // audio unlock on the first tap, button clicks
+  // The animation level and speed, for the board's CSS (motion.css).
+  const animation = useSettings().animation;
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.anim = animation.level;
+    root.style.setProperty("--anim-speed", String(animation.speed));
+  }, [animation.level, animation.speed]);
   const splash = useSplash(ai.loaded);
   const [aiLevel, setAiLevel] = useAiLevel();
   const [screen, setScreen] = useState<Screen>(() =>

@@ -849,26 +849,85 @@ button.square:focus-visible {
   justify-content: center;
 }
 
+/* The moving piece (D53): its box travels square to square; inside it the
+   shadow stays on the board and the piece rises in the middle of each hop.
+   Animated by animation/player.ts with transforms and opacity only. */
 .ghost-mover {
   z-index: 2;
   will-change: transform;
 }
 
-/* The moving piece is lifted: a deeper shadow while it travels. */
-.ghost-mover .piece {
-  box-shadow: 0 10px 14px rgba(0, 0, 0, 0.5);
+.ghost-shadow {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 5%;
+  height: 24%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+  opacity: 0.55;
+  will-change: transform, opacity;
 }
 
-/* A captured piece shows until the mover passes over it, then fades. */
+.ghost-lift,
+.ghost-piece,
 .ghost-captured {
-  animation: capture-out 220ms ease-in forwards;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes capture-out {
-  to {
-    opacity: 0;
-    transform: scale(0.4);
-  }
+.ghost-lift,
+.ghost-captured {
+  will-change: transform, opacity;
+}
+
+/* Lifted: a softer, wider shadow of its own. */
+.ghost-piece .piece {
+  box-shadow:
+    0 9px 14px rgba(0, 0, 0, 0.42),
+    inset 0 2px 3px rgba(255, 255, 255, 0.35);
+}
+
+/* Cinematic: a faint ring where a captured piece was. No particles. */
+.ghost-dust {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 222, 190, 0.7);
+  opacity: 0;
+}
+
+/* A new King: the crown drops in and a soft light sweeps across the piece. */
+.ghost-crown {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--board-size) / 15);
+  line-height: 1;
+  color: #e3b341;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+}
+
+.ghost-sheen-clip {
+  position: absolute;
+  z-index: 1;
+  width: 80%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.ghost-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, rgba(255, 246, 214, 0) 30%, rgba(255, 246, 214, 0.8) 50%, rgba(255, 246, 214, 0) 70%);
+  opacity: 0;
 }
 
 /* ---------- Pieces ---------- */
@@ -939,8 +998,7 @@ button.square:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .spinner,
   .robot-thinking .robot-light,
-  .robot-thinking .robot-eyes,
-  .ghost-captured {
+  .robot-thinking .robot-eyes {
     animation: none;
   }
 }
@@ -1139,15 +1197,18 @@ button.square:focus-visible {
 
 /* ---------- Motion (calm: movement, no glow) ---------- */
 
-/* A picked-up piece lifts a little. */
+/* A picked up piece lifts a little (scale 1.06) and its shadow grows, over
+   120 ms at the chosen animation speed (D53). */
 .piece {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform calc(120ms / var(--anim-speed, 1)) ease-out,
+    box-shadow calc(120ms / var(--anim-speed, 1)) ease-out;
 }
 
 .square-selected .piece {
   transform: translateY(-3px) scale(1.06);
   box-shadow:
-    0 8px 10px rgba(0, 0, 0, 0.45),
+    0 9px 13px rgba(0, 0, 0, 0.4),
     inset 0 2px 3px rgba(255, 255, 255, 0.35);
 }
 

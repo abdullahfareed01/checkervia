@@ -153,6 +153,7 @@
 .ai-badge-ok {
   color: #8fd19e;
   background: rgba(143, 209, 158, 0.12);
+  margin: 0 0 0 0;
 }
 
 .ai-badge-wait {
