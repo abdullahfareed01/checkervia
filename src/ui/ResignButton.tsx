@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { FlagIcon } from "./icons";
 
 interface ResignButtonProps {
   question: string; // e.g. "Resign this game? The AI wins."
@@ -7,14 +8,16 @@ interface ResignButtonProps {
   onResign: () => void;
 }
 
-// Resign (Change 4): asks in a confirmation sheet first. While the resign
-// hint is up, the button gets a subtle highlight (a gold outline, no glow).
+// Resign (Change 4), on the action bar: asks in a confirmation sheet first.
+// While the resign hint is up, the button gets a subtle highlight (a gold
+// outline, no glow).
 export function ResignButton({ question, highlight, onResign }: ResignButtonProps) {
   const [asking, setAsking] = useState(false);
   return (
     <>
-      <button type="button" className={`button${highlight ? " button-resign-hint" : ""}`} onClick={() => setAsking(true)}>
-        Resign
+      <button type="button" className={`bar-button${highlight ? " button-resign-hint" : ""}`} onClick={() => setAsking(true)}>
+        <FlagIcon />
+        <span className="bar-label">Resign</span>
       </button>
       {asking && (
         <ConfirmDialog

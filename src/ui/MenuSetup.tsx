@@ -2,7 +2,7 @@ import { AI_LEVELS } from "../ai";
 import type { AiLevel } from "../ai";
 import type { GameMode } from "../state/gameReducer";
 import { LevelOptions } from "./LevelOptions";
-import type { MenuRun } from "./TopBar";
+import type { MenuRun } from "./GameMenu";
 
 interface MenuSetupProps {
   mode: GameMode;

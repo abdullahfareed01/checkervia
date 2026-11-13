@@ -71,10 +71,13 @@ export function cardFor(
       player={player}
       name={nameOf(state.mode, player)}
       robot={isAi}
-      level={isAi ? AI_LEVELS[state.aiLevel].name : undefined}
-      edge={
+      chips={
         isAi
-          ? { voice: AI_LEVELS[state.aiLevel].voice, onAdultInfo: strongLanguage(state.aiLevel) ? onAdultInfo : undefined }
+          ? {
+              level: AI_LEVELS[state.aiLevel].name,
+              voice: AI_LEVELS[state.aiLevel].voice,
+              onAdultInfo: strongLanguage(state.aiLevel) ? onAdultInfo : undefined,
+            }
           : undefined
       }
       pieces={counts[player]}

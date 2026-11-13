@@ -9,6 +9,8 @@ import "./ui/learn.css";
 import "./ui/chrome.css";
 import "./ui/sheet.css";
 import "./ui/bubble.css";
+import "./ui/layout.css";
+import "./ui/result.css";
 
 async function start() {
   let initial: GameOptions | undefined;

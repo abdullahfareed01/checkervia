@@ -192,11 +192,11 @@ describe("game over panel against the AI", () => {
   };
   const tips = [{ kind: "general" as const, text: "Trade pieces when you are ahead, and avoid trades when you are behind." }];
 
-  it("shows the AI's line at once in the bubble style, with Play again and Review game", () => {
+  it("shows the AI's line at once in the pill, with Play Again and Review Game", () => {
     const html = renderToStaticMarkup(createElement(ResultDialog, { ...props, tips }));
     expect(html).toContain('<p class="result-line speech-banter">Smart. You saw the end coming, haha.</p>');
-    expect(html).toContain(">Play again<");
-    expect(html).toContain(">Review game<");
+    expect(html).toContain(">Play Again<");
+    expect(html).toContain(">Review Game<");
   });
 
   it("hides the tips at first, with a Show tips now link", () => {
@@ -207,7 +207,7 @@ describe("game over panel against the AI", () => {
 
   it("once revealed: the tips, labelled as checked by the engine, announced once", () => {
     const html = renderToStaticMarkup(createElement(ResultDialog, { ...props, tips, tipsShownAtStart: true }));
-    expect(html).toContain("<h3>Tips from the AI</h3>");
+    expect(html).toMatch(/<h3><svg[^>]*icon-bulb[\s\S]*?<\/svg>Tips from the AI<\/h3>/);
     expect(html).toContain("Checked by the game engine");
     expect(html).toContain("Trade pieces when you are ahead");
     expect(html).toMatch(/<p class="sr-only" aria-live="polite">Tips from the AI are shown below\.<\/p>/);

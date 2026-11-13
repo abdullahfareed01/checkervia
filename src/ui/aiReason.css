@@ -205,14 +205,6 @@
   gap: 10px;
 }
 
-/* The AI's level next to its BOT badge on the player card. */
-.badge-level {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.1);
-  letter-spacing: 0.04em;
-  text-transform: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .dialog {
     animation: none;

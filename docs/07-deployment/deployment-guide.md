@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Draft is a static Vite site plus one Netlify function (`netlify/functions/ai-move.ts`), which holds the OpenRouter key. Everything is in `netlify.toml`: build command `npm run build`, publish folder `dist`, functions folder `netlify/functions`.
+Checkervia is a static Vite site plus one Netlify function (`netlify/functions/ai-move.ts`), which holds the OpenRouter key. Everything is in `netlify.toml`: build command `npm run build`, publish folder `dist`, functions folder `netlify/functions`.
 
 ## One time setup
 1. Push the code to a GitHub repository (see the release checklist). `.env` is git ignored; never commit a key.

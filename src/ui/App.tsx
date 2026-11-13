@@ -14,12 +14,10 @@ import { HistoryControls } from "./HistoryControls";
 import { LevelDialog } from "./LevelDialog";
 import { MenuSetup } from "./MenuSetup";
 import { ModeSelector } from "./ModeSelector";
-import { NewGameButton } from "./NewGameButton";
 import { ResultDialog } from "./ResultDialog";
 import { RulesDialog } from "./RulesDialog";
 import { ChatBubble } from "./ChatBubble";
 import { LanguageInfo } from "./LanguageInfo";
-import { ResignButton } from "./ResignButton";
 import { usePersonality } from "./usePersonality";
 import { reactionBubble } from "./bubble";
 import { LANDSCAPE_PHONE, useMediaQuery } from "./useMediaQuery";
@@ -27,7 +25,10 @@ import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
 import { TermsDialog } from "./TermsDialog";
 import { TopBar } from "./TopBar";
-import type { MenuRun } from "./TopBar";
+import { ActionBar } from "./ActionBar";
+import type { EndAction } from "./ActionBar";
+import { GameMenu } from "./GameMenu";
+import type { MenuRun } from "./GameMenu";
 import { useAiExplanation } from "./useAiExplanation";
 import { useGameDuration, useResultPopup } from "./useResultPopup";
 import { useAnimationKey, useHistoryKeys } from "./useHistoryView";
@@ -69,16 +70,14 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // Resign (Change 4): the player against the AI, otherwise the side to move.
   const resignQuestion =
     state.mode === "vs-ai" ? "Resign this game? The AI wins." : `Resign this game? ${state.currentPlayer === "black" ? "White" : "Black"} wins.`;
-  const canResign = state.winner === null;
+  // New game and Resign are on the action bar, not in the Menu (D50).
   const menuItems = useMemo(
     () => [
-      { label: "New game", onSelect: newGame, confirm: loseQuestion("Start a new game?") },
-      ...(canResign ? [{ label: "Resign", onSelect: resign, confirm: resignQuestion }] : []),
       { label: "How to play", onSelect: openRules },
       { label: "Terms and notices", onSelect: openTerms },
       ...(onMenu ? [{ label: "Main menu", onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
     ],
-    [inProgress, newGame, openRules, openTerms, onMenu, canResign, resign, resignQuestion],
+    [inProgress, openRules, openTerms, onMenu],
   );
   // A new game against the AI at `level` (from the level dialog or the
   // Menu). Strongest asks the 18+ consent first (D45); after No or Cancel the
@@ -126,6 +125,11 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
   const personality = usePersonality(state, playerTurn && !startedMove && !covered);
   const bubble = reactionBubble(state, dismissedAt, personality);
+  // The action bar's fourth button: Resign during a game, Result after it.
+  const endAction: EndAction =
+    state.winner === null
+      ? { kind: "resign", question: resignQuestion, highlight: personality.hintActive, onResign: resign }
+      : { kind: "result", onShow: result.reopen };
   const chat = state.mode === "vs-ai" && (
     <ChatBubble
       message={result.open ? null : bubble}
@@ -138,14 +142,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   return (
     <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}`}>
       <header className="topbar">
-        <TopBar
-          title="Draft"
-          onBack={onMenu}
-          backConfirm={loseQuestion("Back to the main menu?")}
-          items={menuItems}
-          setup={setup}
-          onOpenChange={setMenuOpen}
-        />
+        <TopBar title="Checkervia" />
         <ModeSelector mode={state.mode} needsConfirmation={inProgress} onChange={chooseMode} />
       </header>
 
@@ -169,25 +166,16 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           onRetryAi={retryAi}
         />
         <AiMoveNote explanation={why.explanation} open={why.open} onToggle={why.toggleWhy} />
-        <HistoryControls
-          index={shown.index}
-          total={shown.total}
-          live={shown.live}
+        <HistoryControls index={shown.index} total={shown.total} live={shown.live} moves={moves} nameOf={moveNameOf} onGo={goHistory} />
+        <ActionBar
+          menu={<GameMenu items={menuItems} setup={setup} onOpenChange={setMenuOpen} />}
           canBack={canGoBack(state)}
           canForward={canGoForward(state)}
-          moves={moves}
-          nameOf={moveNameOf}
           onGo={goHistory}
+          end={endAction}
+          needsConfirmation={inProgress}
+          onNewGame={newGame}
         />
-        <div className="controls">
-          {state.winner && !result.open && (
-            <button type="button" className="button" onClick={result.reopen}>
-              Show result
-            </button>
-          )}
-          {canResign && <ResignButton question={resignQuestion} highlight={personality.hintActive} onResign={resign} />}
-          <NewGameButton needsConfirmation={inProgress} onNewGame={newGame} />
-        </div>
       </aside>
 
       {state.winner && result.open && (

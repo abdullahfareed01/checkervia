@@ -122,26 +122,29 @@ describe("Terms and notices", () => {
   });
 });
 
-describe("the AI card's 18+ badge and voice chip (Change 4)", () => {
+describe("the AI card's 18+ badge and level chip (Change 4, D50)", () => {
   const render = (mode: "vs-ai" | "two-player", aiLevel: 1 | 2 | 3 | 4) => renderToStaticMarkup(createElement(App, { initial: { mode, aiLevel } }));
+  // The name row of the AI's card (the top card).
+  const nameRow = (html: string) => html.match(/<section class="card card-top[\s\S]*?<p class="card-name">([\s\S]*?)<\/p>/)![1]!;
 
-  it("at Strongest: a two part badge that is a real button, next to the voice chip", () => {
-    const html = render("vs-ai", 4);
-    expect(html).toMatch(/<div class="card-edge"><span class="edge-voice">Strongest<\/span><button type="button" class="edge-adult" aria-label="18 plus, strong language\. About the language rules">/);
-    expect(html).toContain('<span class="edge-adult-age">18+</span><span class="edge-adult-text">Strong language</span>');
+  it("at Strongest: inside the name row, after the name, a two part badge that is a real button", () => {
+    const row = nameRow(render("vs-ai", 4));
+    expect(row).toMatch(/^<span class="card-name-text">AI<\/span>[\s\S]*<span class="card-chips"><span class="chip-level"[^>]*>Strongest<\/span><button type="button" class="chip-adult" aria-label="18 plus, strong language\. About the language rules">/);
+    expect(row).toContain('<span class="chip-adult-age">18+</span><span class="chip-adult-text">Strong language</span>');
   });
 
   it.each([
     [1, "Friendly"],
     [2, "Playful"],
     [3, "Competitive"],
-  ] as const)("level %i: the voice chip %s, and no 18+ badge", (level, voice) => {
+  ] as const)("level %i: one chip %s, and no 18+ badge", (level, voice) => {
     const html = render("vs-ai", level);
-    expect(html).toContain(`<span class="edge-voice">${voice}</span>`);
-    expect(html).not.toContain("edge-adult");
+    expect(nameRow(html)).toContain(`>${voice}</span>`);
+    expect(html.match(/class="chip-level"/g)).toHaveLength(1);
+    expect(html).not.toContain("chip-adult");
   });
 
-  it("nothing on the edge in two player games", () => {
-    expect(render("two-player", 4)).not.toContain("card-edge");
+  it("no chips in two player games", () => {
+    expect(render("two-player", 4)).not.toContain("card-chips");
   });
 });

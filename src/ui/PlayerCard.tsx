@@ -10,11 +10,10 @@ interface PlayerCardProps {
   player: Player;
   name: string; // "You", "AI", "Black", "White"
   robot: boolean; // the AI gets a robot, people get a person icon
-  level?: string | undefined; // the AI's level, e.g. "Hard"
-  // The AI's chips on the card's top edge (Change 4): its voice at this
-  // level ("Playful"), and at Strongest the 18+ badge, a button that
-  // explains the language rules.
-  edge?: { voice: string; onAdultInfo?: (() => void) | undefined } | undefined;
+  // The AI's chips in the name row (Change 4, D50): one level chip, its
+  // voice at this level ("Playful" for Medium), and at Strongest the 18+
+  // badge, a button that explains the language rules.
+  chips?: { level: string; voice: string; onAdultInfo?: (() => void) | undefined } | undefined;
   pieces: number; // pieces left on the board
   captured: number; // opponent pieces this side has taken
   toMove: boolean;
@@ -61,8 +60,7 @@ export const PlayerCard = memo(function PlayerCard({
   player,
   name,
   robot,
-  level,
-  edge,
+  chips,
   pieces,
   captured,
   toMove,
@@ -86,31 +84,26 @@ export const PlayerCard = memo(function PlayerCard({
 
   return (
     <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.`}>
-      {/* On the card's top edge, so they take no room inside the card. */}
-      {edge && (
-        <div className="card-edge">
-          <span className="edge-voice">{edge.voice}</span>
-          {edge.onAdultInfo && (
-            <button type="button" className="edge-adult" aria-label="18 plus, strong language. About the language rules" onClick={edge.onAdultInfo}>
-              <span className="edge-adult-age">18+</span>
-              <span className="edge-adult-text">Strong language</span>
-              <span className="edge-adult-info" aria-hidden="true">
-                <InfoIcon />
-              </span>
-            </button>
-          )}
-        </div>
-      )}
       <div className="avatar">{robot ? <RobotAvatar thinking={thinking} /> : <HumanIcon />}</div>
 
       <div className="card-text">
         <p className="card-name">
           <span className="card-name-text">{name}</span>
           {robot && <span className="badge">BOT</span>}
-          {level && (
-            <span className="badge badge-level">
-              <CrownIcon />
-              {level}
+          {chips && (
+            <span className="card-chips">
+              <span className="chip-level" title={`${chips.level} level`}>
+                {chips.voice}
+              </span>
+              {chips.onAdultInfo && (
+                <button type="button" className="chip-adult" aria-label="18 plus, strong language. About the language rules" onClick={chips.onAdultInfo}>
+                  <span className="chip-adult-age">18+</span>
+                  <span className="chip-adult-text">Strong language</span>
+                  <span className="chip-adult-info" aria-hidden="true">
+                    <InfoIcon />
+                  </span>
+                </button>
+              )}
             </span>
           )}
           {winner && <CrownIcon />}

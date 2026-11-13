@@ -51,13 +51,14 @@ describe("the difficulty bar is gone", () => {
 });
 
 describe("the chosen level is visible in the game", () => {
-  it("as a badge on the AI's card", () => {
+  it("as one chip on the AI's card, named after the level", () => {
     const html = renderToStaticMarkup(createElement(App, { initial: { mode: "vs-ai", aiLevel: 4 } }));
-    expect(html).toMatch(/class="badge badge-level"><svg[^>]*class="icon icon-crown"[\s\S]*?<\/svg>Strongest</);
+    expect(html).toContain('<span class="chip-level" title="Strongest level">Strongest</span>');
+    expect(html.match(/chip-level/g)).toHaveLength(1);
   });
 
   it("not in a two-player game", () => {
-    expect(renderToStaticMarkup(createElement(App, { initial: { mode: "two-player" } }))).not.toContain("badge-level");
+    expect(renderToStaticMarkup(createElement(App, { initial: { mode: "two-player" } }))).not.toContain("chip-level");
   });
 });
 

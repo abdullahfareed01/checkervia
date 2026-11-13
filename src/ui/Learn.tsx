@@ -64,7 +64,7 @@ export function Learn({ onMenu }: { onMenu: () => void }) {
   return (
     <main className="app learn">
       <header className="topbar">
-        <TopBar title="Learn" onBack={onMenu} items={[{ label: "Main menu", onSelect: onMenu }]} />
+        <TopBar title="Learn" onBack={onMenu} />
       </header>
 
       <section className="game" aria-label="Lesson board">

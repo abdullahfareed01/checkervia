@@ -1,7 +1,7 @@
 # Game Design Document
 
 ## Summary
-- Draft: browser checkers, 2 players or vs LLM AI. See `docs/01-concept/game-concept.md`.
+- Checkervia: browser checkers, 2 players or vs LLM AI. See `docs/01-concept/game-concept.md`.
 
 ## Rules
 - Full rule set lives in `core-mechanics.md`; this page is the overview.

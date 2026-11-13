@@ -38,7 +38,7 @@ export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerm
         <div className="home-logo">
           <Logo />
         </div>
-        <GameTitle text="Draft" large />
+        <GameTitle text="Checkervia" large />
         <p className="home-tagline">Checkers for two, or against an AI.</p>
       </header>
 

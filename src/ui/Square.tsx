@@ -1,5 +1,6 @@
 import { memo } from "react";
 import type { Piece as PieceType, Position } from "../engine";
+import { FILE_LABELS, RANK_LABELS } from "./notation";
 import { Piece } from "./Piece";
 
 // Everything the board wants a square to show. Computed by the state layer.
@@ -52,10 +53,36 @@ function classNames(dark: boolean, marks: SquareMarks): string {
     .join(" ");
 }
 
+// The board's coordinates, in the corners of the edge squares (D50): the row
+// number top left in the left column, the column letter bottom right in the
+// bottom row. Decoration for sighted players; screen readers get the square
+// names from each square's label.
+function Coords({ row, col }: { row: number; col: number }) {
+  return (
+    <>
+      {col === 0 && (
+        <span className="coord coord-rank" aria-hidden="true">
+          {RANK_LABELS[row]}
+        </span>
+      )}
+      {row === 7 && (
+        <span className="coord coord-file" aria-hidden="true">
+          {FILE_LABELS[col]}
+        </span>
+      )}
+    </>
+  );
+}
+
 // Light squares are plain. Dark squares are buttons: the only squares a piece
 // can ever stand on, so the only ones worth clicking.
 function SquareView({ row, col, dark, piece, marks, locked, hidePiece = false, onClick }: SquareProps) {
-  if (!dark) return <div className={classNames(dark, marks)} aria-hidden="true" />;
+  if (!dark)
+    return (
+      <div className={classNames(dark, marks)} aria-hidden="true">
+        <Coords row={row} col={col} />
+      </div>
+    );
 
   return (
     <button
@@ -66,6 +93,7 @@ function SquareView({ row, col, dark, piece, marks, locked, hidePiece = false, o
       disabled={locked}
       onClick={() => onClick({ row, col })}
     >
+      <Coords row={row} col={col} />
       {piece && <Piece piece={piece} hidden={hidePiece} />}
     </button>
   );

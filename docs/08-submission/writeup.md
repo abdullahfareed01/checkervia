@@ -1,6 +1,6 @@
-# Draft: Write up
+# Checkervia: Write up
 
-Draft is a browser checkers game for two players on one screen, or one player against an AI powered by `openai/gpt-oss-120b` (through OpenRouter and a Netlify function). Built with React, TypeScript and Vite; 812 automated tests.
+Checkervia is a browser checkers game for two players on one screen, or one player against an AI powered by `openai/gpt-oss-120b` (through OpenRouter and a Netlify function). Built with React, TypeScript and Vite; 812 automated tests.
 
 ## The hardest rule: multi jumps
 Forced capture and Kings were simple to state and to test. Multi jumps were not:

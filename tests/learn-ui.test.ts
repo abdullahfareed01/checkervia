@@ -26,12 +26,13 @@ describe("Learn (first frame)", () => {
     expect(html).not.toContain("selectable");
   });
 
-  it("has playback controls (playing at first), a lesson list and a Menu button", () => {
+  it("has playback controls (playing at first), a lesson list and a back arrow (its only way out, D50)", () => {
     expect(html).toContain(">Pause<");
     expect(html).toContain('aria-label="Previous"');
     expect(html).toContain('aria-label="Next"');
     for (const scene of LESSONS) expect(html).toContain(scene.title);
     expect(html).toContain('aria-current="step"');
-    expect(html).toContain(">Menu<");
+    expect(html).toContain('aria-label="Back to the main menu"');
+    expect(html).not.toContain(">Menu<");
   });
 });

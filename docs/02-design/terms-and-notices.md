@@ -7,7 +7,7 @@
 > The leaderboard (phases 3 and 4) is not built yet, so its section is marked "Coming soon" and written in the future tense. When it is built, reword it as live and remove the label.
 
 ## Entertainment only
-- Draft is a free checkers game made for fun. Nothing in it is advice of any kind.
+- Checkervia is a free checkers game made for fun. Nothing in it is advice of any kind.
 
 ## AI generated text
 - The AI's moves are checked by our game engine, but its words (its reasons and its lines about your play) are written by an AI language model reached through OpenRouter.

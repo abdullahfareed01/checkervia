@@ -9,7 +9,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AiLevel } from "../src/ai";
 import { describeLookahead } from "../src/state/moveFacts";
 import { MenuSetup } from "../src/ui/MenuSetup";
-import type { MenuRun } from "../src/ui/TopBar";
+import type { MenuRun } from "../src/ui/GameMenu";
 
 type Props = { children?: ReactNode; onClick?: () => void; className?: string };
 

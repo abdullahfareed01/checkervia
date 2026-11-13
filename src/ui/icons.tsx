@@ -89,11 +89,40 @@ export function BackIcon() {
   );
 }
 
-// Nine dots, for the Menu button.
-export function MenuDotsIcon() {
+// Three lines (a hamburger), for the Menu button.
+export function MenuIcon() {
   return (
-    <svg className="icon icon-dots" viewBox="0 0 24 24" aria-hidden="true">
-      {[5, 12, 19].flatMap((y) => [5, 12, 19].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="2.2" fill="currentColor" />))}
+    <svg className="icon icon-menu" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 6.5h16M4 12h16M4 17.5h16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// A chevron, for the previous and next move buttons.
+export function ChevronIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg className="icon icon-chevron" viewBox="0 0 24 24" aria-hidden="true">
+      <path d={direction === "left" ? "M15 5l-7 7 7 7" : "M9 5l7 7-7 7"} fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// A flag on a pole, for Resign.
+export function FlagIcon() {
+  return (
+    <svg className="icon icon-flag" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 21V4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M6 4.5h11l-2.5 4 2.5 4H6z" fill="currentColor" />
+    </svg>
+  );
+}
+
+// A circular arrow, for New game.
+export function RestartIcon() {
+  return (
+    <svg className="icon icon-restart" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M19 12a7 7 0 1 1-2.05-4.95" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M19.5 3.5v5h-5" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -148,6 +177,117 @@ export function LaurelIcon({ flip = false }: { flip?: boolean }) {
       {leaves.map(({ cx, cy, r }) => (
         <ellipse key={`${cx}-${cy}`} cx={cx} cy={cy} rx="2" ry="4" transform={`rotate(${r} ${cx} ${cy})`} fill="currentColor" />
       ))}
+    </svg>
+  );
+}
+
+// ---------- The result panel's icons (D51, after mockup/winner_screen.png) ----------
+
+// A stack of pieces, for "Pieces left".
+export function PiecesIcon() {
+  return (
+    <svg className="icon icon-pieces" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 13v4c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2v-4c0 1.8-3.6 3.2-8 3.2S4 14.8 4 13z" fill="currentColor" opacity="0.55" />
+      <path d="M4 8v4c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2V8c0 1.8-3.6 3.2-8 3.2S4 9.8 4 8z" fill="currentColor" opacity="0.75" />
+      <ellipse cx="12" cy="8" rx="8" ry="3.2" fill="currentColor" />
+    </svg>
+  );
+}
+
+// Two crossed swords, for "Pieces captured".
+export function SwordsIcon() {
+  return (
+    <svg className="icon icon-swords" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <path d="M4 4l11 11M20 4L9 15" />
+        <path d="M12.5 17.5l5-5M11.5 17.5l-5-5" />
+        <path d="M16 16l3.5 3.5M8 16l-3.5 3.5" />
+      </g>
+    </svg>
+  );
+}
+
+// A zigzag arrow, for "Best multi jump".
+export function JumpIcon() {
+  return (
+    <svg className="icon icon-jump" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 18l5-5 4 4 8-8" />
+        <path d="M14 9h6v6" />
+        <path d="M3 6l3 3M6 6L3 9" />
+      </g>
+    </svg>
+  );
+}
+
+// Two opposite arrows, for "Moves".
+export function SwapIcon() {
+  return (
+    <svg className="icon icon-swap" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 8h15M15 4l4 4-4 4" />
+        <path d="M20 16H5M9 12l-4 4 4 4" />
+      </g>
+    </svg>
+  );
+}
+
+// An hourglass, for the moves in total.
+export function HourglassIcon() {
+  return (
+    <svg className="icon icon-hourglass" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M6 3h12M6 21h12" />
+        <path d="M8 3v2c0 3 4 5 4 7s-4 4-4 7v2M16 3v2c0 3-4 5-4 7s4 4 4 7v2" />
+      </g>
+      <path d="M9.5 19.5c0-1.8 2.5-3 2.5-3s2.5 1.2 2.5 3z" fill="currentColor" />
+    </svg>
+  );
+}
+
+// A stopwatch, for the game time.
+export function StopwatchIcon() {
+  return (
+    <svg className="icon icon-stopwatch" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <circle cx="12" cy="14" r="7" />
+        <path d="M10 3h4M12 3v4M12 14l3-3M18.5 6.5l1.5-1.5" />
+      </g>
+    </svg>
+  );
+}
+
+// A play triangle, for Play Again.
+export function PlayIcon() {
+  return (
+    <svg className="icon icon-play" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor" />
+    </svg>
+  );
+}
+
+// A bulleted list, for Review Game.
+export function ListIcon() {
+  return (
+    <svg className="icon icon-list" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="currentColor">
+        <circle cx="4.5" cy="6" r="1.8" />
+        <circle cx="4.5" cy="12" r="1.8" />
+        <circle cx="4.5" cy="18" r="1.8" />
+      </g>
+      <path d="M9 6h12M9 12h12M9 18h12" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// A light bulb, for the tips.
+export function BulbIcon() {
+  return (
+    <svg className="icon icon-bulb" viewBox="0 0 24 24" aria-hidden="true">
+      <g fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 3a6 6 0 0 0-3.8 10.6c.8.7 1.3 1.6 1.3 2.6V17h5v-.8c0-1 .5-1.9 1.3-2.6A6 6 0 0 0 12 3z" />
+        <path d="M10 20h4" />
+      </g>
     </svg>
   );
 }

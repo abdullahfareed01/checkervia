@@ -3,7 +3,6 @@ import type { Board as BoardType, Move, Piece, Position } from "../engine";
 import { isDarkSquare, pieceAt, samePosition } from "../engine";
 import type { Destination } from "../state/selectors";
 import { MovingPiece, prefersReducedMotion } from "./MovingPiece";
-import { FILE_LABELS, RANK_LABELS } from "./notation";
 import { RouteOverlay } from "./RouteOverlay";
 import { Square, sameMarks } from "./Square";
 import type { SquareMarks } from "./Square";
@@ -106,20 +105,6 @@ const BoardRow = memo(function BoardRow({ row, pieces, marks, locked, hiddenCol,
   );
 }, sameRow);
 
-// One edge of coordinate labels: column letters (top, bottom) or row
-// numbers (left, right). Decoration for sighted players; screen readers get
-// the square names from each square's label.
-const Labels = memo(function Labels({ kind, edge }: { kind: "files" | "ranks"; edge: "top" | "bottom" | "left" | "right" }) {
-  const labels = kind === "files" ? FILE_LABELS : RANK_LABELS;
-  return (
-    <div className={`board-labels board-labels-${edge}`} aria-hidden="true">
-      {labels.map((label) => (
-        <span key={label}>{label}</span>
-      ))}
-    </div>
-  );
-});
-
 // Identifies a move on screen, for restarting the route animation.
 function routeKey(move: Move, moveKey: number): string {
   const squares = [move.from, ...move.path].map(({ row, col }) => `${row}${col}`).join("-");
@@ -133,10 +118,8 @@ export function Board({ view, onSquareClick }: BoardProps) {
   const mover = lastMove ? pieceAt(view.board, lastMove.to) : null;
 
   return (
-    // The wooden frame carries the A-H and 8-1 labels on all four sides.
+    // A thin wooden frame; the coordinates are in the squares' corners.
     <div className="board-frame">
-      <Labels kind="files" edge="top" />
-      <Labels kind="ranks" edge="left" />
       <div className={`board${view.locked ? " board-locked" : ""}`} aria-label="Checkers board">
         {view.board.map((rowSquares, row) => (
           <BoardRow
@@ -158,8 +141,6 @@ export function Board({ view, onSquareClick }: BoardProps) {
           <MovingPiece move={lastMove} before={view.previousBoard} onDone={finishAnimation} />
         )}
       </div>
-      <Labels kind="ranks" edge="right" />
-      <Labels kind="files" edge="bottom" />
     </div>
   );
 }

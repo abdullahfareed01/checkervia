@@ -1,6 +1,6 @@
 # Game Concept
 
-- **Name:** Draft
+- **Name:** Checkervia (called Draft until 13 Nov 2026, D50)
 - **Genre:** Turn based board game (checkers), browser
 - **Players:** 2 on one screen, or 1 vs LLM AI
 - **One line pitch:** Classic checkers with strict, fully tested rules and an AI opponent that must pick from verified legal moves.

@@ -1,6 +1,6 @@
 # Project Overview
 
-**Draft** is a browser checkers game (8x8) for two players on one screen, or one player against an LLM powered AI. Built as a mentor's project; every rule is meant to be explainable line by line.
+**Checkervia** is a browser checkers game (8x8) for two players on one screen, or one player against an LLM powered AI. Built as a mentor's project; every rule is meant to be explainable line by line.
 
 ## Features
 - Two player hot seat play: click a piece, then click its destination

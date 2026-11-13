@@ -10,7 +10,7 @@ export const CONTACT_EMAIL = "checkvia.games@gmail.com";
 export const TERMS_SECTIONS: readonly { title: string; soon?: boolean; points: readonly string[] }[] = [
   {
     title: "Entertainment only",
-    points: ["Draft is a free checkers game made for fun. Nothing in it is advice of any kind."],
+    points: ["Checkervia is a free checkers game made for fun. Nothing in it is advice of any kind."],
   },
   {
     title: "AI generated text",
