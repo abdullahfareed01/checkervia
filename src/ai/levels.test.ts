@@ -1,12 +1,14 @@
-// Difficulty levels end to end inside the AI module: the prompt carries the
-// engine's scores, a broken look-ahead never stops a turn, and no prompt can
-// grow past what the server accepts.
+// Difficulty levels end to end inside the AI module: the engine scores the
+// moves, the model is offered the level's best few (all at Easy), its choice
+// is checked against that list, and no prompt can grow past what the server
+// accepts (D44).
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { MAX_PROMPT_CHARS } from "../../netlify/aiMoveHandler";
 import { applyMove, getLegalMoves, initialBoard, opponentOf } from "../engine";
 import type { Board, Player } from "../engine";
-import { FALLBACK_DEPTH, analyze, analyzeHere } from "./analyzer";
+import { analyze, analyzeHere } from "./analyzer";
 import type { Analyze } from "./analyzer";
+import { pickCandidates } from "./candidates";
 import { chooseMove } from "./chooseMove";
 import type { CallModel } from "./chooseMove";
 import { AI_LEVELS, DEFAULT_AI_LEVEL, LEVELS, toAiLevel } from "./difficulty";
@@ -26,9 +28,26 @@ function recordingModel(reply: string) {
 }
 
 describe("levels", () => {
-  it("go from no look-ahead to 6 turns", () => {
-    expect(LEVELS.map((level) => AI_LEVELS[level].depth)).toEqual([0, 2, 4, 6]);
-    expect(AI_LEVELS[4].name).toBe("Expert");
+  it("are Easy, Medium, Hard and Strongest; Medium is the default", () => {
+    expect(LEVELS.map((level) => AI_LEVELS[level].name)).toEqual(["Easy", "Medium", "Hard", "Strongest"]);
+    expect(AI_LEVELS[DEFAULT_AI_LEVEL].name).toBe("Medium");
+  });
+
+  it("look 1, 2, 4 and 6 turns ahead and offer every move, then the best 5, 4 and 3", () => {
+    expect(LEVELS.map((level) => AI_LEVELS[level].depth)).toEqual([1, 2, 4, 6]);
+    expect(LEVELS.map((level) => AI_LEVELS[level].candidates)).toEqual([undefined, 5, 4, 3]);
+  });
+
+  it("only Easy makes deliberate slips", () => {
+    expect(LEVELS.map((level) => AI_LEVELS[level].slipChance)).toEqual([0.3, 0, 0, 0]);
+  });
+
+  it("describe their real depth and choice", () => {
+    for (const level of LEVELS) {
+      const { depth, candidates, description } = AI_LEVELS[level];
+      expect(description).toContain(`Looks ${depth} ${depth === 1 ? "turn" : "turns"} ahead`);
+      if (candidates) expect(description).toContain(`best ${candidates} moves`);
+    }
   });
 
   it("turn any stored value into a valid level", () => {
@@ -95,44 +114,95 @@ describe("buildPrompt with a look-ahead", () => {
 });
 
 describe("chooseMove at each level", () => {
-  it("Beginner: no look-ahead is run and the prompt has no scores", async () => {
+  // Scores for the 7 opening moves: best is move 3 (index 2), then index 1.
+  const scores = [0, 50, 200, 0, 0, 0, -100];
+  const fake: Analyze = async (_b, _p, depth) => ({ depth, scores });
+
+  it("without a level: every legal move, no look-ahead, no scores", async () => {
     const analyzeSpy = vi.fn<Analyze>();
     const { callModel, prompts } = recordingModel('{"move": 1}');
-    const result = await chooseMove(board, "black", callModel, 3, { level: 1, analyze: analyzeSpy });
+    const result = await chooseMove(board, "black", callModel, 3, { analyze: analyzeSpy });
 
     expect(analyzeSpy).not.toHaveBeenCalled();
     expect(prompts[0]).not.toContain("score");
     expect(result).toEqual({ ok: true, move: legal[0], attempts: 1 });
   });
 
-  it.each([2, 3, 4] as const)("level %i: asks for that depth, sends the scores, reports the chosen score", async (level) => {
+  it("Easy: looks 1 turn ahead and offers every legal move with its score", async () => {
     const depths: number[] = [];
-    const fake: Analyze = async (_b, _p, depth) => {
-      depths.push(depth);
-      return { depth, scores: [0, 50, 200, 0, 0, 0, -100] };
-    };
-    const { callModel, prompts } = recordingModel('{"move": 2, "reason": "Solid."}');
-    const result = await chooseMove(board, "black", callModel, 3, { level, analyze: fake });
+    const spy: Analyze = async (b, p, depth) => (depths.push(depth), fake(b, p, depth));
+    const { callModel, prompts } = recordingModel('{"move": 3}');
+    const result = await chooseMove(board, "black", callModel, 3, { level: 1, analyze: spy, random: () => 0.99 });
 
-    expect(depths).toEqual([AI_LEVELS[level].depth]);
-    expect(prompts[0]).toContain(`for the next ${AI_LEVELS[level].depth} turns`);
-    expect(prompts[0]).toMatch(/3: .* \| score \+2\.0/);
-    expect(result).toEqual({
+    expect(depths).toEqual([1]);
+    expect(prompts[0]).toContain("Legal moves:");
+    expect(prompts[0]).toMatch(/7: .* \| score -1\.0/);
+    expect(result).toMatchObject({
       ok: true,
-      move: legal[1],
-      attempts: 1,
-      reason: "Solid.",
-      lookahead: { depth: AI_LEVELS[level].depth, score: 50, best: 200 },
+      move: legal[2],
+      lookahead: { depth: 1, score: 200, best: 200, offered: 7, legal: 7, scoresShown: true },
     });
   });
 
-  it("still plays when the look-ahead throws (the model just gets no scores)", async () => {
+  it("Easy slip: the scores are left out and the model chooses on its own", async () => {
+    const { callModel, prompts } = recordingModel('{"move": 7}');
+    const result = await chooseMove(board, "black", callModel, 3, { level: 1, analyze: fake, random: () => 0 });
+
+    expect(prompts[0]).not.toContain("Engine look-ahead");
+    expect(prompts[0]).not.toContain("score");
+    expect(result).toMatchObject({ ok: true, move: legal[6], lookahead: { score: -100, best: 200, scoresShown: false } });
+  });
+
+  it("only Easy slips: the other levels never ask for a random number", async () => {
+    const random = vi.fn(() => 0);
+    const { callModel, prompts } = recordingModel('{"move": 1}');
+    await chooseMove(board, "black", callModel, 3, { level: 4, analyze: fake, random });
+    expect(random).not.toHaveBeenCalled();
+    expect(prompts[0]).toContain("Engine look-ahead");
+  });
+
+  it.each([2, 3, 4] as const)("level %i: offers only the engine's best few, numbered from 1", async (level) => {
+    const { depth, candidates } = AI_LEVELS[level];
+    const picked = pickCandidates(scores, candidates);
+    const { callModel, prompts } = recordingModel('{"move": 2, "reason": "Solid."}');
+    const result = await chooseMove(board, "black", callModel, 3, { level, analyze: fake });
+
+    expect(prompts[0]).toContain(`for the next ${depth} turns`);
+    expect(prompts[0]).toContain(`the engine's best ${candidates} of your 7 legal moves`);
+    expect(prompts[0]).not.toMatch(new RegExp(`\\n${candidates! + 1}: `));
+    expect(result).toEqual({
+      ok: true,
+      move: legal[picked[1]!],
+      attempts: 1,
+      reason: "Solid.",
+      lookahead: { depth, score: scores[picked[1]!], best: 200, offered: candidates, legal: 7, scoresShown: true },
+    });
+  });
+
+  it("Strongest: a number outside its 3 moves is rejected, so a weaker move can never slip in", async () => {
+    const { callModel, prompts } = recordingModel('{"move": 4}');
+    const result = await chooseMove(board, "black", callModel, 3, { level: 4, analyze: fake });
+    expect(result.ok).toBe(false);
+    expect(prompts).toHaveLength(4); // the first try and 3 retries
+  });
+
+  it("a level that limits the moves fails the turn when the look-ahead throws (Retry is shown)", async () => {
     const broken: Analyze = async () => {
       throw new Error("worker crashed");
     };
     const { callModel, prompts } = recordingModel('{"move": 3}');
     const result = await chooseMove(board, "black", callModel, 3, { level: 4, analyze: broken });
 
+    expect(result).toEqual({ ok: false, attempts: 0, reasons: ["The engine's look-ahead failed, so the AI's moves could not be listed."] });
+    expect(prompts).toHaveLength(0);
+  });
+
+  it("Easy still plays when the look-ahead throws (every move is allowed anyway)", async () => {
+    const broken: Analyze = async () => {
+      throw new Error("worker crashed");
+    };
+    const { callModel, prompts } = recordingModel('{"move": 3}');
+    const result = await chooseMove(board, "black", callModel, 3, { level: 1, analyze: broken });
     expect(result).toEqual({ ok: true, move: legal[2], attempts: 1 });
     expect(prompts[0]).not.toContain("Engine look-ahead");
   });
@@ -140,11 +210,11 @@ describe("chooseMove at each level", () => {
   it.each([
     ["the wrong number of scores", { depth: 4, scores: [1, 2, 3] }],
     ["a score that is not a number", { depth: 4, scores: [0, 0, Number.NaN, 0, 0, 0, 0] }],
-  ])("ignores a look-ahead with %s", async (_, bad) => {
+  ])("does not trust a look-ahead with %s", async (_, bad) => {
     const { callModel, prompts } = recordingModel('{"move": 1}');
     const result = await chooseMove(board, "black", callModel, 3, { level: 3, analyze: async () => bad });
-    expect(result.ok).toBe(true);
-    expect(prompts[0]).not.toContain("Engine look-ahead");
+    expect(result.ok).toBe(false);
+    expect(prompts).toHaveLength(0);
   });
 
   it("uses the real search on the page by default", async () => {
@@ -165,7 +235,7 @@ describe("analyze (the app's analyzer)", () => {
     expect(await analyze(board, "black", 3)).toEqual(await analyzeHere(board, "black", 3));
   });
 
-  it("falls back to a quick search when the worker fails", async () => {
+  it("falls back to the same search on the page when the worker fails (same depth, same candidates)", async () => {
     class FailingWorker {
       onmessage: ((event: MessageEvent) => void) | null = null;
       onerror: ((event: Event) => void) | null = null;
@@ -177,8 +247,8 @@ describe("analyze (the app's analyzer)", () => {
     globalThis.Worker = FailingWorker as unknown as typeof Worker;
 
     const result = await analyze(board, "black", 6);
-    expect(result.depth).toBe(FALLBACK_DEPTH);
-    expect(result).toEqual(await analyzeHere(board, "black", FALLBACK_DEPTH));
+    expect(result.depth).toBe(6);
+    expect(result).toEqual(await analyzeHere(board, "black", 6));
   });
 
   it("uses the worker's scores when it answers", async () => {

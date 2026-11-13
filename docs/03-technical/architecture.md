@@ -53,7 +53,8 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 │   │   ├── index.ts          # public API
 │   │   ├── client.ts         # callModel: POST to /.netlify/functions/ai-move, with timeout
 │   │   ├── health.ts         # GET health check: ready / offline / unreachable
-│   │   ├── difficulty.ts     # the four AI levels and their look-ahead depth
+│   │   ├── difficulty.ts     # the four AI levels: turns ahead, moves offered, Easy slips
+│   │   ├── candidates.ts     # the level's best few moves (deterministic, for the server too)
 │   │   ├── search.ts         # look-ahead: negamax + alpha-beta, scores every legal move
 │   │   ├── searchWorker.ts   # runs the search in a Web Worker
 │   │   ├── analyzer.ts       # worker with timeout and fallbacks; never fails a turn
@@ -70,10 +71,13 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 │       ├── useAiStatus.ts    # health check at start, splash fade
 │       ├── ConfirmButton.tsx # button that asks first (New game, Menu)
 │       ├── LevelDialog.tsx   # asks for the AI level when Play vs AI is chosen
+│       ├── LevelOptions.tsx  # the four levels as a radio list (dialog and Menu sheet)
+│       ├── MenuSetup.tsx     # mode and level at the top of the game's Menu sheet
 │       ├── TopBar.tsx        # back arrow, crowned title (GameTitle), Menu list
 │       ├── ConfirmDialog.tsx # "are you sure?" popup for actions that lose a game
 │       ├── RulesDialog.tsx   # the rules over the game (from the Menu)
-│       ├── chrome.css        # the look from mockup/mockup_design.png (loaded last)
+│       ├── chrome.css        # the look from mockup/mockup_design.png
+│       ├── sheet.css         # the Menu sheet (bottom sheet on phones), loaded last
 │       ├── SpeechBubble.tsx  # the AI's speech bubble (reasons now, reactions later)
 │       ├── useAiExplanation.ts # the AI move on screen: label, reason, engine facts
 │       ├── gameView.tsx      # helpers: board view, player cards, win reason

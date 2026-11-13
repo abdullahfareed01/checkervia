@@ -4,6 +4,8 @@
 import { applyMove, getLegalMoves, getWinner, opponentOf, pieceAt, samePosition } from "../engine";
 import type { Board, Move, Player, Position } from "../engine";
 import type { ChosenLookahead } from "../ai/chooseMove";
+import { AI_LEVELS } from "../ai/difficulty";
+import type { AiLevel } from "../ai/difficulty";
 import { describeScore } from "../ai/prompt";
 
 export interface MoveFacts {
@@ -87,13 +89,26 @@ export function describeFacts(facts: MoveFacts): FactLine[] {
   return lines;
 }
 
+// What the model was offered at its level: every move or the best few, and
+// whether it saw the scores (an Easy slip hides them).
+function describeOffer(level: AiLevel | null, { depth, offered, legal, scoresShown }: ChosenLookahead): FactLine {
+  const name = level ? `${AI_LEVELS[level].name} level` : "This level";
+  const turns = `${depth} ${depth === 1 ? "turn" : "turns"}`;
+  if (!scoresShown) return { tone: "info", text: `${name}: a deliberate slip. The AI chose without the engine's scores this time.` };
+  const choice = offered < legal ? `its best ${offered} of ${legal} moves` : `all ${legal} legal moves`;
+  return { tone: "info", text: `${name}: the engine looked ${turns} ahead and offered the AI ${choice}.` };
+}
+
 /**
- * What the engine's look-ahead said about the AI's move (higher levels):
- * the move's score, and whether it was one of the engine's best moves.
+ * What the engine's look-ahead said about the AI's move: what the AI was
+ * offered at its level, the move's score, and whether it was one of the
+ * engine's best moves.
  */
-export function describeLookahead({ depth, score, best }: ChosenLookahead): FactLine[] {
+export function describeLookahead(lookahead: ChosenLookahead, level: AiLevel | null = null): FactLine[] {
+  const { depth, score, best } = lookahead;
   const lines: FactLine[] = [
-    { tone: "info", text: `Looking ${depth} turns ahead, the engine scored this move ${describeScore(score)}.` },
+    describeOffer(level, lookahead),
+    { tone: "info", text: `Looking ${depth} ${depth === 1 ? "turn" : "turns"} ahead, the engine scored this move ${describeScore(score)}.` },
   ];
   lines.push(
     score >= best

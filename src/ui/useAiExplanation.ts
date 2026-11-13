@@ -35,7 +35,7 @@ export function explainShown(mode: GameMode, shown: DisplayedPosition): AiExplan
           ]
         : []),
       ...describeFacts(moveFacts(shown.previousBoard, shown.move, AI_PLAYER)),
-      ...(shown.lookahead ? describeLookahead(shown.lookahead) : []),
+      ...(shown.lookahead ? describeLookahead(shown.lookahead, shown.level) : []),
     ],
   };
 }

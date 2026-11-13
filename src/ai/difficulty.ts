@@ -1,21 +1,36 @@
-// The AI difficulty levels. The model always chooses the move; a level only
-// changes how much the engine works out for it first (see search.ts).
+// The AI difficulty levels. The model always chooses the move; a level sets
+// how far the engine looks ahead and how many of its best moves the model may
+// choose from (see search.ts and candidates.ts). D44.
+//
+// A "turn" (a ply) is one move by one side. A multi jump is one turn.
+// 6 turns ahead means 3 moves by each side, the AI's own move first.
 
 export type AiLevel = 1 | 2 | 3 | 4;
 
 export interface LevelInfo {
   readonly name: string;
-  // Turns the engine looks ahead for every legal move (0 = no look-ahead).
-  // The AI's own move counts as the first turn.
+  // Turns (plies) the engine looks ahead for every legal move. The AI's own
+  // move counts as the first turn.
   readonly depth: number;
-  readonly description: string;
+  // How many of the engine's best moves the model may choose from;
+  // undefined = every legal move.
+  readonly candidates?: number;
+  // Chance per turn that the model gets no engine scores and chooses on its
+  // own (the Easy level's deliberate slips). 0 = never.
+  readonly slipChance: number;
+  readonly description: string; // one line, shown when choosing a level
 }
 
 export const AI_LEVELS: Readonly<Record<AiLevel, LevelInfo>> = {
-  1: { name: "Beginner", depth: 0, description: "The AI sees only the board and the list of legal moves." },
-  2: { name: "Casual", depth: 2, description: "The engine checks every reply to each move before the AI chooses." },
-  3: { name: "Strong", depth: 4, description: "The engine plays out every possible line 4 turns ahead." },
-  4: { name: "Expert", depth: 6, description: "The engine plays out every possible line 6 turns ahead." },
+  1: {
+    name: "Easy",
+    depth: 1,
+    slipChance: 0.3,
+    description: "Looks 1 turn ahead, any move allowed, and sometimes plays without the engine's help.",
+  },
+  2: { name: "Medium", depth: 2, candidates: 5, slipChance: 0, description: "Looks 2 turns ahead (its move and your reply) and picks from its best 5 moves." },
+  3: { name: "Hard", depth: 4, candidates: 4, slipChance: 0, description: "Looks 4 turns ahead (2 moves each) and picks from its best 4 moves." },
+  4: { name: "Strongest", depth: 6, candidates: 3, slipChance: 0, description: "Looks 6 turns ahead (3 moves each) and picks from its best 3 moves." },
 };
 
 export const LEVELS: readonly AiLevel[] = [1, 2, 3, 4];

@@ -31,7 +31,8 @@ export function useGame(initial?: GameOptions) {
   const setMode = useCallback((mode: GameMode) => dispatch({ type: "setMode", mode }), []);
   const retryAi = useCallback(() => dispatch({ type: "aiRetry" }), []);
   const goHistory = useCallback((to: HistoryTarget) => dispatch({ type: "history", to }), []);
-  const setAiLevel = useCallback((level: AiLevel) => dispatch({ type: "setAiLevel", level }), []);
+  // A new game against the AI at `level` (a level is fixed for a game).
+  const playAi = useCallback((level: AiLevel) => dispatch({ type: "newGame", mode: "vs-ai", level }), []);
 
-  return { state, click, newGame, setMode, retryAi, goHistory, setAiLevel };
+  return { state, click, newGame, setMode, retryAi, goHistory, playAi };
 }

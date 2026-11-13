@@ -125,7 +125,7 @@ describe("Menu button in the game", () => {
     const html = renderToStaticMarkup(createElement(App, { onMenu: noop }));
     expect(html).toContain('aria-label="Back to the main menu"');
     expect(html).toContain(">Menu<");
-    expect(html).toContain('aria-haspopup="menu"');
+    expect(html).toContain('aria-haspopup="dialog"');
   });
 
   it("has no back arrow without a main menu to return to (the Menu still offers New game and the rules)", () => {

@@ -50,8 +50,10 @@ export interface HistoryEntry {
   // The AI's own explanation of `move`, as the model wrote it (not verified).
   // Absent for human moves, the start position and AI replies without one.
   readonly reason?: string;
-  // What the engine's look-ahead said about this AI move (higher levels only).
+  // What the engine's look-ahead said about this AI move.
   readonly lookahead?: ChosenLookahead;
+  // The level the AI played this move at (AI moves only).
+  readonly level?: AiLevel;
   // The AI's reaction (trash talk) to the player's move just before, and the
   // engine's verdict on that move when it found it remarkable.
   readonly reaction?: string;
@@ -64,6 +66,7 @@ interface AiMoveDetails {
   readonly lookahead?: ChosenLookahead | undefined;
   readonly reaction?: string | undefined;
   readonly judgement?: MoveJudgement | undefined;
+  readonly level?: AiLevel | undefined;
 }
 
 // Where to go in the history: one of the four arrows, or a move number.
@@ -99,14 +102,16 @@ export interface GameState {
   // can be recognised and ignored.
   readonly aiRequestId: number;
   readonly aiFailureReasons: readonly string[];
-  // How strong the AI plays (see src/ai/difficulty.ts). Can change at any
-  // time; it applies from the AI's next turn.
+  // How strong the AI plays (see src/ai/difficulty.ts). Fixed for the whole
+  // game, so a game (and later a leaderboard win) belongs to one level;
+  // choosing another level starts a new game (D44).
   readonly aiLevel: AiLevel;
 }
 
 export type GameAction =
   | { type: "click"; position: Position }
-  | { type: "newGame" }
+  // A new game; `mode` and `level` change them for it (else they are kept).
+  | { type: "newGame"; mode?: GameMode; level?: AiLevel }
   | { type: "setMode"; mode: GameMode }
   | {
       type: "aiMoved";
@@ -119,7 +124,6 @@ export type GameAction =
     }
   | { type: "aiFailed"; requestId: number; reasons: readonly string[] }
   | { type: "aiRetry" }
-  | { type: "setAiLevel"; level: AiLevel }
   | { type: "history"; to: HistoryTarget };
 
 export interface GameOptions {
@@ -216,6 +220,7 @@ function playMove(state: GameState, move: Move, ai: AiMoveDetails = {}): GameSta
         player: mover,
         ...(ai.reason ? { reason: ai.reason } : {}),
         ...(ai.lookahead ? { lookahead: ai.lookahead } : {}),
+        ...(ai.level ? { level: ai.level } : {}),
         ...(ai.reaction ? { reaction: ai.reaction } : {}),
         ...(ai.judgement ? { judgement: ai.judgement } : {}),
       },
@@ -301,7 +306,7 @@ function handleAiMoved(state: GameState, requestId: number, move: Move, ai: AiMo
       aiFailureReasons: ["The AI chose a move that is not legal."],
     };
   }
-  return playMove(state, legal, ai);
+  return playMove(state, legal, { ...ai, level: state.aiLevel });
 }
 
 function handleAiFailed(
@@ -351,7 +356,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "click":
       return handleClick(state, action.position);
     case "newGame":
-      return createGameState({ mode: state.mode, aiRequestId: state.aiRequestId + 1, aiLevel: state.aiLevel });
+      return createGameState({
+        mode: action.mode ?? state.mode,
+        aiRequestId: state.aiRequestId + 1,
+        aiLevel: action.level ?? state.aiLevel,
+      });
     case "setMode":
       return action.mode === state.mode
         ? state
@@ -360,8 +369,6 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return handleAiMoved(state, action.requestId, action.move, action);
     case "aiFailed":
       return handleAiFailed(state, action.requestId, action.reasons);
-    case "setAiLevel":
-      return action.level === state.aiLevel ? state : { ...state, aiLevel: action.level };
     case "aiRetry":
       return handleAiRetry(state);
   }

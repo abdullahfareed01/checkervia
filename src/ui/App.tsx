@@ -12,6 +12,7 @@ import { Board } from "./Board";
 import { boardViewOf, cardFor, nameOf, winReasonOf } from "./gameView";
 import { HistoryControls } from "./HistoryControls";
 import { LevelDialog } from "./LevelDialog";
+import { MenuSetup } from "./MenuSetup";
 import { ModeSelector } from "./ModeSelector";
 import { NewGameButton } from "./NewGameButton";
 import { ResultDialog } from "./ResultDialog";
@@ -20,6 +21,7 @@ import { SpeechBubble } from "./SpeechBubble";
 import type { SpeechMessage } from "./SpeechBubble";
 import { StatusBar } from "./StatusBar";
 import { TopBar } from "./TopBar";
+import type { MenuRun } from "./TopBar";
 import { useAiExplanation } from "./useAiExplanation";
 import { useGameDuration, useResultPopup } from "./useResultPopup";
 import { useAnimationKey, useHistoryKeys } from "./useHistoryView";
@@ -34,7 +36,7 @@ interface AppProps {
 // Layout: the board column (opponent card, board, your card) and a sidebar
 // (title, mode, status, history, controls). See styles.css for the layout.
 export function App({ initial, onMenu, onAiLevel }: AppProps) {
-  const { state, click, newGame, setMode, retryAi, goHistory, setAiLevel } = useGame(initial);
+  const { state, click, newGame, setMode, retryAi, goHistory, playAi } = useGame(initial);
   const inProgress = isGameInProgress(state);
   const durationMs = useGameDuration(state.movesPlayed, state.winner);
   const result = useResultPopup(state.winner, state.lastMove);
@@ -60,12 +62,29 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     ],
     [inProgress, newGame, openRules, onMenu],
   );
-  const startVsAi = (level: AiLevel) => {
-    setAskLevel(false);
-    setAiLevel(level);
-    onAiLevel?.(level);
-    setMode("vs-ai");
-  };
+  // A new game against the AI at `level` (from the level dialog or the Menu).
+  const startVsAi = useCallback(
+    (level: AiLevel) => {
+      setAskLevel(false);
+      playAi(level);
+      onAiLevel?.(level);
+    },
+    [playAi, onAiLevel],
+  );
+  // The Menu sheet's mode and level controls.
+  const setup = useCallback(
+    (run: MenuRun) => (
+      <MenuSetup
+        mode={state.mode}
+        level={state.aiLevel}
+        run={run}
+        loseQuestion={loseQuestion}
+        onTwoPlayers={() => setMode("two-player")}
+        onPlayAi={startVsAi}
+      />
+    ),
+    [state.mode, state.aiLevel, inProgress, setMode, startVsAi],
+  );
 
   // The AI's speech bubble: typing dots while it thinks, then its reason,
   // which stays until the player plays their move (or its time runs out).
@@ -92,6 +111,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           onBack={onMenu}
           backConfirm={loseQuestion("Back to the main menu?")}
           items={menuItems}
+          setup={setup}
         />
         <ModeSelector mode={state.mode} needsConfirmation={inProgress} onChange={chooseMode} />
       </header>

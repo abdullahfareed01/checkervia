@@ -7,6 +7,7 @@ import "./ui/aiReason.css";
 import "./ui/menu.css";
 import "./ui/learn.css";
 import "./ui/chrome.css";
+import "./ui/sheet.css";
 
 async function start() {
   let initial: GameOptions | undefined;

@@ -17,11 +17,22 @@
 6. After 1 + 3 attempts with no valid answer: dispatch `aiFailed`. The UI shows the fallback message and a Retry button. Nothing is played and the board stays locked.
 7. A reply for an old request id (New game, mode change, Retry) is ignored by the reducer.
 
-## Difficulty levels and look-ahead (prompt v3; square names since v4)
-- Levels: Beginner (no look-ahead), Casual (2 turns), Strong (4 turns), Expert (6 turns). See D36.
-- For levels 2 to 4 the prompt gets a block before the move list ("Engine look-ahead: for every move below, the game engine tried every possible sequence of moves for the next N turns ..."), and each move line ends with `| score +1.0` (material lead in pieces after best play) or `| forced win in 3 turns`, `| forced loss in 2 turns`, `| wins the game at once`.
-- Example line: `5: (3,4) -> (5,2) | captures (4,3) | score +1.0`.
-- The search runs in a Web Worker. Fallbacks: a worker error or a 10 s timeout gives a 2-turn search on the page; any other look-ahead problem gives a Beginner prompt. A turn never fails because of the look-ahead.
+## Difficulty levels and look-ahead (prompt v7, D44)
+- A **turn** (a **ply**) is one move by one side; a multi jump counts as one turn. "Looks 6 turns ahead" means 3 moves by each side, starting with the AI's own move.
+- How a move is chosen: the engine scores every legal move by searching ahead (negamax with alpha-beta pruning in `src/ai/search.ts`, run in a Web Worker so the board never freezes). Each score is the material lead (a piece 1.0, a King 1.6) after best play by both sides for that many turns, or a forced win or loss. While a capture is pending the search goes on, up to 8 extra turns, so an exchange is never judged half way. `src/ai/candidates.ts` keeps the level's best few; the model chooses one of them by number; the number is checked against that list.
+- The same search judges the player's moves for the AI's reactions (`judge.ts`, always 4 turns, D42).
+
+| Level | Turns ahead | Moves offered to the model | Search time (median / max) |
+| --- | --- | --- | --- |
+| Easy | 1 | every legal move; about 3 turns in 10 without scores (deliberate slips) | 0.1 / 1.4 ms |
+| Medium (default) | 2 | the best 5 | 0.3 / 2.6 ms |
+| Hard | 4 | the best 4 | 2.9 / 28 ms |
+| Strongest | 6 | the best 3 | 25 / 268 ms |
+
+- Times: Node, 919 positions from 8 varied self-play games. A whole game's re-check at Strongest (one search per AI move) took 1.1 to 3.6 s.
+- The prompt gets a block before the move list ("Engine look-ahead: ... for the next N turns (a turn is one move by one side; your move is the first turn) ..."), and each line ends with `| score +1.0` or `| forced win in 3 turns`. When only some moves are offered, the heading says so: "Moves to choose from (the engine's best 3 of your 9 legal moves; choose one of these):".
+- Ties at the cut are broken by the engine's move order, so the list is the same every time for the same position and level (the server can recompute it).
+- Fallbacks: if the worker fails or takes over 10 s, the same search runs on the page at the same depth. If the look-ahead still fails, Medium, Hard and Strongest cannot build their list, so the turn fails and Retry is shown; Easy plays on without scores.
 - The proxy accepts prompts up to 8000 characters (the tested worst case is well below).
 
 ## Prompt format (version v2, still the base of v3)
@@ -165,3 +176,4 @@ Add a row for every prompt version. Fill in the result after real testing.
 | v4 | 2026-11-13 | Squares named as on the board: columns A to H, rows 8 (top) to 1 (bottom), e.g. `1: A3 -> B4`; the board grid has letters on top and rows 8 to 1; directions now "Black moves up toward row 8". Nothing else changed. | Live check (headless Edge, `netlify dev`): 8 AI turns at Beginner and Expert, 0 failures, 0 page errors; Expert chose a top-scored move 4 of 4. Replies took 3.7 to 13 s (v3 had 2.0 to 5.6 s); the prompt is the same size, so this is most likely provider speed varying between runs; keep watching. |
 | v5 | 2026-11-13 | Reply is `{"move", "reason", "reaction"}`. Before the move list, one line about the opponent's last move: after an engine-judged blunder, ask for a gentle playful tease (max 15 words, never insulting); after a great move, warm praise; otherwise `set "reaction" to ""`. | Live check (headless Edge, `netlify dev`, `?scenario=react`): 3 blunders, 3 friendly teases ("Oops, a little slip there, huh?", "Nice try, but that slip cost you a piece!", "Oops, that slip lost you a piece!"); 2 safe moves, no reaction. 0 failures, replies in 1.4 to 2.9 s. |
 | v6 | 2026-11-13 | Trash-talking rival persona; a reaction after every player move (engine verdict added when there is one); the AI's last 3 lines quoted so it does not repeat itself; no "Nice try", no "pawns"; limits: about the game only (no slurs, hate, real-world personal topics, sex or threats). | Live check (headless Edge, `?scenario=react`, real model): first try had 6 of 6 lines opening with "Nice try" and used "pawn"; after the variety rules, 6 different, much sharper lines (e.g. "What a brain-fart, moving into my capture—now you'll eat dust!", "Your move was as stale as week-old coffee, time to brew some real trouble."), all about the game; 0 failures, replies in 1.2 to 2.7 s. The model's lines are not checked: one called a forward move "stepping back". |
+| v7 | 2026-11-13 | Levels Easy / Medium / Hard / Strongest (D44): the model is offered only the engine's best 5 / 4 / 3 moves at Medium / Hard / Strongest (all at Easy), numbered from 1, with a heading saying so; the look-ahead text explains what a turn is. | Live check (headless Edge, `netlify dev`, real model): 2 turns per level, 8 turns, 0 failures, 1.5 to 5.6 s per turn; one Easy slip seen; every popup showed the right level, depth and number of moves offered. |

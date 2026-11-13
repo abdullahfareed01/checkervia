@@ -1,6 +1,6 @@
 // Gets look-ahead scores for the AI's legal moves, in the background when the
 // browser allows it. Built never to fail a turn: if the worker breaks or is
-// too slow, it falls back to a quick search on the spot.
+// stuck, the same search runs on the page instead.
 import type { Board, Player } from "../engine";
 import { analyzeMoves } from "./search";
 
@@ -11,11 +11,8 @@ export interface Lookahead {
 
 export type Analyze = (board: Board, player: Player, depth: number) => Promise<Lookahead>;
 
-// A 6-turn search takes well under a second; this only catches a stuck worker.
+// A 6-turn search takes at most about 0.3 s; this only catches a stuck worker.
 export const WORKER_TIMEOUT_MS = 10_000;
-// Depth of the emergency search when the worker fails: fast enough (a few
-// milliseconds) to run on the page without a visible pause.
-export const FALLBACK_DEPTH = 2;
 
 /** The search on the page itself (tests, and the fallback). */
 export const analyzeHere: Analyze = async (board, player, depth) => ({
@@ -51,13 +48,15 @@ function analyzeInWorker(board: Board, player: Player, depth: number): Promise<L
 
 /**
  * The analyzer the app uses: a background worker where available, otherwise
- * (or if the worker fails) a shallow search on the page.
+ * (or if the worker fails) the same search on the page. Always the full depth:
+ * the level's candidate moves must be the same as the server would work out
+ * (D44), and even 6 turns takes at most about 0.3 s on the page.
  */
 export const analyze: Analyze = async (board, player, depth) => {
   if (typeof Worker === "undefined") return analyzeHere(board, player, depth);
   try {
     return await analyzeInWorker(board, player, depth);
   } catch {
-    return analyzeHere(board, player, Math.min(depth, FALLBACK_DEPTH));
+    return analyzeHere(board, player, depth);
   }
 };

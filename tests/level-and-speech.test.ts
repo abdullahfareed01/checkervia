@@ -21,13 +21,13 @@ describe("LevelDialog", () => {
 
   it("offers all four levels with what each one means", () => {
     expect(html.match(/role="radio"/g)).toHaveLength(4);
-    for (const name of ["Beginner", "Casual", "Strong", "Expert"]) expect(html).toContain(name);
+    for (const name of ["Easy", "Medium", "Hard", "Strongest"]) expect(html).toContain(name);
     expect(html).toContain("6 turns ahead");
   });
 
   it("preselects the given level", () => {
     expect(html.match(/aria-checked="true"/g)).toHaveLength(1);
-    expect(html).toMatch(/aria-checked="true"[^>]*>[\s\S]*?Strong/);
+    expect(html).toMatch(/aria-checked="true"[^>]*>[\s\S]*?Hard/);
   });
 
   it("has Start game and Cancel", () => {
@@ -52,7 +52,7 @@ describe("the difficulty bar is gone", () => {
 describe("the chosen level is visible in the game", () => {
   it("as a badge on the AI's card", () => {
     const html = renderToStaticMarkup(createElement(App, { initial: { mode: "vs-ai", aiLevel: 4 } }));
-    expect(html).toMatch(/class="badge badge-level"><svg[^>]*class="icon icon-crown"[\s\S]*?<\/svg>Expert</);
+    expect(html).toMatch(/class="badge badge-level"><svg[^>]*class="icon icon-crown"[\s\S]*?<\/svg>Strongest</);
   });
 
   it("not in a two-player game", () => {

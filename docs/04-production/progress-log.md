@@ -162,3 +162,9 @@
 - User asked for more aggressive replies with a free hand. Prompt v6: cocky rival persona, a reaction after every move, limits only to keep it about the game. The AI sees its last 3 lines so it does not repeat itself.
 - Live check found the first version repetitive (every line opened with "Nice try") and using the chess word "pawn"; fixed with variety rules; the next 6 lines were all different and sharper.
 - Tests: 530 passing in 41 files. Typecheck and build clean.
+
+## 2026-11-13: Leaderboard work, phase 1: difficulty levels (D44)
+- Git repository created; baseline commit on `main`; work on `feature/leaderboard`.
+- Levels Easy (1 turn, all moves, random slips), Medium (2 turns, best 5), Hard (4, best 4), Strongest (6, best 3). The model only sees the offered moves; its number is checked against them. Prompt v7. A level is fixed per game; stored on AI history entries; chip on the AI card; Menu sheet with mode and level.
+- Search time measured: up to 268 ms at 6 turns (median 25 ms).
+- Tests: 559 passing in 43 files. Typecheck clean. Live: 8 real AI turns across the four levels, 0 failures.

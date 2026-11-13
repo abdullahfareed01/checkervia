@@ -1,4 +1,5 @@
 import { memo, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { BackIcon, CrownIcon, LaurelIcon, MenuDotsIcon } from "./icons";
 
@@ -25,17 +26,25 @@ export interface MenuItem {
   confirm?: string | undefined;
 }
 
+// Runs a choice made in the Menu sheet: closes the sheet, and asks
+// `question` first when it is set.
+export type MenuRun = (question: string | undefined, action: () => void) => void;
+
 interface TopBarProps {
   title: string;
   onBack?: (() => void) | undefined; // the back arrow (hidden without one)
   backConfirm?: string | undefined; // ask this first, if set
   items?: readonly MenuItem[]; // the Menu button's list (hidden when empty)
+  // Extra controls at the top of the Menu sheet (the game's mode and level).
+  setup?: ((run: MenuRun) => ReactNode) | undefined;
 }
 
 // The bar at the top of the game and Learn screens: back arrow, title, Menu.
-// The Menu opens a short list; actions that would lose a game ask first.
+// The Menu opens a sheet (a panel under the button; a bottom sheet on
+// phones) with the optional setup controls and a short list of actions.
+// Actions that would lose a game ask first.
 // Memoised: the game passes stable callbacks and a memoised item list.
-export const TopBar = memo(function TopBar({ title, onBack, backConfirm, items = [] }: TopBarProps) {
+export const TopBar = memo(function TopBar({ title, onBack, backConfirm, items = [], setup }: TopBarProps) {
   const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState<{ question: string; run: () => void } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -57,7 +66,7 @@ export const TopBar = memo(function TopBar({ title, onBack, backConfirm, items =
     };
   }, [open]);
 
-  const run = (question: string | undefined, action: () => void) => {
+  const run: MenuRun = (question, action) => {
     setOpen(false);
     if (question) setAsking({ question, run: action });
     else action();
@@ -77,17 +86,21 @@ export const TopBar = memo(function TopBar({ title, onBack, backConfirm, items =
 
       {items.length > 0 ? (
         <div className="menu" ref={menuRef}>
-          <button type="button" className="menu-button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+          <button type="button" className="menu-button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
             <MenuDotsIcon />
             Menu
           </button>
+          {open && <div className="menu-backdrop" aria-hidden="true" onClick={() => setOpen(false)} />}
           {open && (
-            <div className="menu-list" role="menu">
-              {items.map((item) => (
-                <button key={item.label} type="button" role="menuitem" className="menu-item" onClick={() => run(item.confirm, item.onSelect)}>
-                  {item.label}
-                </button>
-              ))}
+            <div className={`menu-list${setup ? " menu-sheet" : ""}`} role="dialog" aria-label="Menu">
+              {setup?.(run)}
+              <div role="menu" aria-label="Actions">
+                {items.map((item) => (
+                  <button key={item.label} type="button" role="menuitem" className="menu-item" onClick={() => run(item.confirm, item.onSelect)}>
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
         </div>

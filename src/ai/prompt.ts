@@ -7,7 +7,7 @@ import type { Lookahead } from "./analyzer";
 import type { MoveJudgement } from "./judge";
 import { isForced, turnsToResult } from "./search";
 
-export const PROMPT_VERSION = "v6";
+export const PROMPT_VERSION = "v7";
 
 const SYSTEM_RULES = `You are playing checkers on an 8x8 board.
 
@@ -61,7 +61,7 @@ export function describeScore(score: number): string {
 // How the scores were made, so the model can trust and use them.
 function explainLookahead(depth: number): string {
   return [
-    `Engine look-ahead: for every move below, the game engine tried every possible sequence of moves for the next ${depth} turns (your move is the first turn), with both sides always choosing their best option.`,
+    `Engine look-ahead: for every move below, the game engine tried every possible sequence of moves for the next ${depth} turns (a turn is one move by one side; your move is the first turn), with both sides always choosing their best option.`,
     `"score" is your material lead at the end of that line, in pieces (a regular piece counts 1.0, a King 1.6). Higher is better for you. "forced win in N turns" means you can win by force; "forced loss in N turns" means your opponent can.`,
     "The scores are exact for that many turns. Choose the move with the highest score unless you see a clear reason not to.",
   ].join("\n");
@@ -110,20 +110,28 @@ export function describeMove(move: Move, number: number, score?: number): string
   return parts.join(" | ");
 }
 
+// The heading of the move list: all legal moves, or the engine's best few.
+function movesHeading(offered: number, legal: number): string {
+  if (offered >= legal) return "Legal moves:";
+  return `Moves to choose from (the engine's best ${offered} of your ${legal} legal moves; choose one of these):`;
+}
+
 // The numbered list of legal moves, starting at 1.
 export function describeMoves(moves: readonly Move[], scores?: readonly number[]): string {
   return moves.map((move, index) => describeMove(move, index + 1, scores?.[index])).join("\n");
 }
 
-// The full prompt: rules, then the position, then (for the higher levels)
-// how the look-ahead works, then the numbered legal moves. Scores are only
-// used when there is exactly one per move.
+// The full prompt: rules, then the position, then how the look-ahead works
+// (when scores are shown), then the numbered moves the model may choose from.
+// Scores are only used when there is exactly one per move. `legalCount` is
+// the number of legal moves when `moves` is only the engine's best few.
 export function buildPrompt(
   board: Board,
   player: Player,
   moves: readonly Move[],
   lookahead?: Lookahead,
   opponent?: OpponentMove,
+  legalCount = moves.length,
 ): string {
   const side = player === "black" ? "Black" : "White";
   const scores = lookahead && lookahead.scores.length === moves.length ? lookahead.scores : undefined;
@@ -133,7 +141,7 @@ export function buildPrompt(
     `${LEGEND}\n${DIRECTIONS}\nYou are playing ${side}.`,
     ...(scores && lookahead ? [explainLookahead(lookahead.depth)] : []),
     describeOpponentMove(opponent),
-    `Legal moves:\n${describeMoves(moves, scores)}`,
+    `${movesHeading(moves.length, legalCount)}\n${describeMoves(moves, scores)}`,
   ].join("\n\n");
 }
 
