@@ -1,5 +1,5 @@
 // The development only URL options (?scenario= prepared positions, ?idle=fast
-// quick idle lines) must do nothing in a production build: their code is
+// quick idle lines, ?sounds the sound audition page) must do nothing in a production build: their code is
 // behind import.meta.env.DEV, so Vite leaves it out. This builds the app the
 // way Netlify does (into a temporary folder) and checks that none of it is in
 // the output.
@@ -43,5 +43,15 @@ describe("production build", () => {
 
   it("has no ?idle=fast option", () => {
     expect(code).not.toMatch(literal("fast"));
+  });
+
+  it("has no ?sounds audition page", () => {
+    expect(files.some((file) => /SoundAudition/i.test(file))).toBe(false);
+    expect(code).not.toMatch(literal("sounds"));
+    expect(code).not.toContain("Sound audition");
+  });
+
+  it("ships no audio files (every sound is synthesized)", () => {
+    expect(files.filter((file) => /\.(mp3|wav|ogg|m4a|aac|flac)$/i.test(file))).toEqual([]);
   });
 });

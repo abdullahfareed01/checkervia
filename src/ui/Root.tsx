@@ -11,6 +11,7 @@ import { Splash } from "./Splash";
 import { TermsDialog } from "./TermsDialog";
 import { useAiLevel } from "./useAiLevel";
 import { useAiStatus, useSplash } from "./useAiStatus";
+import { useInterfaceFeedback } from "./useFeedback";
 
 // Which screen is showing. A game gets a fresh `id` each time one is started
 // from the menu, so the board always starts clean.
@@ -31,6 +32,7 @@ interface RootProps {
 // menu, the rules page or a game.
 export function Root({ initial, checkAi }: RootProps) {
   const ai = useAiStatus(checkAi);
+  useInterfaceFeedback(); // audio unlock on the first tap, button clicks
   const splash = useSplash(ai.loaded);
   const [aiLevel, setAiLevel] = useAiLevel();
   const [screen, setScreen] = useState<Screen>(() =>

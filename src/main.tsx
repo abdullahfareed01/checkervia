@@ -19,8 +19,15 @@ async function start() {
   // In a production build import.meta.env.DEV is false, so this block and the
   // scenarios file are left out entirely.
   if (import.meta.env.DEV) {
-    const name = new URLSearchParams(window.location.search).get("scenario");
+    const params = new URLSearchParams(window.location.search);
+    const name = params.get("scenario");
     if (name) initial = (await import("./ui/devScenarios")).scenario(name);
+    // ?sounds: the sound audition page instead of the game.
+    if (params.has("sounds")) {
+      const { SoundAudition } = await import("./ui/SoundAudition");
+      createRoot(document.getElementById("root")!).render(<SoundAudition />);
+      return;
+    }
   }
 
   createRoot(document.getElementById("root")!).render(

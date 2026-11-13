@@ -79,3 +79,8 @@
 ## Controls
 - New game button always visible. It asks for confirmation (inline panel) only while a game is in progress: at least one move played and no winner yet.
 - Mode toggle: Two players / Versus AI.
+
+## Sound and haptics (D52)
+- Restrained and tactile: short wooden clacks for moves, a heavier clack and a low thud for captures, rising clacks for each hop of a multi jump, a soft chime for a King, a dull thud for a tap that does nothing (softer when a capture is mandatory), a soft pop for the AI's lines, a settle of pieces for a new game, a warm rising two note motif for a win and a soft falling one for a loss, very soft clicks for buttons and toggles, an air whoosh for sheets. Nothing for turn changes or the AI thinking.
+- Vibrations match: 8 ms to pick up, 12 ms to land, 25 ms to capture, a pattern for a King, a win and an error; none on phones that cannot vibrate (iPhone).
+- Every sound is synthesized; tune them in `src/ui/sound/soundConfig.ts` and listen at `?sounds` in development.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { playFeedback } from "./feedback";
 import type { ReactNode } from "react";
 import type { AiLevel } from "../ai";
 import { hasConsent, nextConsentStep, saveConsent } from "./consent";
@@ -102,6 +103,7 @@ export function useStrongestGate(start: (level: AiLevel) => void): [(level: AiLe
     if (!step) return;
     const next = nextConsentStep(step, yes);
     if (next === "accepted") {
+      playFeedback("consent");
       saveConsent(new Date());
       setStep(null);
       start(4);

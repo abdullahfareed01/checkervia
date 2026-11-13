@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { AiLevel } from "../ai";
 import { useGame } from "../state/useGame";
 import { isCaptureMandatory, isGameInProgress, pieceCounts } from "../state/selectors";
 import { canGoBack, canGoForward, displayedPosition, moveList } from "../state/history";
 import type { MoveListItem } from "../state/history";
+import { gameReducer } from "../state/gameReducer";
 import type { GameMode, GameOptions } from "../state/gameReducer";
+import type { Position } from "../engine";
 import { AiMoveNote } from "./AiMoveNote";
 import { useStrongestGate } from "./ConsentDialog";
 import { Board } from "./Board";
@@ -32,6 +34,8 @@ import type { MenuRun } from "./GameMenu";
 import { useAiExplanation } from "./useAiExplanation";
 import { useGameDuration, useResultPopup } from "./useResultPopup";
 import { useAnimationKey, useHistoryKeys } from "./useHistoryView";
+import { clickFeedback, playFeedback } from "./feedback";
+import { useGameFeedback } from "./useFeedback";
 
 interface AppProps {
   initial?: GameOptions | undefined; // the first game's setup
@@ -43,7 +47,51 @@ interface AppProps {
 // Layout: the board column (opponent card, board, your card) and a sidebar
 // (title, mode, status, history, controls). See styles.css for the layout.
 export function App({ initial, onMenu, onAiLevel }: AppProps) {
-  const { state, click, newGame, setMode, retryAi, goHistory, playAi, resign } = useGame(initial);
+  const game = useGame(initial);
+  const { state, retryAi, goHistory } = game;
+  // The game's actions with their sounds and vibrations (feedback.ts). A
+  // board click is classified by running the pure reducer on the current
+  // state: a pick up, a put down, or a tap that does nothing. Moves sound
+  // when the piece lands (useGameFeedback).
+  const current = useRef(state);
+  current.current = state;
+  const click = useCallback(
+    (position: Position) => {
+      const before = current.current;
+      const event = clickFeedback(before, gameReducer(before, { type: "click", position }), position);
+      if (event) playFeedback(event, { column: position.col });
+      game.click(position);
+    },
+    [game.click],
+  );
+  const newGame = useCallback(() => {
+    game.newGame();
+    playFeedback("gameStart");
+  }, [game.newGame]);
+  const setMode = useCallback(
+    (mode: GameMode) => {
+      if (mode !== current.current.mode) playFeedback("gameStart");
+      game.setMode(mode);
+    },
+    [game.setMode],
+  );
+  const playAi = useCallback(
+    (level: AiLevel) => {
+      game.playAi(level);
+      playFeedback("gameStart");
+    },
+    [game.playAi],
+  );
+  const resign = useCallback(() => {
+    game.resign();
+    playFeedback("resign");
+  }, [game.resign]);
+  // Opening the game screen sets up a board too (once, even in StrictMode).
+  const started = useRef(false);
+  useEffect(() => {
+    if (!started.current) playFeedback("gameStart");
+    started.current = true;
+  }, []);
   const inProgress = isGameInProgress(state);
   const durationMs = useGameDuration(state.movesPlayed, state.winner);
   const result = useResultPopup(state.winner, state.lastMove);
@@ -130,6 +178,11 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     state.winner === null
       ? { kind: "resign", question: resignQuestion, highlight: personality.hintActive, onResign: resign }
       : { kind: "result", onShow: result.reopen };
+  // Sounds and vibrations that follow from what is on screen.
+  const sheets = [menuOpen && "menu", why.open && "why", termsOpen && "terms", rulesOpen && "rules", languageOpen && "language", askLevel && "level"]
+    .filter(Boolean)
+    .join(" ");
+  useGameFeedback({ state, resultOpen: result.open, sheets, bubble: result.open ? null : bubble });
   const chat = state.mode === "vs-ai" && (
     <ChatBubble
       message={result.open ? null : bubble}
