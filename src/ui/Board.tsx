@@ -36,7 +36,8 @@ interface BoardProps {
   // The move animation tells the game when each landing happens (its sound
   // and vibration) and while input must wait (the hops), never longer.
   onMoveBeat?: ((beat: MoveBeat) => void) | undefined;
-  onMoveLock?: ((locked: boolean) => void) | undefined;
+  // `key` is the move's animation key: unlocking it means that move landed.
+  onMoveLock?: ((locked: boolean, key: number) => void) | undefined;
 }
 
 function includes(list: readonly Position[], position: Position): boolean {
@@ -80,9 +81,11 @@ function useMovePlayback(
 ): [Playback | null, PlayerHandlers] {
   const [active, setActive] = useState<Playback | null>(null);
   const key = view.moveKey ?? 0;
-  // The latest callbacks, read when a landing happens.
+  // The latest callbacks, read when a landing happens, and the key of the
+  // move being played.
   const callbacks = useRef({ onBeat, onLock });
   callbacks.current = { onBeat, onLock };
+  const playing = useRef(0);
 
   useLayoutEffect(() => {
     const move = view.lastMove;
@@ -98,16 +101,17 @@ function useMovePlayback(
       return playPlan(plan, {}, { onBeat: (beat) => callbacks.current.onBeat?.(beat) });
     }
     setActive({ key, plan });
-    callbacks.current.onLock?.(true);
+    playing.current = key;
+    callbacks.current.onLock?.(true, key);
     // A new move, a new game or leaving: the lock never outlives the plan.
-    return () => callbacks.current.onLock?.(false);
+    return () => callbacks.current.onLock?.(false, key);
     // Only a new key starts a plan.
   }, [key]);
 
   const handlers = useMemo<PlayerHandlers>(
     () => ({
       onBeat: (beat) => callbacks.current.onBeat?.(beat),
-      onUnlock: () => callbacks.current.onLock?.(false),
+      onUnlock: () => callbacks.current.onLock?.(false, playing.current),
       onDone: () => setActive(null),
     }),
     [],

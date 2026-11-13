@@ -7,7 +7,7 @@ import { canGoBack, canGoForward, displayedPosition, moveList } from "../state/h
 import type { MoveListItem } from "../state/history";
 import { AI_PLAYER, gameReducer } from "../state/gameReducer";
 import type { GameMode, GameOptions } from "../state/gameReducer";
-import type { Position } from "../engine";
+import type { Move, Position } from "../engine";
 import { AiMoveNote } from "./AiMoveNote";
 import { useStrongestGate } from "./ConsentDialog";
 import { Board } from "./Board";
@@ -37,8 +37,10 @@ import { useAnimationKey, useHistoryKeys } from "./useHistoryView";
 import { clickFeedback, playFeedback } from "./feedback";
 import type { MoveBeat } from "./feedback";
 import { shakeAt } from "./animation/shake";
-import { settingsStore } from "./settings";
+import { settingsStore, useSettings } from "./settings";
 import { useGameFeedback } from "./useFeedback";
+import { useSpeakTips, useVoice } from "./useVoice";
+import { voiceEngine } from "./voice/voiceEngine";
 
 interface AppProps {
   initial?: GameOptions | undefined; // the first game's setup
@@ -59,11 +61,14 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const current = useRef(state);
   current.current = state;
   // While the move animation's hops run, the board waits (never longer).
-  const [moving, setMoving] = useState(false);
   const movingNow = useRef(false);
-  const onMoveLock = useCallback((locked: boolean) => {
+  // The last move whose animation has landed (see aiLanding). Only the move
+  // on screen counts: the cleanup of an older one reports its own key.
+  const [landedMove, setLandedMove] = useState<Move | null>(null);
+  const shownKey = useRef(0);
+  const onMoveLock = useCallback((locked: boolean, key: number) => {
     movingNow.current = locked;
-    setMoving(locked);
+    if (!locked && key === shownKey.current) setLandedMove(current.current.lastMove);
   }, []);
   // Each landing of a move: its sound and vibration (only for the game as
   // it is now, not while stepping through the history).
@@ -87,11 +92,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     [game.click],
   );
   const newGame = useCallback(() => {
+    voiceEngine().cancel();
     game.newGame();
     playFeedback("gameStart");
   }, [game.newGame]);
   const setMode = useCallback(
     (mode: GameMode) => {
+      voiceEngine().cancel();
       if (mode !== current.current.mode) playFeedback("gameStart");
       game.setMode(mode);
     },
@@ -99,6 +106,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   );
   const playAi = useCallback(
     (level: AiLevel) => {
+      voiceEngine().cancel();
       game.playAi(level);
       playFeedback("gameStart");
     },
@@ -119,6 +127,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const result = useResultPopup(state.winner, state.lastMove);
   const shown = displayedPosition(state);
   const moveKey = useAnimationKey(shown.index);
+  shownKey.current = moveKey;
   const why = useAiExplanation(state.mode, shown);
   const landscapePhone = useMediaQuery(LANDSCAPE_PHONE);
   const [askLevel, setAskLevel] = useState(false);
@@ -195,8 +204,18 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
   const personality = usePersonality(state, playerTurn && !startedMove && !covered);
   // The AI's line appears after its piece has landed: until then, the typing
-  // dots stay (the same bubble, so nothing flickers).
-  const aiLanding = moving && state.history[state.history.length - 1]?.player === AI_PLAYER && state.mode === "vs-ai";
+  // dots stay (the same bubble, so nothing flickers). Worked out during the
+  // render from the move's animation key, so no effect (the bubble's pop, the
+  // voice) ever sees the line early.
+  const animatedLevel = useSettings().animation.level;
+  const aiLanding =
+    state.mode === "vs-ai" &&
+    state.viewIndex === null &&
+    state.history[state.history.length - 1]?.player === AI_PLAYER &&
+    moveKey > 0 &&
+    state.lastMove !== null &&
+    state.lastMove !== landedMove &&
+    (animatedLevel === "standard" || animatedLevel === "cinematic");
   const bubble = aiLanding
     ? { key: `thinking-${state.aiRequestId}`, text: null, tone: "banter" as const, why: false }
     : reactionBubble(state, dismissedAt, personality);
@@ -210,6 +229,12 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     .filter(Boolean)
     .join(" ");
   useGameFeedback({ state, resultOpen: result.open, sheets, bubble: result.open ? null : bubble });
+  // The AI's voice reads what is on screen (only what the player chose).
+  const endLine = result.open && state.mode === "vs-ai" ? (personality.end?.line?.text ?? null) : null;
+  const whyText =
+    why.open && why.explanation ? [...why.explanation.facts.map((fact) => fact.text), why.explanation.reason ?? ""].join(" ") : null;
+  useVoice({ bubble: result.open ? null : bubble, level: state.aiLevel, startedMove, endLine, why: whyText });
+  const speakTips = useSpeakTips(state.aiLevel);
   const chat = state.mode === "vs-ai" && (
     <ChatBubble
       message={result.open ? null : bubble}
@@ -275,6 +300,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           onClose={result.close}
           aiLine={personality.end?.line}
           tips={state.mode === "vs-ai" && state.winner !== "black" ? (personality.end?.tips ?? null) : undefined}
+          onTipsShown={speakTips}
         />
       )}
 

@@ -88,3 +88,6 @@
 ## Move animation (D53)
 - Levels: Off (instant), Reduced (instant, the moved piece fades in over 100 ms; the default when the system asks for less motion), Standard, Cinematic (adds a faint ring where a piece was captured and shows legal destinations nearest first). Speed 0.75 to 1.5.
 - A move slides along its path with a gentle lift in the middle of each hop and lands with a tiny settle, in time with the clack and the vibration. A jumped piece shrinks and fades as the capturing piece lands; a multi jump goes hop by hop. A new King gets a short crown drop and a soft light sweep. The last move's tint fades in after the landing; the AI's line appears after its piece has landed. A tap that does nothing gives a small shake.
+
+## AI voice (D54)
+- Off by default. When on, the AI reads its lines aloud with the device's own voices (no cost): reactions, greetings and the game over taunt by default; idle lines and Tips and Why only when chosen. It never speaks before the first tap, stops when you start your next move, and lowers the sound effects while it speaks. People who use a screen reader should keep it off: the bubble is already announced.

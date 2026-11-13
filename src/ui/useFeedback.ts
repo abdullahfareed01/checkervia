@@ -6,14 +6,10 @@ import type { GameState } from "../state/gameReducer";
 import { AI_PLAYER } from "../state/gameReducer";
 import type { BubbleMessage } from "./ChatBubble";
 import { playFeedback } from "./feedback";
+import { markInteracted } from "./interaction";
+import { settingsStore } from "./settings";
 import { soundEngine } from "./sound/soundEngine";
-
-let interacted = false;
-
-/** True once the player has tapped, clicked or pressed a key on the page. */
-export function hasInteracted(): boolean {
-  return interacted;
-}
+import { voiceEngine } from "./voice/voiceEngine";
 
 /**
  * For the whole app: unlocks audio on the first tap or key press (browsers
@@ -24,8 +20,10 @@ export function hasInteracted(): boolean {
 export function useInterfaceFeedback(): void {
   useEffect(() => {
     const unlock = () => {
-      interacted = true;
+      markInteracted();
       soundEngine().unlock();
+      // iOS only allows speech after a tap: warm the voice up inside one.
+      if (settingsStore().get().voice.enabled) voiceEngine().unlock();
     };
     const onClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target.closest("button, [role='switch']") : null;

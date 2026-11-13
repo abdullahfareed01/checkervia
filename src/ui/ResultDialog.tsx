@@ -42,6 +42,7 @@ interface ResultDialogProps {
   aiLine?: EndLine | null | undefined;
   tips?: readonly GameTip[] | null | undefined;
   tipsShownAtStart?: boolean; // tests render the revealed state
+  onTipsShown?: ((tips: readonly string[]) => void) | undefined; // the AI voice may read them
 }
 
 type Outcome = "victory" | "defeat" | "winner";
@@ -248,7 +249,7 @@ export function ResultDialog(props: ResultDialogProps) {
           </button>
         </div>
 
-        {tips !== undefined && <AiTips tips={tips} shown={tipsShown} onShowNow={() => setTipsShown(true)} />}
+        {tips !== undefined && <AiTips tips={tips} shown={tipsShown} onShowNow={() => setTipsShown(true)} onShown={props.onTipsShown} />}
 
         <Scenery className="result-scenery" />
       </div>
@@ -259,7 +260,21 @@ export function ResultDialog(props: ResultDialogProps) {
 // "Tips from the AI" (Change 4): up to three tips worked out by the engine
 // from this game. Hidden for the first seconds with a "Show tips now" link;
 // the reveal is announced once to screen readers.
-function AiTips({ tips, shown, onShowNow }: { tips: readonly GameTip[] | null; shown: boolean; onShowNow: () => void }) {
+function AiTips({
+  tips,
+  shown,
+  onShowNow,
+  onShown,
+}: {
+  tips: readonly GameTip[] | null;
+  shown: boolean;
+  onShowNow: () => void;
+  onShown?: ((tips: readonly string[]) => void) | undefined;
+}) {
+  // Once the tips are on screen, the AI voice may read them (D54).
+  useEffect(() => {
+    if (shown && tips) onShown?.(tips.map((tip) => tip.text));
+  }, [shown, tips]);
   return (
     <section className="result-tips" aria-label="Tips from the AI">
       <p className="sr-only" aria-live="polite">
