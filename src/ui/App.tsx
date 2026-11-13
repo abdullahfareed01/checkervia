@@ -22,7 +22,7 @@ import { LanguageInfo } from "./LanguageInfo";
 import { ResignButton } from "./ResignButton";
 import { usePersonality } from "./usePersonality";
 import { reactionBubble } from "./bubble";
-import { LANDSCAPE_PHONE, PHONE, useMediaQuery } from "./useMediaQuery";
+import { LANDSCAPE_PHONE, useMediaQuery } from "./useMediaQuery";
 import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
 import { TermsDialog } from "./TermsDialog";
@@ -49,7 +49,6 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const shown = displayedPosition(state);
   const moveKey = useAnimationKey(shown.index);
   const why = useAiExplanation(state.mode, shown);
-  const phone = useMediaQuery(PHONE);
   const landscapePhone = useMediaQuery(LANDSCAPE_PHONE);
   const [askLevel, setAskLevel] = useState(false);
   // The move list only changes when the history does (DEV-010).
@@ -59,7 +58,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const [termsOpen, setTermsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
-  useHistoryKeys(goHistory, !result.open && !(why.open && phone) && !askLevel && !rulesOpen && !termsOpen);
+  useHistoryKeys(goHistory, !result.open && !why.open && !askLevel && !rulesOpen && !termsOpen);
   const loseQuestion = (what: string) => (inProgress ? `${what} The current game will be lost.` : undefined);
 
   // Switching to "Play vs AI" first asks for the AI's level.
@@ -123,7 +122,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   }, [startedMove, state.history.length]);
   // Greeting, idle lines, the resign hint and the end of the game (Change 4).
   // Idle lines wait while anything covers the board or the player is busy.
-  const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || (why.open && phone);
+  const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open;
   const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
   const personality = usePersonality(state, playerTurn && !startedMove && !covered);
   const bubble = reactionBubble(state, dismissedAt, personality);
@@ -169,7 +168,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           aiFailureReasons={state.aiFailureReasons}
           onRetryAi={retryAi}
         />
-        <AiMoveNote explanation={why.explanation} open={why.open} inline={!phone} onToggle={why.toggleWhy} />
+        <AiMoveNote explanation={why.explanation} open={why.open} onToggle={why.toggleWhy} />
         <HistoryControls
           index={shown.index}
           total={shown.total}
@@ -213,7 +212,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
 
       {/* Phones: "Why?" floats above the page. Rendered under <body> so no
           stacking layer can trap it under the board's route line (BUG-002). */}
-      {phone && why.open && why.explanation && createPortal(<WhySheet explanation={why.explanation} onClose={why.closeWhy} />, document.body)}
+      {why.open && why.explanation && createPortal(<WhySheet explanation={why.explanation} onClose={why.closeWhy} />, document.body)}
 
       {rulesOpen && <RulesDialog onClose={() => setRulesOpen(false)} />}
 

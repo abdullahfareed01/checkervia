@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 
-// Phones held upright, and phones held sideways (short screens).
-export const PHONE = "(max-width: 599px), (orientation: landscape) and (max-height: 599px)";
 // Phones held sideways only: the two column layout.
 export const LANDSCAPE_PHONE = "(orientation: landscape) and (max-height: 599px) and (min-width: 560px)";
 

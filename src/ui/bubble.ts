@@ -9,14 +9,14 @@ import { moveText } from "./notation";
 // Lines from the local banks (Change 4), already picked for this game.
 export interface ExtraLines {
   readonly greeting?: string | null | undefined; // at the start of a game
-  readonly idle?: { readonly key: string; readonly text: string } | null | undefined; // the player is slow
+  readonly idle?: { readonly key: string; readonly text: string; readonly count: number } | null | undefined; // the player is slow (count: the n-th idle line this turn)
   readonly hint?: { readonly index: number; readonly text: string } | null | undefined; // the resign hint, for one AI move
 }
 
 /**
  * The bubble for the live game, most recent event first:
  * - typing dots while the AI thinks;
- * - an idle line (no Why?);
+ * - an idle line (no Why?; only the first of a turn is read out);
  * - nothing once the player picked up a piece in this position
  *   (`dismissedAt` is the history length when they did);
  * - after an AI move: the resign hint if the engine proved the position
@@ -28,7 +28,7 @@ export interface ExtraLines {
 export function reactionBubble(state: GameState, dismissedAt: number, extra: ExtraLines = {}): BubbleMessage | null {
   if (state.mode !== "vs-ai" || state.viewIndex !== null || state.winner) return null;
   if (state.aiPhase === "thinking") return { key: `thinking-${state.aiRequestId}`, text: null, tone: "banter", why: false };
-  if (extra.idle) return { key: extra.idle.key, text: extra.idle.text, tone: "banter", why: false };
+  if (extra.idle) return { key: extra.idle.key, text: extra.idle.text, tone: "banter", why: false, announce: extra.idle.count === 1 };
   if (dismissedAt === state.history.length) return null;
 
   const index = state.history.length - 1;

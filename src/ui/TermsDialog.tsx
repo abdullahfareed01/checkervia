@@ -1,12 +1,13 @@
 import { useEffect, useRef } from "react";
 
-// Where players ask for a leaderboard entry to be removed.
+// The contact for the notices (and, later, leaderboard entry removals).
 export const CONTACT_EMAIL = "checkvia.games@gmail.com";
 
 // The Terms and notices, in plain words. DRAFT text (D45): the owner should
 // have it reviewed; it is not legal advice. Same text as
 // docs/02-design/terms-and-notices.md. No hyphens or dashes anywhere.
-export const TERMS_SECTIONS: readonly { title: string; points: readonly string[] }[] = [
+// `soon`: the section describes a feature that does not exist yet.
+export const TERMS_SECTIONS: readonly { title: string; soon?: boolean; points: readonly string[] }[] = [
   {
     title: "Entertainment only",
     points: ["Draft is a free checkers game made for fun. Nothing in it is advice of any kind."],
@@ -34,24 +35,30 @@ export const TERMS_SECTIONS: readonly { title: string; points: readonly string[]
     ],
   },
   {
-    title: "Leaderboard names are public",
-    points: [
-      "If you submit a win, your nickname, a short tag and your game stats are shown publicly on the worldwide leaderboard. Please do not use your real name.",
-      "Nicknames are filtered, and entries that break these rules may be hidden or removed.",
-    ],
-  },
-  {
     title: "What is stored",
     points: [
-      "In your browser: your chosen level, your acceptance of the Strongest notice (the time and the notice version) and a random device id that groups your wins. Clearing your browser data removes them, and your next win then counts as a new player.",
-      "On our server, only when you submit a win: your nickname and tag, the level, the moves of the game, the stats worked out from them, a scrambled (hashed) form of your device id, and the date.",
+      "In your browser: your chosen level and your acceptance of the Strongest notice (the time and the notice version). Clearing your browser data removes them.",
+      "In this tab only: your wins and losses against the AI, so it can greet you. They are gone when you close the tab.",
       "During a game, the board and the list of possible moves are sent to the AI provider so the AI can choose its move. No personal details are sent.",
-      "Your IP address may be used, in a scrambled form, to limit how often wins can be submitted. It is never shown.",
+      "Nothing is stored on our server today.",
     ],
   },
   {
-    title: "Removing an entry",
-    points: [`To have a leaderboard entry removed, email ${CONTACT_EMAIL} with the nickname and tag and roughly when you submitted it.`],
+    // Describes the leaderboard (phases 3 and 4), which is not built yet:
+    // shown as coming soon until it exists.
+    title: "Leaderboard",
+    soon: true,
+    points: [
+      "The worldwide leaderboard is not open yet, and nothing is sent to it. When it opens, these rules will apply:",
+      "If you submit a win, your nickname, a short tag and your game stats will be shown publicly. Please do not use your real name. Nicknames will be filtered, and entries that break these rules may be hidden or removed.",
+      "Only when you submit a win, our server will store your nickname and tag, the level, the moves of the game, the stats worked out from them, a scrambled (hashed) form of a random device id kept in your browser, and the date.",
+      "Your IP address may be used, in a scrambled form, to limit how often wins can be submitted. It will never be shown.",
+      `To have an entry removed, you will be able to email ${CONTACT_EMAIL} with the nickname and tag and roughly when you submitted it.`,
+    ],
+  },
+  {
+    title: "Contact",
+    points: [`Questions about these notices: ${CONTACT_EMAIL}.`],
   },
   {
     title: "No warranty",
@@ -82,7 +89,10 @@ export function TermsDialog({ onClose }: { onClose: () => void }) {
         </h2>
         {TERMS_SECTIONS.map((section) => (
           <section key={section.title} className="rules-dialog-section">
-            <h3>{section.title}</h3>
+            <h3>
+              {section.title}
+              {section.soon && <span className="terms-soon">Coming soon</span>}
+            </h3>
             <ul>
               {section.points.map((point) => (
                 <li key={point}>{point}</li>

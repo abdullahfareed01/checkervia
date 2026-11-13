@@ -1,9 +1,9 @@
-// The idle lines' timer (Change 4): if it is the player's turn and they have
-// not moved, the AI speaks after 30 seconds, and once more after 60. At most
-// two per turn. Plain TypeScript with injectable timers, so tests can use
-// fake timers.
+// The idle lines' timer (Change 4, updated after the owner's review): if it is
+// the player's turn and they have not moved, the AI speaks after 30 seconds,
+// and keeps speaking every 30 seconds until they move. Plain TypeScript with
+// injectable timers, so tests can use fake timers.
 
-export const IDLE_DELAYS_MS = [30_000, 60_000] as const;
+export const IDLE_EVERY_MS = 30_000;
 
 interface Timers {
   setTimeout: (run: () => void, ms: number) => unknown;
@@ -25,25 +25,31 @@ const PAGE_TIMERS: Timers = {
 };
 
 /**
- * Calls `onIdle(n)` for the n-th idle line of a turn. Becoming inactive
- * (page hidden, a sheet open, reviewing an older move, game over) pauses and
- * resets the clock: when active again it counts from zero, towards the
- * lines not yet shown this turn.
+ * Calls `onIdle(n)` for the n-th idle line of a turn, every `everyMs` while
+ * the player stays idle. Becoming inactive (page hidden, a sheet open,
+ * reviewing an older move, game over) pauses and resets the clock: when
+ * active again the next line comes a full `everyMs` later. `n` keeps
+ * counting within the turn, so every line has its own key.
  */
 export function createIdleTimer(
   onIdle: (count: number) => void,
   timers: Timers = PAGE_TIMERS,
-  delays: readonly number[] = IDLE_DELAYS_MS,
+  everyMs: number = IDLE_EVERY_MS,
 ): IdleTimer {
-  let handles: unknown[] = [];
+  let handle: unknown = null;
   let shown = 0;
   let turn: unknown = undefined;
-  let running = false;
 
   const clear = () => {
-    handles.forEach((handle) => timers.clearTimeout(handle));
-    handles = [];
-    running = false;
+    if (handle !== null) timers.clearTimeout(handle);
+    handle = null;
+  };
+  const schedule = () => {
+    handle = timers.setTimeout(() => {
+      shown += 1;
+      onIdle(shown);
+      schedule();
+    }, everyMs);
   };
 
   return {
@@ -54,15 +60,9 @@ export function createIdleTimer(
         shown = 0;
       }
       if (!active) return clear();
-      if (running && !newTurn) return; // already counting for this turn
+      if (handle !== null && !newTurn) return; // already counting for this turn
       clear();
-      running = true;
-      handles = delays.slice(shown).map((delay) =>
-        timers.setTimeout(() => {
-          shown += 1;
-          onIdle(shown);
-        }, delay),
-      );
+      schedule();
     },
     stop: clear,
   };

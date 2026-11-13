@@ -104,6 +104,20 @@
   overflow-y: auto;
 }
 
+/* A section about a feature that is not built yet. */
+.terms-soon {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 0 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.6;
+  vertical-align: 2px;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .home-foot {
   display: flex;
   justify-content: center;

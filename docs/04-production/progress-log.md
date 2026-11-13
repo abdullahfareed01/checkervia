@@ -183,3 +183,12 @@
 - Change 3: chat bubble in a fixed slot under the AI card; checked at 320, 360, 375, 390, 430, 768, 1024 and 1440 wide and two landscape phones: the board never moved and the bubble never covered a square; everything fits at 375x667 (not at 320x568, as before).
 - Change 4: line banks, greeting with a tab record, idle lines, resign in both modes, the engine proven resign hint, the game over panel with tips, the voice chip and the 18+ badge.
 - Tests: 812 passing in 52 files. Typecheck and build clean; no secret or key name in the build.
+
+## 13 Nov 2026: Owner's review of Changes 1 to 4 (D49)
+- Idle lines no longer stop after two: the AI speaks every 30 seconds while the player waits (`?idle=fast`: every 3 seconds).
+- The bubble is never red: after a blunder it stays neutral with the "Your slip" label; a line with 18+ words shows in red text, in the bubble and the game over panel.
+- "Why?" opens as a floating card on every screen size, so the side panel no longer grows or shows a scroll bar.
+- Browser check (headless Edge, the running dev server, real model) at 1180x882, 1024x700 and 375x667, Medium and Strongest: 4 different idle lines in 12 seconds; roast bubbles neutral (#f4efe6); red text only on lines with "crap", "hell" or "damn", a clean Strongest roast stayed dark; Why card 480px wide on desktop and a bottom sheet on the phone; the side panel never scrolled; no page errors.
+- Second round: only the first idle line of a turn is read out by screen readers; the Why card closes with Esc (wherever focus is) and a tap outside, and gives focus back to the Why button (Esc and tap outside already worked; the focus return and Esc with focus off the card are new); the Terms show the leaderboard as "Coming soon" and say nothing is stored on our server today; a test builds the production bundle and checks that `?scenario=` and `?idle=fast` are not in it (it caught that Vite builds in development mode under Vitest, so the test forces production).
+- Browser check (headless Edge) at 1180x882 and 375x667: idle lines changed every 3 seconds while the live region kept the first; Enter opened the card with focus on its close button; Esc (also with focus off the card) and a tap outside closed it with focus back on the Why button that opened it, for both Why buttons; the Terms show "Leaderboard · Coming soon"; no page errors.
+- Tests: 819 passing in 53 files. Typecheck and build clean.

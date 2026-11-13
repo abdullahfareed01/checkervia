@@ -12,7 +12,7 @@ import type { LineContext } from "../ai/lines";
 import { AI_PLAYER } from "../state/gameReducer";
 import type { GameState } from "../state/gameReducer";
 import type { BubbleTone } from "./ChatBubble";
-import { IDLE_DELAYS_MS, createIdleTimer } from "./idleTimer";
+import { IDLE_EVERY_MS, createIdleTimer } from "./idleTimer";
 import { nextRound, readSession, withResult, writeSession } from "./session";
 
 export interface EndLine {
@@ -48,11 +48,11 @@ export function playedPositions(state: GameState): PlayedPosition[] {
   );
 }
 
-// Development only: ?idle=fast shows the idle lines after 3 and 6 seconds,
-// for testing by hand. Production builds always wait 30 and 60 seconds.
-function idleDelays(): readonly number[] {
+// Development only: ?idle=fast shows an idle line every 3 seconds, for
+// testing by hand. Production builds always wait 30 seconds between lines.
+function idleEvery(): number {
   const fast = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("idle") === "fast";
-  return fast ? [3_000, 6_000] : IDLE_DELAYS_MS;
+  return fast ? 3_000 : IDLE_EVERY_MS;
 }
 
 const TONES: Partial<Record<LineContext, BubbleTone>> = { aiWonBlunder: "roast", playerWon: "respect" };
@@ -95,17 +95,17 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
     setGreeting(ai ? say(greetingContext(readSession().last)) : null);
   }, [game, ai]);
 
-  // B: idle lines, at most two per turn.
-  const [idle, setIdle] = useState<{ key: string; text: string; turn: number } | null>(null);
+  // B: idle lines, every 30 seconds until the player moves.
+  const [idle, setIdle] = useState<{ key: string; text: string; count: number; turn: number } | null>(null);
   const timer = useRef<ReturnType<typeof createIdleTimer> | null>(null);
   const sayRef = useRef(say);
   sayRef.current = say;
   const turnRef = useRef(turn);
   turnRef.current = turn;
   timer.current ??= createIdleTimer(
-    (count) => setIdle({ key: `idle-${turnRef.current}-${count}`, text: sayRef.current("idle"), turn: turnRef.current }),
+    (count) => setIdle({ key: `idle-${turnRef.current}-${count}`, text: sayRef.current("idle"), count, turn: turnRef.current }),
     undefined,
-    idleDelays(),
+    idleEvery(),
   );
   const pageVisible = usePageVisible();
   const idleActive = ai && idleAllowed && pageVisible;

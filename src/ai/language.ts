@@ -126,6 +126,12 @@ export function classify(text: string): WordClass[] {
   return WORD_CLASSES.map(([wordClass]) => wordClass).filter((wordClass) => found.has(wordClass));
 }
 
+/** True when a shown line has 18+ words (mild swearing or insults), which
+ * the bubble shows in red text (only possible at Strongest). */
+export function hasAdultWords(text: string): boolean {
+  return classify(text).length > 0;
+}
+
 // Every hyphen-like character, read as a plain hyphen; every dash-like
 // character, read as an em dash. (Written as escapes so they are visible.)
 const HYPHENS = /[\u2010\u2011\u2012\u00ad\u2043\ufe63\uff0d]/g;

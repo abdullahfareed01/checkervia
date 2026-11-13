@@ -49,12 +49,38 @@ export function WhyContent({ explanation }: { explanation: AiExplanation }) {
 
 export const WHY_PANEL_ID = "why-panel";
 
-// On phones "Why?" opens this card floating above the page (Change 3), so
-// the board and the cards never move. Close button, Esc or a tap outside
-// closes it.
+// The "Why?" button that opened the card: the focused one (a click or a key
+// press), else the first one on the page (Safari does not focus clicked
+// buttons). It may be gone by the time the card closes (a new move), so the
+// focus call is then a no op on a detached element.
+function whyButtonToReturnTo(): HTMLElement | null {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && active.getAttribute("aria-controls") === WHY_PANEL_ID) return active;
+  return document.querySelector<HTMLElement>(`[aria-controls="${WHY_PANEL_ID}"]`);
+}
+
+// "Why?" opens this card floating above the page (Change 3; on every screen
+// size since the owner's review, so the side panel never gets a scroll bar
+// and the board and the cards never move). Close button, Esc or a tap outside
+// closes it, and keyboard focus goes back to the "Why?" button.
 export function WhySheet({ explanation, onClose }: { explanation: AiExplanation; onClose: () => void }) {
   const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => closeRef.current?.focus(), []);
+  useEffect(() => {
+    const opener = whyButtonToReturnTo();
+    closeRef.current?.focus();
+    return () => opener?.focus();
+  }, []);
+  // Esc closes it wherever focus is (a click on the card's text can move
+  // focus off the close button).
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onCloseRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
     <div className="why-sheet-backdrop" onClick={onClose}>
@@ -65,9 +91,6 @@ export function WhySheet({ explanation, onClose }: { explanation: AiExplanation;
         aria-modal="true"
         aria-labelledby="why-sheet-title"
         onClick={(event) => event.stopPropagation()}
-        onKeyDown={(event) => {
-          if (event.key === "Escape") onClose();
-        }}
       >
         <div className="why-sheet-head">
           <h2 id="why-sheet-title">Why AI played {explanation.label}</h2>

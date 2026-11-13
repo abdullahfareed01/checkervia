@@ -1,5 +1,5 @@
-// The idle timer with fake timers (30 and 60 seconds, pause and reset, at
-// most two per turn) and the tab's session record (Change 4).
+// The idle timer with fake timers (a line every 30 seconds while idle, pause
+// and reset) and the tab's session record (Change 4).
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createIdleTimer } from "../src/ui/idleTimer";
 import { EMPTY_SESSION, SESSION_KEY, nextRound, readSession, withResult, writeSession } from "../src/ui/session";
@@ -14,7 +14,7 @@ describe("idle timer", () => {
     return { lines, timer };
   }
 
-  it("speaks after 30 seconds, again after 60, and never a third time in the turn", () => {
+  it("speaks after 30 seconds and keeps speaking every 30 seconds while the player is idle", () => {
     const { lines, timer } = setup();
     timer.update(true, 1);
     vi.advanceTimersByTime(29_999);
@@ -23,8 +23,8 @@ describe("idle timer", () => {
     expect(lines).toEqual([1]);
     vi.advanceTimersByTime(30_000);
     expect(lines).toEqual([1, 2]);
-    vi.advanceTimersByTime(600_000);
-    expect(lines).toEqual([1, 2]);
+    vi.advanceTimersByTime(90_000);
+    expect(lines).toEqual([1, 2, 3, 4, 5]);
   });
 
   it("re-renders with the same turn do not restart the clock", () => {
@@ -50,17 +50,15 @@ describe("idle timer", () => {
     expect(lines).toEqual([1]);
   });
 
-  it("after a reset, the second line still comes at most once", () => {
+  it("after a reset, the count goes on in the same turn and the next line waits a full 30 seconds", () => {
     const { lines, timer } = setup();
     timer.update(true, 1);
     vi.advanceTimersByTime(30_000);
     timer.update(false, 1);
     timer.update(true, 1);
-    vi.advanceTimersByTime(60_000);
-    expect(lines).toEqual([1, 2]);
-    timer.update(false, 1);
-    timer.update(true, 1);
-    vi.advanceTimersByTime(600_000);
+    vi.advanceTimersByTime(29_000);
+    expect(lines).toEqual([1]);
+    vi.advanceTimersByTime(1_000);
     expect(lines).toEqual([1, 2]);
   });
 

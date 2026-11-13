@@ -2,11 +2,15 @@
 // reaction after its move, cleared when the player picks up a piece for
 // their next move, on New game and on a mode change; nothing while reviewing
 // or in two player games. Plus the 140 character cap on AI lines.
+import { readFileSync } from "node:fs";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { MAX_LINE_LENGTH, capLength, checkReaction, tidyLine } from "../src/ai/language";
 import { createGameState, gameReducer } from "../src/state/gameReducer";
 import type { GameAction, GameState } from "../src/state/gameReducer";
 import { reactionBubble } from "../src/ui/bubble";
+import { ChatBubble, toneClasses } from "../src/ui/ChatBubble";
 
 const click = (row: number, col: number): GameAction => ({ type: "click", position: { row, col } });
 
@@ -90,5 +94,34 @@ describe("the 140 character cap on AI lines", () => {
     const { getLegalMoves, initialBoard } = await import("../src/engine");
     const prompt = buildPrompt(initialBoard(), "black", getLegalMoves(initialBoard(), "black"), undefined, { label: "x", judgement: null });
     expect(prompt).toContain("at most 140 characters");
+  });
+});
+
+// Owner's review: the bubble is never red; only a line with 18+ words is
+// shown in red text, and a blunder keeps its "Your slip" label instead.
+describe("bubble colours after the owner's review", () => {
+  const html = (tone: "roast" | "respect" | "banter", text: string) =>
+    renderToStaticMarkup(createElement(ChatBubble, { message: { key: "k", text, tone, why: false }, placement: "card" }));
+
+  it("a clean roast keeps its label but not red text", () => {
+    const out = html("roast", "That slip gave me a tasty capture, enjoy the lesson!");
+    expect(out).toContain("Your slip");
+    expect(out).not.toContain("speech-adult");
+  });
+
+  it("a line with mild swearing or an insult gets red text", () => {
+    expect(toneClasses({ tone: "roast", text: "Damn, that was a gift." })).toBe("speech-roast speech-adult");
+    expect(toneClasses({ tone: "banter", text: "What a clown move, haha." })).toContain("speech-adult");
+  });
+
+  it("laughter and harmless words stay plain", () => {
+    expect(toneClasses({ tone: "banter", text: "Hahaha lol, so cocky." })).toBe("speech-banter");
+    expect(toneClasses({ tone: "banter", text: null })).toBe("speech-banter");
+  });
+
+  it("the roast bubble has no red background in the styles", () => {
+    const css = readFileSync(new URL("../src/ui/bubble.css", import.meta.url), "utf8");
+    expect(css).not.toMatch(/\.speech-roast\s*\{/);
+    expect(css).toMatch(/\.speech-adult\s*\{[^}]*--bubble-ink/);
   });
 });

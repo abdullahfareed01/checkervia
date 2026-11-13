@@ -29,7 +29,6 @@ const note = (state: GameState, open = false) =>
     createElement(AiMoveNote, {
       explanation: explainShown(state.mode, displayedPosition(state)),
       open,
-      inline: true,
       onToggle: () => {},
     }),
   );
@@ -58,12 +57,12 @@ describe("AiMoveNote", () => {
     expect(html).not.toContain("No reason");
   });
 
-  it("opens right below on wide screens, with aria-expanded", () => {
+  it("when open, says so with aria-expanded but adds nothing to the side panel (the answer floats)", () => {
     const html = note(afterAiMove("Keeps the centre."), true);
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('aria-controls="why-panel"');
-    expect(html).toContain('id="why-panel"');
-    expect(html).toContain("Keeps the centre.");
+    expect(html).not.toContain('id="why-panel"');
+    expect(html).not.toContain("Keeps the centre.");
   });
 
   it("shows nothing after a human move or in two-player mode", () => {
@@ -115,7 +114,7 @@ describe("what Why? shows", () => {
     expect(html).toContain("&lt;img");
   });
 
-  it("on phones: a card floating above the page, with a close button", () => {
+  it("a card floating above the page, with a close button", () => {
     const html = renderToStaticMarkup(createElement(WhySheet, { explanation: explanation("Safe."), onClose: () => {} }));
     expect(html).toContain('role="dialog"');
     expect(html).toContain('id="why-panel"');
@@ -131,7 +130,7 @@ describe("what Why? shows", () => {
 describe("Why? sheet placement (BUG-002)", () => {
   const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
 
-  it("renders the phone sheet through a portal into document.body", () => {
+  it("renders the Why sheet through a portal into document.body", () => {
     expect(source).toMatch(/createPortal\(<WhySheet[\s\S]*?\/>, document\.body\)/);
   });
 });

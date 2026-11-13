@@ -11,6 +11,7 @@ import { startAiTurn } from "../src/state/aiController";
 import { createGameState, gameReducer } from "../src/state/gameReducer";
 import type { GameAction, GameState } from "../src/state/gameReducer";
 import { reactionBubble } from "../src/ui/bubble";
+import { ChatBubble } from "../src/ui/ChatBubble";
 import { winReasonOf } from "../src/ui/gameView";
 import { TIPS_DELAY_MS, revealAfter } from "../src/ui/idleTimer";
 import { LANGUAGE_RULES, LanguageInfo } from "../src/ui/LanguageInfo";
@@ -140,9 +141,25 @@ describe("what the bubble shows first", () => {
 
   it("an idle line beats the reaction, has no Why?, and shows even after a piece was put back", () => {
     const state = afterAi({ reaction: "Bold." });
-    const idle = { key: "idle-1", text: "Tick tock." };
+    const idle = { key: "idle-1", text: "Tick tock.", count: 1 };
     expect(reactionBubble(state, 0, { idle })).toMatchObject({ text: "Tick tock.", why: false });
     expect(reactionBubble(state, state.history.length, { idle })?.text).toBe("Tick tock.");
+  });
+
+  // Owner's review: idle lines keep coming every 30 seconds, but a screen
+  // reader hears only the first one of a turn.
+  it("only the first idle line of a turn is read out by screen readers", () => {
+    const state = afterAi({ reaction: "Bold." });
+    const first = reactionBubble(state, 0, { idle: { key: "idle-1", text: "Tick tock.", count: 1 } })!;
+    const later = reactionBubble(state, 0, { idle: { key: "idle-2", text: "Still there?", count: 2 } })!;
+    expect(first.announce).toBe(true);
+    expect(later.announce).toBe(false);
+    const live = (message: typeof first) =>
+      renderToStaticMarkup(createElement(ChatBubble, { message, placement: "card" })).match(/aria-live="polite">([^<]*)</)![1];
+    expect(live(first)).toBe("Tick tock.");
+    expect(live(later)).toBe("");
+    // Still shown on screen.
+    expect(renderToStaticMarkup(createElement(ChatBubble, { message: later, placement: "card" }))).toContain("Still there?");
   });
 
   it("nothing once the game is over (the result panel speaks)", () => {

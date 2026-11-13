@@ -76,11 +76,6 @@
   animation: bubble-in 150ms ease-out both;
 }
 
-.speech-roast {
-  --bubble-bg: #f8e2da;
-  --bubble-ink: #451708;
-}
-
 .speech-respect {
   --bubble-bg: #e0f0e3;
   --bubble-ink: #112f1c;
@@ -124,6 +119,12 @@
   line-height: 1.5;
   vertical-align: 1px;
   color: #ffffff;
+}
+
+/* A line with 18+ words: red text on the neutral bubble (contrast above
+   6 to 1). The words themselves and the 18+ badge say it too. */
+.speech-adult {
+  --bubble-ink: #9b1c12;
 }
 
 .speech-roast .speech-label {
@@ -247,11 +248,6 @@
 
 /* ---------- What "Why?" shows ---------- */
 
-.why-inline {
-  margin-top: 10px;
-  animation: why-open 150ms ease-out both;
-}
-
 .why-content {
   display: grid;
   gap: 10px;
@@ -282,20 +278,8 @@
   overflow-wrap: anywhere;
 }
 
-/* Desktop: the answer opens in the side panel. Its sections keep their
-   size and the side panel scrolls, instead of squeezing the move list
-   under the buttons. */
-@media (min-width: 900px) and (min-height: 600px) {
-  .sidebar > :not(.history) {
-    flex-shrink: 0;
-  }
-
-  .app .history {
-    min-height: 150px;
-  }
-}
-
-/* Phones: a card floating above the page; nothing under it moves. */
+/* A card floating above the page; nothing under it moves. A sheet from the
+   bottom on phones, a centred card on larger screens. */
 .why-sheet-backdrop {
   position: fixed;
   inset: 0;
@@ -309,11 +293,28 @@
   width: 100%;
   max-height: 75vh;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-soft) transparent;
   padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
   border-radius: 18px 18px 0 0;
   background: #241b14;
   box-shadow: 0 0 0 1px var(--gold-soft);
   animation: why-sheet-up 150ms ease-out both;
+}
+
+@media (min-width: 600px) {
+  .why-sheet-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .why-sheet {
+    width: min(480px, 100%);
+    max-height: 90vh;
+    padding: 14px 18px 18px;
+    border-radius: 18px;
+  }
 }
 
 .why-sheet-head {
@@ -345,13 +346,6 @@
   outline: 2px solid var(--choice);
 }
 
-@keyframes why-open {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
 @keyframes why-sheet-up {
   from {
     transform: translateY(24px);
@@ -362,7 +356,6 @@
 @media (prefers-reduced-motion: reduce) {
   .speech,
   .speech-typing span,
-  .why-inline,
   .why-sheet {
     animation: none;
   }
@@ -514,12 +507,7 @@
   clip-path: polygon(50% 0, 100% 100%, 0 100%);
 }
 
-.result-line.speech-roast {
-  --bubble-bg: #f8e2da;
-  --bubble-ink: #451708;
-}
-
-.result-line.speech-respect {
+.result-line.result-line.speech-respect {
   --bubble-bg: #e0f0e3;
   --bubble-ink: #112f1c;
 }

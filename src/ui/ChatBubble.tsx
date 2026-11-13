@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { hasAdultWords } from "../ai/language";
 import { WHY_PANEL_ID } from "./WhyContent";
 
-// The bubble's colour follows what the line is about (Change 3): warm red
-// after the player's blunder, green after a great move, a neutral surface
-// for plain banter. A small label says the same, so colour is never the
-// only signal.
+// What the line is about (Change 3): a "Your slip" label after the player's
+// blunder (the bubble itself stays neutral, owner's review), green after a
+// great move, a neutral surface for plain banter. Separately, a line with
+// 18+ words is shown in red text.
 export type BubbleTone = "roast" | "respect" | "banter";
 
 // One thing the AI says. `text: null` shows the typing dots.
@@ -13,6 +14,9 @@ export interface BubbleMessage {
   readonly text: string | null; // plain text, never HTML
   readonly tone: BubbleTone;
   readonly why: boolean; // offer "Why?" (only for the AI's moves)
+  // false: shown but not read out by screen readers (later idle lines, so
+  // the AI does not interrupt every 30 seconds). Default: read out once.
+  readonly announce?: boolean;
 }
 
 const TONE_LABELS: Partial<Record<BubbleTone, string>> = { roast: "Your slip", respect: "Respect" };
@@ -41,7 +45,7 @@ export function ChatBubble({ message, placement, whyOpen = false, onWhy }: ChatB
         {announcement}
       </p>
       {message && (
-        <div key={message.key} className={`speech speech-${message.tone}`}>
+        <div key={message.key} className={`speech ${toneClasses(message)}`}>
           {message.text === null ? (
             <p className="speech-typing" aria-hidden="true">
               <span />
@@ -73,12 +77,19 @@ export function ChatBubble({ message, placement, whyOpen = false, onWhy }: ChatB
   );
 }
 
+/** A bubble's tone class, plus red text when the line has 18+ words. */
+export function toneClasses(message: { tone: BubbleTone; text: string | null }): string {
+  const adult = message.text !== null && hasAdultWords(message.text);
+  return `speech-${message.tone}${adult ? " speech-adult" : ""}`;
+}
+
 // The text for the live region: each new line once (typing dots are not
-// announced, the status line already says the AI is thinking).
+// announced, the status line already says the AI is thinking; lines marked
+// `announce: false` are shown only).
 function useAnnouncement(message: BubbleMessage | null): string {
-  const [text, setText] = useState(message?.text ?? "");
+  const [text, setText] = useState(message?.announce !== false ? (message?.text ?? "") : "");
   useEffect(() => {
-    if (message?.text) setText(message.text);
-  }, [message?.key, message?.text]);
+    if (message?.text && message.announce !== false) setText(message.text);
+  }, [message?.key, message?.text, message?.announce]);
   return text;
 }

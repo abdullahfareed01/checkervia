@@ -7,7 +7,7 @@ import { App } from "../src/ui/App";
 import { CONSENT_KEY, NOTICE_VERSION, hasConsent, nextConsentStep, readConsent, saveConsent } from "../src/ui/consent";
 import { ConsentDialog } from "../src/ui/ConsentDialog";
 import { Home } from "../src/ui/Home";
-import { CONTACT_EMAIL, TermsDialog } from "../src/ui/TermsDialog";
+import { CONTACT_EMAIL, TERMS_SECTIONS, TermsDialog } from "../src/ui/TermsDialog";
 
 const noop = () => {};
 
@@ -93,9 +93,19 @@ describe("Terms and notices", () => {
 
   it.each([
     "Entertainment only", "AI generated text", "Strong language at Strongest", "18 plus: a self declaration",
-    "Leaderboard names are public", "What is stored", "Removing an entry", "No warranty",
+    "What is stored", "Contact", "No warranty",
   ])("has the section %s", (title) => {
     expect(html).toContain(`<h3>${title}</h3>`);
+  });
+
+  // The leaderboard and its database do not exist yet, so the Terms must not
+  // describe them as live (owner's review).
+  it("marks the leaderboard as coming soon and describes no live server storage", () => {
+    expect(html).toMatch(/<h3>Leaderboard<span class="terms-soon">Coming soon<\/span><\/h3>/);
+    expect(html).toContain("Nothing is stored on our server today.");
+    for (const section of TERMS_SECTIONS.filter((s) => !s.soon)) {
+      expect(section.points.join(" ")).not.toMatch(/leaderboard|database|server will|submit|device id|IP address/i);
+    }
   });
 
   it("says plainly that age cannot be checked, and gives the contact email", () => {

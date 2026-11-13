@@ -3,6 +3,7 @@ import type { GameTip } from "../ai/endgame";
 import type { Player } from "../engine";
 import type { GameMode, SideStats } from "../state/gameReducer";
 import { AI_PLAYER } from "../state/gameReducer";
+import { toneClasses } from "./ChatBubble";
 import { RobotIcon, TrophyIcon } from "./icons";
 import { TIPS_DELAY_MS, revealAfter } from "./idleTimer";
 import type { EndLine } from "./usePersonality";
@@ -123,7 +124,7 @@ export function ResultDialog(props: ResultDialogProps) {
           {TITLES[outcome](nameOf(mode, winner))}
         </h2>
         {aiLine ? (
-          <p className={`result-line speech-${aiLine.tone}`}>{aiLine.text}</p>
+          <p className={`result-line ${toneClasses(aiLine)}`}>{aiLine.text}</p>
         ) : (
           <p className="result-subtitle">{SUBTITLES[outcome]}</p>
         )}
