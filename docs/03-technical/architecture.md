@@ -55,7 +55,9 @@ Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `state`/
 │   │   ├── health.ts         # GET health check: ready / offline / unreachable
 │   │   ├── difficulty.ts     # the four AI levels: turns ahead, moves offered, Easy slips
 │   │   ├── candidates.ts     # the level's best few moves (deterministic, for the server too)
-│   │   ├── language.ts       # word lists and language rules per level and verdict (D45)
+│   │   ├── language.ts       # word lists, language rules, the dash sanitizer and the 140 character cap
+│   │   ├── lines.ts          # local line banks: picking without repeats (banks in linesGentle.ts, linesFierce.ts)
+│   │   ├── endgame.ts        # proven loss (resign hint) and tips after the AI wins
 │   │   ├── search.ts         # look-ahead: negamax + alpha-beta, scores every legal move
 │   │   ├── searchWorker.ts   # runs the search in a Web Worker
 │   │   ├── analyzer.ts       # worker with timeout and fallbacks; never fails a turn
@@ -82,7 +84,14 @@ Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `state`/
 │       ├── RulesDialog.tsx   # the rules over the game (from the Menu)
 │       ├── chrome.css        # the look from mockup/mockup_design.png
 │       ├── sheet.css         # the Menu sheet (bottom sheet on phones), loaded last
-│       ├── SpeechBubble.tsx  # the AI's speech bubble (reasons now, reactions later)
+│       ├── ChatBubble.tsx    # the AI's chat bubble in a fixed slot, with a live region
+│       ├── bubble.ts         # what the bubble shows: typing, idle, hint, reaction, greeting
+│       ├── usePersonality.ts # greeting, idle lines, resign hint, end of game line and tips
+│       ├── idleTimer.ts      # 30 and 60 second idle timer; the tips reveal
+│       ├── session.ts        # this tab's wins and losses (sessionStorage)
+│       ├── ResignButton.tsx  # Resign with a confirmation sheet
+│       ├── LanguageInfo.tsx  # what the 18+ badge explains
+│       ├── useMediaQuery.ts  # phone and landscape phone queries
 │       ├── useAiExplanation.ts # the AI move on screen: label, reason, engine facts
 │       ├── gameView.tsx      # helpers: board view, player cards, win reason
 │       ├── useAiLevel.ts     # remembers the chosen level in the browser
@@ -95,8 +104,8 @@ Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `state`/
 │       ├── ModeSelector.tsx  # Two players / Play vs AI
 │       ├── PlayerCard.tsx    # card above/below the board: icon, name, pieces, to move
 │       ├── ResultDialog.tsx  # end-of-game popup with stats
-│       ├── AiMoveNote.tsx    # sidebar note after an AI move, "Why this move?" button
-│       ├── AiReasonDialog.tsx # popup: model reason (unchecked) + engine facts
+│       ├── AiMoveNote.tsx    # "AI played E3 → D4" and "Why?" in the side panel
+│       ├── WhyContent.tsx    # what "Why?" shows, inline or as a phone sheet
 │       ├── aiReason.css      # styles for the two above
 │       ├── HistoryControls.tsx # history arrows, "Move x of y", move list
 │       ├── useHistoryView.ts # when to animate (one step forward only); arrow keys

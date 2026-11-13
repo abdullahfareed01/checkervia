@@ -18,6 +18,9 @@ import { NewGameButton } from "./NewGameButton";
 import { ResultDialog } from "./ResultDialog";
 import { RulesDialog } from "./RulesDialog";
 import { ChatBubble } from "./ChatBubble";
+import { LanguageInfo } from "./LanguageInfo";
+import { ResignButton } from "./ResignButton";
+import { usePersonality } from "./usePersonality";
 import { reactionBubble } from "./bubble";
 import { LANDSCAPE_PHONE, PHONE, useMediaQuery } from "./useMediaQuery";
 import { WhySheet } from "./WhyContent";
@@ -39,7 +42,7 @@ interface AppProps {
 // Layout: the board column (opponent card, board, your card) and a sidebar
 // (title, mode, status, history, controls). See styles.css for the layout.
 export function App({ initial, onMenu, onAiLevel }: AppProps) {
-  const { state, click, newGame, setMode, retryAi, goHistory, playAi } = useGame(initial);
+  const { state, click, newGame, setMode, retryAi, goHistory, playAi, resign } = useGame(initial);
   const inProgress = isGameInProgress(state);
   const durationMs = useGameDuration(state.movesPlayed, state.winner);
   const result = useResultPopup(state.winner, state.lastMove);
@@ -54,6 +57,8 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player), [state.mode]);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
   useHistoryKeys(goHistory, !result.open && !(why.open && phone) && !askLevel && !rulesOpen && !termsOpen);
   const loseQuestion = (what: string) => (inProgress ? `${what} The current game will be lost.` : undefined);
 
@@ -61,14 +66,20 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const chooseMode = useCallback((mode: GameMode) => (mode === "vs-ai" ? setAskLevel(true) : setMode(mode)), [setMode]);
   const openRules = useCallback(() => setRulesOpen(true), []);
   const openTerms = useCallback(() => setTermsOpen(true), []);
+  const openLanguage = useCallback(() => setLanguageOpen(true), []);
+  // Resign (Change 4): the player against the AI, otherwise the side to move.
+  const resignQuestion =
+    state.mode === "vs-ai" ? "Resign this game? The AI wins." : `Resign this game? ${state.currentPlayer === "black" ? "White" : "Black"} wins.`;
+  const canResign = state.winner === null;
   const menuItems = useMemo(
     () => [
       { label: "New game", onSelect: newGame, confirm: loseQuestion("Start a new game?") },
+      ...(canResign ? [{ label: "Resign", onSelect: resign, confirm: resignQuestion }] : []),
       { label: "How to play", onSelect: openRules },
       { label: "Terms and notices", onSelect: openTerms },
       ...(onMenu ? [{ label: "Main menu", onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
     ],
-    [inProgress, newGame, openRules, openTerms, onMenu],
+    [inProgress, newGame, openRules, openTerms, onMenu, canResign, resign, resignQuestion],
   );
   // A new game against the AI at `level` (from the level dialog or the
   // Menu). Strongest asks the 18+ consent first (D45); after No or Cancel the
@@ -110,7 +121,12 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   useEffect(() => {
     if (startedMove) setDismissedAt(state.history.length);
   }, [startedMove, state.history.length]);
-  const bubble = reactionBubble(state, dismissedAt);
+  // Greeting, idle lines, the resign hint and the end of the game (Change 4).
+  // Idle lines wait while anything covers the board or the player is busy.
+  const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || (why.open && phone);
+  const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
+  const personality = usePersonality(state, playerTurn && !startedMove && !covered);
+  const bubble = reactionBubble(state, dismissedAt, personality);
   const chat = state.mode === "vs-ai" && (
     <ChatBubble
       message={result.open ? null : bubble}
@@ -129,12 +145,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           backConfirm={loseQuestion("Back to the main menu?")}
           items={menuItems}
           setup={setup}
+          onOpenChange={setMenuOpen}
         />
         <ModeSelector mode={state.mode} needsConfirmation={inProgress} onChange={chooseMode} />
       </header>
 
       <section className="game" aria-label="Game">
-        {cardFor(state, shown.board, "white", "top")}
+        {cardFor(state, shown.board, "white", "top", openLanguage)}
         {!landscapePhone && chat}
         <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} />
         {cardFor(state, shown.board, "black", "bottom")}
@@ -169,6 +186,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
               Show result
             </button>
           )}
+          {canResign && <ResignButton question={resignQuestion} highlight={personality.hintActive} onResign={resign} />}
           <NewGameButton needsConfirmation={inProgress} onNewGame={newGame} />
         </div>
       </aside>
@@ -183,7 +201,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           totalMoves={state.movesPlayed}
           durationMs={durationMs}
           onPlayAgain={newGame}
+          onReview={() => {
+            result.close();
+            goHistory("first");
+          }}
           onClose={result.close}
+          aiLine={personality.end?.line}
+          tips={state.mode === "vs-ai" && state.winner !== "black" ? (personality.end?.tips ?? null) : undefined}
         />
       )}
 
@@ -195,6 +219,15 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
 
       {askLevel && <LevelDialog initial={state.aiLevel} onStart={startVsAi} onCancel={() => setAskLevel(false)} />}
       {consent}
+      {languageOpen && (
+        <LanguageInfo
+          onTerms={() => {
+            setLanguageOpen(false);
+            setTermsOpen(true);
+          }}
+          onClose={() => setLanguageOpen(false)}
+        />
+      )}
       {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
     </main>
   );

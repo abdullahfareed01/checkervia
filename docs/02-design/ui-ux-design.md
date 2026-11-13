@@ -16,7 +16,7 @@
 - AI reactions (D45): after every player move the AI may say one line: a roast or tease after an engine judged blunder (warm red), respect after a great move (green), plain banter otherwise (dark bold). Clean at Easy, Medium and Hard; trash talk at Strongest. Lines that break the level's rules are replaced by a clean line.
 - 18+ consent (D45): choosing Strongest asks "Are you 18 or older?" (Yes, I am 18 or older / No), then the strong language notice (I understand and accept / Cancel) with a link to the Terms. No or Cancel: "No problem. Strongest stays locked and nothing has changed." Focus starts on No or Cancel. Asked once per browser and notice version. During a Strongest game the AI card carries an "18+ · Strong language" label on its top edge.
 - Terms and notices (D45): a sheet with the draft text, from the Menu, the home screen ("Terms and notices" link under the cards) and the Strongest notice.
-- Text rule (D45): no hyphens or dashes in anything players see, including the AI's lines. Checked by `tests/no-dashes.test.ts`.
+- Text rule (D45, D46): no hyphens or dashes in anything players see, including the AI's lines, nor in the prose of the docs. Checked by `tests/no-dashes.test.ts` and `tests/docs-no-dashes.test.ts`.
 - AI speech bubble: a white rounded bubble with a curved tail under the AI's card, pointing at the robot, with a small "AI" label. Typing dots while it thinks; then its reason (large, dark text) with "Why?" and a close button. It stays until you play your move, or leaves after 20 to 40 s if you wait. While you hold a piece it turns see through and clicks go through it to the board. It pops in from its tail and shrinks away when it leaves.
 - Look: calm and flat (D37), with motion but no glow (D40): the route draws itself, picked up pieces lift, hints pop in, the turn bar slides in.
 - In a game, a Menu button sits left of the title. It asks first if a game is in progress.
@@ -25,12 +25,19 @@
 - Desktop (window at least 900x600): two columns that always fit the window, so the page never scrolls. Left: White's player card, the board, Black's player card. Right: title, mode selector, status, controls. The board is as large as the space allows (up to 800px).
 - Narrow screens and phones: one column (title and mode, cards and board, status and controls); the page may scroll. Board width is the screen width minus 16px gutters, up to 560px.
 - Player cards (like chess.com): dark glass avatar with a neon ring in the side's colour (gold Black, cyan White); a person icon, or a glowing robot with a BOT badge for the AI; side and status ("To move", "Thinking..." with animated dots, "Winner" with a gold crown); 12 piece markers plus the number left; captured pieces as small discs. The side to move glows softly.
-- End of game: a result popup after the last move's animation. You win: gold theme, trophy, confetti, "You win!". The AI wins: cyan robot theme, "AI wins". Two players: "<side> wins!". It shows the reason, both sides' stats (pieces left, captured, Kings made, best multi jump, moves), total moves and game time, with Play again and View board. "Show result" in the sidebar reopens it. The sidebar status still says who won.
+- End of game: a result popup after the last move's animation. You win: gold theme, trophy, confetti, "You win!". The AI wins: cyan robot theme, "AI wins". Two players: "<side> wins!". It shows the reason, both sides' stats (pieces left, captured, Kings made, best multi jump, moves), total moves and game time, with Play again and Review game (back to the first position). "Show result" in the sidebar reopens it. Against the AI (D48): the AI's line at once in the bubble style; after an AI win "Tips from the AI" fade in after 5 seconds, with "Show tips now". The sidebar status still says who won.
 
-## AI reason
-- After each AI move a small cyan card sits in the sidebar under the status: a robot icon, "AI played 3,2 → 4,1" and the start of the model's reason in quotes (or "No reason given."). A "Why this move?" button opens the popup.
-- The popup (cyan robot theme, like the AI's result popup) has the move number and move, then two boxes. "In its own words": the model's sentence, with a note that the game does not check it. "Checked by the game engine": short facts with a green tick (good for the AI), a red "!" (a risk) or a dot (neutral), e.g. "It captured 1 piece. Capturing was mandatory.", "It chose 1 of 7 legal moves.", "The moved piece can be captured next turn." Close, Esc or a click outside closes it.
-- It follows the history: when an older AI move is on screen, the note explains that move. After a human move, and in two player mode, there is no note.
+## AI reason (D47)
+- After each AI move the side panel shows only "AI played E3 → D4" and a small "Why?" button; the chat bubble shows the reaction. Nothing about the reasoning shows until "Why?" is pressed.
+- "Why?" shows "Checked by the game engine" (facts with a green tick, a red "!" or a dot, including the engine's verdict on your previous move and the look ahead) and then "AI generated, may be wrong" (the AI's own words). A part with nothing in it is left out; with neither there is no button. Pressing again closes it; it starts closed on every new move and every new game.
+- Phones: a card floating above the page with a close button. Tablets and desktop: right below the line in the side panel.
+- It follows the history: when an older AI move is on screen, the line explains that move.
+
+## AI chat bubble (D47, D48)
+- A slot of fixed height under the AI card (85px on phones, 70px on larger screens) holds the bubble, so the board never moves. Phones held sideways: at the top of the side panel.
+- Shows typing dots, then the reaction (warm red with "Your slip", green with "Respect", neutral for banter), a greeting at the start of a game, idle lines, and the resign hint. At least 15px text, 3 lines on phones and 2 on larger screens, 140 characters at most. Fades in over 150 ms (off with reduced motion). Clears when you pick up a piece, and on New game, mode or level change.
+- Resign: in the action bar and the Menu, with a confirmation sheet. The button gets a gold outline while the resign hint is up.
+- AI card edge: a voice chip (Friendly, Playful, Competitive, Strongest) and at Strongest the "18+ | Strong language" badge, a button that explains the language rules (only "18+" and an info icon under 360px and on phones held sideways).
 
 ## History
 - In the sidebar: four arrows (first, back, forward, latest) and "Move x of y". Like chess.com, an arrow that cannot be used stays in place but looks switched off: forward and latest at the live position, first and back at the start.

@@ -35,7 +35,7 @@ describe("classify: harmless words that contain a listed word are not blocked", 
     "Hello there, nice class.", "Assess the board before you pass.", "That shell of a defence is gone.",
     "A classic scrap for the centre.", "Hellooo, are you awake?", "Scunthorpe is a town.", "Your assassin piece is bold.",
     "That was a fatal mistake.", "I will dumbfound you.", "Cocktail hour is over.", "The grass is greener on my side.",
-    "I take 2 pieces in 1 turn.", "Move 4 to E5.", "Shiitake? No, checkers.",
+    "I take 2 pieces in 1 turn.", "Move 4 to E5.", "Shiitake? No, checkers.", "Do not get cocky.", "Such cockiness!",
   ])("%s", (text) => {
     expect(classify(text)).toEqual([]);
   });

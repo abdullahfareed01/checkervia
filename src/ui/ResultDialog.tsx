@@ -1,8 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { GameTip } from "../ai/endgame";
 import type { Player } from "../engine";
 import type { GameMode, SideStats } from "../state/gameReducer";
 import { AI_PLAYER } from "../state/gameReducer";
 import { RobotIcon, TrophyIcon } from "./icons";
+import { TIPS_DELAY_MS, revealAfter } from "./idleTimer";
+import type { EndLine } from "./usePersonality";
 
 interface ResultDialogProps {
   winner: Player;
@@ -13,7 +16,14 @@ interface ResultDialogProps {
   totalMoves: number;
   durationMs: number | null; // from the first move to the end
   onPlayAgain: () => void;
+  onReview: () => void; // close and step through the game from the start
   onClose: () => void; // close and look at the final board
+  // Against the AI (Change 4): its line, shown at once in the chat bubble
+  // style; and after the AI won, its tips from the engine (null while the
+  // engine works them out; undefined: no tips, for example after a win).
+  aiLine?: EndLine | null | undefined;
+  tips?: readonly GameTip[] | null | undefined;
+  tipsShownAtStart?: boolean; // tests render the revealed state
 }
 
 type Outcome = "victory" | "defeat" | "winner";
@@ -71,9 +81,12 @@ function Confetti() {
 
 // The popup at the end of a game: who won, why, and the stats of both sides.
 export function ResultDialog(props: ResultDialogProps) {
-  const { winner, mode, reason, stats, pieces, totalMoves, durationMs, onPlayAgain, onClose } = props;
+  const { winner, mode, reason, stats, pieces, totalMoves, durationMs, onPlayAgain, onReview, onClose, aiLine, tips } = props;
   const outcome = outcomeOf(mode, winner);
   const playAgainRef = useRef<HTMLButtonElement>(null);
+  // The tips fade in after about 5 seconds; "Show tips now" skips the wait.
+  const [tipsShown, setTipsShown] = useState(props.tipsShownAtStart ?? false);
+  useEffect(() => (tips === undefined ? undefined : revealAfter(TIPS_DELAY_MS, () => setTipsShown(true))), [tips === undefined]);
 
   // Put the keyboard on the main button when the popup opens.
   useEffect(() => playAgainRef.current?.focus(), []);
@@ -109,7 +122,11 @@ export function ResultDialog(props: ResultDialogProps) {
         <h2 id="result-title" className="result-title">
           {TITLES[outcome](nameOf(mode, winner))}
         </h2>
-        <p className="result-subtitle">{SUBTITLES[outcome]}</p>
+        {aiLine ? (
+          <p className={`result-line speech-${aiLine.tone}`}>{aiLine.text}</p>
+        ) : (
+          <p className="result-subtitle">{SUBTITLES[outcome]}</p>
+        )}
         <p className="result-reason">{reason}</p>
 
         <table className="result-stats">
@@ -149,11 +166,45 @@ export function ResultDialog(props: ResultDialogProps) {
           <button ref={playAgainRef} type="button" className="button button-primary" onClick={onPlayAgain}>
             Play again
           </button>
-          <button type="button" className="button" onClick={onClose}>
-            View board
+          <button type="button" className="button" onClick={onReview}>
+            Review game
           </button>
         </div>
+
+        {tips !== undefined && <AiTips tips={tips} shown={tipsShown} onShowNow={() => setTipsShown(true)} />}
       </div>
     </div>
+  );
+}
+
+// "Tips from the AI" (Change 4): up to three tips worked out by the engine
+// from this game. Hidden for the first seconds with a "Show tips now" link;
+// the reveal is announced once to screen readers.
+function AiTips({ tips, shown, onShowNow }: { tips: readonly GameTip[] | null; shown: boolean; onShowNow: () => void }) {
+  return (
+    <section className="result-tips" aria-label="Tips from the AI">
+      <p className="sr-only" aria-live="polite">
+        {shown && tips ? "Tips from the AI are shown below." : ""}
+      </p>
+      {shown ? (
+        <div className="result-tips-body">
+          <h3>Tips from the AI</h3>
+          <p className="result-tips-caption">Checked by the game engine</p>
+          {tips ? (
+            <ul>
+              {tips.map((tip) => (
+                <li key={tip.text}>{tip.text}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="result-tips-caption">The engine is still looking at your game.</p>
+          )}
+        </div>
+      ) : (
+        <button type="button" className="link-button" onClick={onShowNow}>
+          Show tips now
+        </button>
+      )}
+    </section>
   );
 }

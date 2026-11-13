@@ -49,6 +49,10 @@ export const HARD_LINE_PHRASES = [
   "punch you", "you will die", "you'll die", "go die", "i will end you", "watch your back",
 ];
 
+// Harmless words that a listed word plus a usual ending would catch
+// ("cock" + "y"). Checked first, so clean lines are never blocked.
+export const HARMLESS_WORDS = ["cocky", "cockiness", "dicky", "hello", "shell", "assess", "class", "pass", "bass"];
+
 export type WordClass = "mild" | "insult" | "strong" | "hardLine";
 
 // Leetspeak and look-alike symbols, read as the letters they stand for.
@@ -107,7 +111,7 @@ function tokensOf(text: string): string[] {
       run = "";
     }
   }
-  return [...tokens, ...joined];
+  return [...tokens, ...joined].filter((token) => !HARMLESS_WORDS.includes(token));
 }
 
 /** Every class of listed language found in `text`, most serious first. */

@@ -37,6 +37,7 @@ interface TopBarProps {
   items?: readonly MenuItem[]; // the Menu button's list (hidden when empty)
   // Extra controls at the top of the Menu sheet (the game's mode and level).
   setup?: ((run: MenuRun) => ReactNode) | undefined;
+  onOpenChange?: ((open: boolean) => void) | undefined; // the Menu opened or closed
 }
 
 // The bar at the top of the game and Learn screens: back arrow, title, Menu.
@@ -44,10 +45,11 @@ interface TopBarProps {
 // phones) with the optional setup controls and a short list of actions.
 // Actions that would lose a game ask first.
 // Memoised: the game passes stable callbacks and a memoised item list.
-export const TopBar = memo(function TopBar({ title, onBack, backConfirm, items = [], setup }: TopBarProps) {
+export const TopBar = memo(function TopBar({ title, onBack, backConfirm, items = [], setup, onOpenChange }: TopBarProps) {
   const [open, setOpen] = useState(false);
   const [asking, setAsking] = useState<{ question: string; run: () => void } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => onOpenChange?.(open || asking !== null), [open, asking]);
 
   // Close the list on a click outside it or on Escape.
   useEffect(() => {

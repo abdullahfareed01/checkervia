@@ -7,7 +7,7 @@ import type { Lookahead } from "./analyzer";
 import type { MoveJudgement } from "./judge";
 import { isForced, turnsToResult } from "./search";
 
-export const PROMPT_VERSION = "v10";
+export const PROMPT_VERSION = "v11";
 
 const SYSTEM_RULES = `You are playing checkers on an 8x8 board.
 
@@ -78,7 +78,7 @@ export interface OpponentMove {
 
 // Rules shared by both voices. src/ai/language.ts enforces them in code.
 const LIMITS =
-  'Vary your wording every time: never open with "Nice try". It is checkers: say pieces and kings, never pawns. Do not use hyphens, em dashes or en dashes: write compound words as separate words or as one word (for example "brain fart", "stale coffee"). Keep it about the game: no slurs, no hate, nothing about real world looks, family, identity or sex, no threats. One short line, at most 20 words and at most 140 characters. Use "" only if you really have nothing to say.';
+  'Vary your wording every time: never open with "Nice try". It is checkers: say pieces and kings, never pawns. Do not use hyphens, em dashes or en dashes: write compound words as separate words or as one word (for example "brain fart", "stale coffee"). Keep it about the game: no slurs, no hate, nothing about real world looks, family, identity or sex, no threats. You may laugh (haha, hehe, lol) when it fits. One short line, at most 20 words and at most 140 characters, laughter included. Use "" only if you really have nothing to say.';
 
 // The AI's voice at Easy, Medium and Hard: playful and clean (D45).
 const CLEAN_PERSONA = `For "reaction" you are a friendly, playful checkers rival. Tease lightly: a confident quip, a gentle joke about a mistake, honest praise for a good move. No swearing, no insults, no name calling. ${LIMITS}`;

@@ -1,6 +1,6 @@
 import { memo } from "react";
 import type { Player } from "../engine";
-import { CrownIcon, HumanIcon, RobotAvatar } from "./icons";
+import { CrownIcon, HumanIcon, InfoIcon, RobotAvatar } from "./icons";
 
 // At most this many captured pieces are drawn in the stack; the number says
 // the rest.
@@ -11,7 +11,10 @@ interface PlayerCardProps {
   name: string; // "You", "AI", "Black", "White"
   robot: boolean; // the AI gets a robot, people get a person icon
   level?: string | undefined; // the AI's level, e.g. "Hard"
-  tag?: string | undefined; // a notice chip, e.g. "18+ · Strong language"
+  // The AI's chips on the card's top edge (Change 4): its voice at this
+  // level ("Playful"), and at Strongest the 18+ badge, a button that
+  // explains the language rules.
+  edge?: { voice: string; onAdultInfo?: (() => void) | undefined } | undefined;
   pieces: number; // pieces left on the board
   captured: number; // opponent pieces this side has taken
   toMove: boolean;
@@ -59,7 +62,7 @@ export const PlayerCard = memo(function PlayerCard({
   name,
   robot,
   level,
-  tag,
+  edge,
   pieces,
   captured,
   toMove,
@@ -82,10 +85,22 @@ export const PlayerCard = memo(function PlayerCard({
     .join(" ");
 
   return (
-    <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.${tag ? ` ${tag}.` : ""}`}>
-      {/* On the card's top edge, so it takes no room inside the card and
-          fits on every screen (D45). */}
-      {tag && <span className="badge badge-adult">{tag}</span>}
+    <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.`}>
+      {/* On the card's top edge, so they take no room inside the card. */}
+      {edge && (
+        <div className="card-edge">
+          <span className="edge-voice">{edge.voice}</span>
+          {edge.onAdultInfo && (
+            <button type="button" className="edge-adult" aria-label="18 plus, strong language. About the language rules" onClick={edge.onAdultInfo}>
+              <span className="edge-adult-age">18+</span>
+              <span className="edge-adult-text">Strong language</span>
+              <span className="edge-adult-info" aria-hidden="true">
+                <InfoIcon />
+              </span>
+            </button>
+          )}
+        </div>
+      )}
       <div className="avatar">{robot ? <RobotAvatar thinking={thinking} /> : <HumanIcon />}</div>
 
       <div className="card-text">

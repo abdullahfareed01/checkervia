@@ -1,6 +1,6 @@
 # Draft: Write up
 
-Draft is a browser checkers game for two players on one screen, or one player against an AI powered by `openai/gpt-oss-120b` (through OpenRouter and a Netlify function). Built with React, TypeScript and Vite; 530 automated tests.
+Draft is a browser checkers game for two players on one screen, or one player against an AI powered by `openai/gpt-oss-120b` (through OpenRouter and a Netlify function). Built with React, TypeScript and Vite; 812 automated tests.
 
 ## The hardest rule: multi jumps
 Forced capture and Kings were simple to state and to test. Multi jumps were not:
@@ -30,7 +30,7 @@ The model never chooses freely. Our code lists every legal move with a number, t
 What helped most was taking work away from the model: the engine finds the legal moves and searches ahead, and the model chooses and explains. What did not need changing: with structured output and a reasoning model at low effort, the answer format was almost never wrong.
 
 ## Also built from user feedback
-History with arrows, a result popup with stats, a home menu with a splash tied to real loading, a Learn mode where two robots play four scripted lessons (each move checked by the engine), difficulty levels chosen in a popup, a calm look with simple animations, and a layout that works from small phones (portrait and landscape) to large screens.
+History with arrows, a result popup with stats, a home menu with a splash tied to real loading, a Learn mode where two robots play four scripted lessons (each move checked by the engine), four difficulty levels whose strength comes from the engine, an 18 plus notice for the strongest level with language rules enforced in code, a chat bubble that never moves the board, "Why?" on demand, greetings, idle lines, resigning with an engine proven hint, tips from the engine after a loss, a calm look with simple animations, and a layout that works from small phones (portrait and landscape) to large screens.
 
 ## Links
 - Live site: (add after deploy)

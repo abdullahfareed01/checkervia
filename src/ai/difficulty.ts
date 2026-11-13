@@ -19,6 +19,7 @@ export interface LevelInfo {
   // own (the Easy level's deliberate slips). 0 = never.
   readonly slipChance: number;
   readonly description: string; // one line, shown when choosing a level
+  readonly voice: string; // the AI's character at this level, a chip on its card (Change 4)
 }
 
 export const AI_LEVELS: Readonly<Record<AiLevel, LevelInfo>> = {
@@ -27,10 +28,11 @@ export const AI_LEVELS: Readonly<Record<AiLevel, LevelInfo>> = {
     depth: 1,
     slipChance: 0.3,
     description: "Looks 1 turn ahead, any move allowed, and sometimes plays without the engine's help.",
+    voice: "Friendly",
   },
-  2: { name: "Medium", depth: 2, candidates: 5, slipChance: 0, description: "Looks 2 turns ahead (its move and your reply) and picks from its best 5 moves." },
-  3: { name: "Hard", depth: 4, candidates: 4, slipChance: 0, description: "Looks 4 turns ahead (2 moves each) and picks from its best 4 moves." },
-  4: { name: "Strongest", depth: 6, candidates: 3, slipChance: 0, description: "Looks 6 turns ahead (3 moves each) and picks from its best 3 moves." },
+  2: { name: "Medium", depth: 2, candidates: 5, slipChance: 0, description: "Looks 2 turns ahead (its move and your reply) and picks from its best 5 moves.", voice: "Playful" },
+  3: { name: "Hard", depth: 4, candidates: 4, slipChance: 0, description: "Looks 4 turns ahead (2 moves each) and picks from its best 4 moves.", voice: "Competitive" },
+  4: { name: "Strongest", depth: 6, candidates: 3, slipChance: 0, description: "Looks 6 turns ahead (3 moves each) and picks from its best 3 moves.", voice: "Strongest" },
 };
 
 export const LEVELS: readonly AiLevel[] = [1, 2, 3, 4];

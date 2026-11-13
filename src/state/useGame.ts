@@ -34,5 +34,7 @@ export function useGame(initial?: GameOptions) {
   // A new game against the AI at `level` (a level is fixed for a game).
   const playAi = useCallback((level: AiLevel) => dispatch({ type: "newGame", mode: "vs-ai", level }), []);
 
-  return { state, click, newGame, setMode, retryAi, goHistory, playAi };
+  const resign = useCallback(() => dispatch({ type: "resign" }), []);
+
+  return { state, click, newGame, setMode, retryAi, goHistory, playAi, resign };
 }

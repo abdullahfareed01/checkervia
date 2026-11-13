@@ -50,6 +50,7 @@ describe("prompt v5: the reaction", () => {
     const prompt = buildPrompt(initialBoard(), "black", moves, undefined, { label: "C3 -> D4", judgement: null });
     expect(prompt).toContain("Your opponent's last move was C3 -> D4. The game engine found nothing special about it.");
     expect(prompt).toContain("friendly, playful checkers rival");
+    expect(prompt).toContain("You may laugh (haha, hehe, lol) when it fits.");
     expect(prompt).toContain("No swearing, no insults, no name calling.");
     expect(prompt).not.toContain("trash-talking");
     expect(prompt).toContain("Keep it about the game: no slurs, no hate");

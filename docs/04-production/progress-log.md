@@ -176,3 +176,10 @@
 - Browser checks (headless Edge): the consent flow at 1280x800 and 375x667 (No, Cancel, Terms over the notice, accept, not asked again); the 18+ label at 10 sizes from 320x568 to 1920x1080 and two landscape phones.
 - Live: 8 real AI turns at Strongest and Medium, rules held; a non breaking hyphen slipped through once and is now caught.
 - Tests: 666 passing in 46 files. Typecheck and build clean.
+
+## 13 Nov 2026: Changes 1 to 4 from `docs/phases/Changes.md` (D46, D47, D48)
+- Change 1: one dash sanitizer for all AI text (ranges, arrows, every hyphen and dash character, awkward cases); the engine's verdict and failure details cleaned; the prose of the README and 23 docs reworded (about 330 places; code, paths and identifiers left alone); tests for the UI and the docs.
+- Change 2: only the compact line and the reaction show; "Why?" opens the engine's facts and the AI's own words.
+- Change 3: chat bubble in a fixed slot under the AI card; checked at 320, 360, 375, 390, 430, 768, 1024 and 1440 wide and two landscape phones: the board never moved and the bubble never covered a square; everything fits at 375x667 (not at 320x568, as before).
+- Change 4: line banks, greeting with a tab record, idle lines, resign in both modes, the engine proven resign hint, the game over panel with tips, the voice chip and the 18+ badge.
+- Tests: 812 passing in 52 files. Typecheck and build clean; no secret or key name in the build.

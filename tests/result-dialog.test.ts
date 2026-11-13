@@ -21,6 +21,7 @@ function render(overrides: Partial<ComponentProps<typeof ResultDialog>> = {}): s
       totalMoves: 41,
       durationMs: 185_000,
       onPlayAgain: () => {},
+      onReview: () => {},
       onClose: () => {},
       ...overrides,
     }),
@@ -77,10 +78,10 @@ describe("ResultDialog", () => {
     expect(render({ durationMs: null })).not.toContain("Game time");
   });
 
-  it("offers Play again and View board", () => {
+  it("offers Play again and Review game straight away", () => {
     const html = render();
     expect(html).toContain("Play again");
-    expect(html).toContain("View board");
+    expect(html).toContain("Review game");
   });
 });
 

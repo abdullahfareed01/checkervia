@@ -42,6 +42,7 @@ export function winReasonOf(state: GameState): string | null {
   if (!state.winner) return null;
   const loser = opponentOf(state.winner);
   const name = loser === "black" ? "Black" : "White";
+  if (state.resignedBy) return state.mode === "vs-ai" ? "You resigned." : `${name} resigned.`;
   return pieceCounts(state.board)[loser] === 0
     ? `${name} has no pieces left.`
     : `${name} has no legal moves.`;
@@ -52,12 +53,15 @@ export function nameOf(mode: GameMode, player: Player): string {
   return player === "black" ? "Black" : "White";
 }
 
-// The chip on the AI card at Strongest (D45). No dashes.
-export const STRONG_LANGUAGE_TAG = "18+ · Strong language";
-
 // Card details for one side. Piece counts follow the board on screen, so they
 // match the position being reviewed. The AI's card shows its level.
-export function cardFor(state: GameState, board: BoardType, player: Player, placement: "top" | "bottom") {
+export function cardFor(
+  state: GameState,
+  board: BoardType,
+  player: Player,
+  placement: "top" | "bottom",
+  onAdultInfo?: () => void, // opens the language rules (Strongest's 18+ badge)
+) {
   const counts = pieceCounts(board);
   const isAi = state.mode === "vs-ai" && player === AI_PLAYER;
   const toMove = state.winner === null && state.currentPlayer === player;
@@ -68,7 +72,11 @@ export function cardFor(state: GameState, board: BoardType, player: Player, plac
       name={nameOf(state.mode, player)}
       robot={isAi}
       level={isAi ? AI_LEVELS[state.aiLevel].name : undefined}
-      tag={isAi && strongLanguage(state.aiLevel) ? STRONG_LANGUAGE_TAG : undefined}
+      edge={
+        isAi
+          ? { voice: AI_LEVELS[state.aiLevel].voice, onAdultInfo: strongLanguage(state.aiLevel) ? onAdultInfo : undefined }
+          : undefined
+      }
       pieces={counts[player]}
       captured={PIECES_PER_SIDE - counts[opponentOf(player)]}
       toMove={toMove}

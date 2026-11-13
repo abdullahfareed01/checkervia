@@ -48,4 +48,4 @@ Notes:
 - Progress: `docs/04-production/task-backlog.md`
 
 ## Status
-All features are built and tested (666 tests). Left: GitHub push, Netlify deploy (see `docs/07-deployment/deployment-guide.md`), and a screen recording. Progress: `docs/04-production/task-backlog.md`.
+All features are built and tested (812 tests). Left: GitHub push, Netlify deploy (see `docs/07-deployment/deployment-guide.md`), and a screen recording. Progress: `docs/04-production/task-backlog.md`.

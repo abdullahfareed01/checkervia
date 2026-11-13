@@ -9,7 +9,8 @@ import { describe, expect, it } from "vitest";
 import { AI_LEVELS, LEVELS } from "../src/ai";
 import { App } from "../src/ui/App";
 import { ConsentDialog } from "../src/ui/ConsentDialog";
-import { STRONG_LANGUAGE_TAG } from "../src/ui/gameView";
+import { LANGUAGE_RULES } from "../src/ui/LanguageInfo";
+import { LINE_BANKS } from "../src/ai/lines";
 import { Home } from "../src/ui/Home";
 import { HowToPlay } from "../src/ui/HowToPlay";
 import { LevelDialog } from "../src/ui/LevelDialog";
@@ -54,6 +55,7 @@ const screens: [string, ReactElement][] = [
       totalMoves: 39,
       durationMs: 300_000,
       onPlayAgain: noop,
+      onReview: noop,
       onClose: noop,
     }),
   ],
@@ -107,8 +109,9 @@ describe("no hyphens or dashes in text shown to players", () => {
     expect(judgement?.detail).not.toMatch(DASHES);
   });
 
-  it("level names and descriptions, and the 18+ tag", () => {
-    for (const level of LEVELS) expect(`${AI_LEVELS[level].name} ${AI_LEVELS[level].description}`).not.toMatch(DASHES);
-    expect(STRONG_LANGUAGE_TAG).not.toMatch(DASHES);
+  it("level names, descriptions and voices, the language rules, and every banked line", () => {
+    for (const level of LEVELS) expect(`${AI_LEVELS[level].name} ${AI_LEVELS[level].description} ${AI_LEVELS[level].voice}`).not.toMatch(DASHES);
+    expect(LANGUAGE_RULES).not.toMatch(DASHES);
+    for (const level of LEVELS) for (const lines of Object.values(LINE_BANKS[level])) for (const line of lines) expect(line).not.toMatch(DASHES);
   });
 });

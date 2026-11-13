@@ -1,7 +1,7 @@
 # Release Checklist
 
 ## Before release (done 12 Nov 2026 unless marked)
-- [x] `npm test`: 666 tests in 46 files pass
+- [x] `npm test`: 812 tests in 52 files pass
 - [x] `npm run typecheck` and `npm run build` clean
 - [x] Production build checked in a browser (`vite preview`): no console errors, no failed requests, no long tasks over 40 moves
 - [x] Every screen checked at 11 sizes (320x568 to 1920x1080, portrait and landscape): no sideways scrolling, nothing cut off

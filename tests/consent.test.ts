@@ -112,14 +112,26 @@ describe("Terms and notices", () => {
   });
 });
 
-describe("the AI card's 18+ tag", () => {
-  it("shows while playing at Strongest", () => {
-    const html = renderToStaticMarkup(createElement(App, { initial: { mode: "vs-ai", aiLevel: 4 } }));
-    expect(html).toContain('class="badge badge-adult">18+ · Strong language<');
+describe("the AI card's 18+ badge and voice chip (Change 4)", () => {
+  const render = (mode: "vs-ai" | "two-player", aiLevel: 1 | 2 | 3 | 4) => renderToStaticMarkup(createElement(App, { initial: { mode, aiLevel } }));
+
+  it("at Strongest: a two part badge that is a real button, next to the voice chip", () => {
+    const html = render("vs-ai", 4);
+    expect(html).toMatch(/<div class="card-edge"><span class="edge-voice">Strongest<\/span><button type="button" class="edge-adult" aria-label="18 plus, strong language\. About the language rules">/);
+    expect(html).toContain('<span class="edge-adult-age">18+</span><span class="edge-adult-text">Strong language</span>');
   });
 
-  it.each([1, 2, 3] as const)("not at level %i, and not in two-player games", (level) => {
-    expect(renderToStaticMarkup(createElement(App, { initial: { mode: "vs-ai", aiLevel: level } }))).not.toContain("badge-adult");
-    expect(renderToStaticMarkup(createElement(App, { initial: { mode: "two-player", aiLevel: 4 } }))).not.toContain("badge-adult");
+  it.each([
+    [1, "Friendly"],
+    [2, "Playful"],
+    [3, "Competitive"],
+  ] as const)("level %i: the voice chip %s, and no 18+ badge", (level, voice) => {
+    const html = render("vs-ai", level);
+    expect(html).toContain(`<span class="edge-voice">${voice}</span>`);
+    expect(html).not.toContain("edge-adult");
+  });
+
+  it("nothing on the edge in two player games", () => {
+    expect(render("two-player", 4)).not.toContain("card-edge");
   });
 });
