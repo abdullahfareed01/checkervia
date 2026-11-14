@@ -59,4 +59,5 @@
   - [ ] Supabase project created and the three variables set (needs the owner)
   - [x] Phase 4: screens (submit form, leaderboard, profile sheet, links), and the Terms describe it as live. Waiting for the owner's review; nothing is deployed.
   - [x] Profile first and automatic wins (D61): the Profile screen before the first AI game, the custom country picker, automatic wins with a retry queue, renames. Waiting for the owner's review.
+  - [x] Redesign after the mockups, avatars and the profile icon (D62). Waiting for the owner's review.
   - [ ] Run `leaderboard-migration-2.sql` in Supabase before this version goes live (needs the owner)

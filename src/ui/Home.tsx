@@ -1,6 +1,8 @@
 import type { AiStatus } from "../ai";
 import type { GameMode } from "../state/gameReducer";
 import { CrownIcon, HumanIcon, RobotIcon, TrophyIcon } from "./icons";
+import { Avatar } from "./leaderboard/Avatar";
+import { useLeaderboardProfile } from "./leaderboard/profile";
 import { Logo } from "./Splash";
 import { GameTitle } from "./TopBar";
 
@@ -13,6 +15,7 @@ interface HomeProps {
   onTerms: () => void;
   onSettings?: (() => void) | undefined; // sound, haptics, voice, animation, board
   onLeaderboard?: (() => void) | undefined; // D57: open to everyone
+  onProfile?: (() => void) | undefined; // D62: the profile icon, top right
 }
 
 // What the AI badge says for each health check result.
@@ -30,12 +33,24 @@ const AI_HELP: Partial<Record<AiStatus, string>> = {
 };
 
 // The home menu: Play vs AI, 2 Players, Learn, the Leaderboard and How to play.
-export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerms, onSettings, onLeaderboard }: HomeProps) {
+export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerms, onSettings, onLeaderboard, onProfile }: HomeProps) {
   const badge = AI_BADGES[aiStatus];
   const help = aiStatus === "checking" ? undefined : AI_HELP[aiStatus];
+  const { profile } = useLeaderboardProfile();
 
   return (
     <main className="home">
+      {onProfile && (
+        // The player's avatar once a profile exists, a neutral person before.
+        <button
+          type="button"
+          className="home-profile"
+          aria-label={profile ? `Your profile, ${profile.username}` : "Create your profile"}
+          onClick={onProfile}
+        >
+          <Avatar id={profile?.avatar ?? null} size={48} />
+        </button>
+      )}
       <header className="home-head">
         <div className="home-logo">
           <Logo />

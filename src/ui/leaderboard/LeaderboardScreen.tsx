@@ -1,31 +1,57 @@
-// The leaderboard (D57): open to everyone, from the home screen and the
-// game's Menu, as a full screen layer over whatever is behind it (a game
-// stays as it was). Tabs for the four levels (Strongest first), a segmented
-// control for the period, a podium for the top three with the champion
-// first among equals, then a list from 4 on. Every state has its own calm
-// panel: loading rows, empty, offline, a server problem, too many requests.
-// Rows open the player's profile.
+// The leaderboard (D57, redesigned in D62 after mockup/Leader_board.png):
+// open to everyone, from the home screen and the game's Menu, as a full
+// screen layer over whatever is behind it (a game stays as it was).
+//
+// Top: a close button and the title. Then the level tabs (Strongest first),
+// the three periods and the reset line. Then the podium: the top ranked
+// player card in the middle under its crown, the second ranked player card
+// on the left and the third ranked player card on the right. Then ranks 4
+// and on as rows; the player's own row is highlighted (and shown above the
+// list when it is not on the first page). Every state has its own calm
+// panel: loading, empty, offline, a server problem, too many requests.
+//
+// One scroll only: the layer itself scrolls as a page; the list is never a
+// scroll area of its own, and Load more makes the page longer.
 import { useEffect, useId, useRef, useState } from "react";
-import type { KeyboardEvent } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { AI_LEVELS } from "../../ai/difficulty";
 import type { AiLevel } from "../../ai/difficulty";
 import { PERIODS, resetsInText } from "../../leaderboard/periods";
 import type { Period } from "../../leaderboard/periods";
-import { LEADERBOARD_LEVELS } from "../../leaderboard/protocol";
+import { LEADERBOARD_LEVELS, PAGE_SIZE } from "../../leaderboard/protocol";
 import type { LeaderboardRow } from "../../leaderboard/protocol";
-import { BackIcon, CrownIcon, LaurelIcon, TrophyIcon } from "../icons";
+import { Avatar } from "./Avatar";
 import { Flag, countryName } from "./Flag";
-import { ProfileSheet } from "./ProfileSheet";
+import {
+  ChevronDownIcon,
+  CloseIcon,
+  LbBars,
+  LbCalendar,
+  LbCrown,
+  LbGradients,
+  LbInfinity,
+  LbLaurel,
+  LbStar,
+  LbSwords,
+  LbTrophy,
+} from "./lbIcons";
+import type { Tone } from "./lbIcons";
+import { ProfileSheet, TIERS } from "./ProfileSheet";
 import { useLeaderboardProfile } from "./profile";
 import { ProblemPanel, problemText } from "./Problem";
 import { useLeaderboardPage } from "./useLeaderboardPage";
 
 const PERIOD_NAMES: Record<Period, string> = { week: "This week", month: "This month", all: "All time" };
-const CHAMPION: Record<Period, string> = { week: "Champion this week", month: "Champion this month", all: "Champion of all time" };
 const EMPTY: Record<Period, string> = {
   week: "No wins yet this week. Be the first.",
   month: "No wins yet this month. Be the first.",
   all: "No wins yet. Be the first.",
+};
+const TAB_ICONS: Record<AiLevel, ReactNode> = {
+  4: <LbCrown />,
+  3: <LbSwords tone="cream" />,
+  2: <LbBars />,
+  1: <LbStar />,
 };
 
 const winsWord = (wins: number) => (wins === 1 ? "win" : "wins");
@@ -42,25 +68,35 @@ function useResetsIn(resetsAt: string | null): string | null {
   return resetsAt ? resetsInText(new Date(resetsAt), now) : null;
 }
 
-export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; onTerms?: () => void }) {
+interface LeaderboardScreenProps {
+  onClose: () => void;
+  /** The own row opens the Profile screen (where it can be edited). */
+  onOwnProfile?: (() => void) | undefined;
+}
+
+export function LeaderboardScreen({ onClose, onOwnProfile }: LeaderboardScreenProps) {
   const [level, setLevel] = useState<AiLevel>(4);
   const [period, setPeriod] = useState<Period>("week");
-  const [openProfile, setOpenProfile] = useState<string | null>(null);
+  const [openProfile, setOpenProfile] = useState<{ username: string; rank: number } | null>(null);
   const { state, retry, loadMore } = useLeaderboardPage(level, period);
   const { profile } = useLeaderboardProfile();
   const ids = useId();
-  const backRef = useRef<HTMLButtonElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const resetsIn = useResetsIn(state.kind === "ready" ? state.resetsAt : null);
 
-  // Focus starts on Back; it returns where it was when the screen closes.
+  // Focus starts on the close button; it returns where it was when the screen closes.
   useEffect(() => {
     const before = document.activeElement as HTMLElement | null;
-    backRef.current?.focus({ preventScroll: true });
+    closeRef.current?.focus({ preventScroll: true });
     return () => before?.focus?.({ preventScroll: true });
   }, []);
 
   const isMine = (row: LeaderboardRow) => profile !== null && row.username.toLowerCase() === profile.username.toLowerCase();
+  const open = (row: LeaderboardRow) => {
+    if (isMine(row) && onOwnProfile) onOwnProfile();
+    else setOpenProfile({ username: row.username, rank: row.rank });
+  };
 
   // Arrow keys, Home and End move between the level tabs (and choose them).
   const onTabKey = (event: KeyboardEvent, index: number) => {
@@ -81,12 +117,16 @@ export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; o
   const podium = rows.slice(0, 3);
   const list = rows.slice(3);
   const me = state.kind === "ready" ? state.me : null;
-  const meShown = me !== null && rows.some((row) => row.rank === me.rank);
+  // "Your place" shows when the own row is not on the first page, and stays
+  // after Load more brings it in, so nothing above the list ever disappears
+  // (no jump while scrolling).
+  const meAbove = me !== null && me.rank > PAGE_SIZE;
   const levelName = AI_LEVELS[level].name;
   const panelId = `${ids}-panel`;
 
   return (
     <div className="lb-backdrop">
+      <LbGradients />
       <div
         className="lb-screen"
         role="dialog"
@@ -97,51 +137,73 @@ export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; o
         }}
       >
         <header className="lb-head">
-          <button ref={backRef} type="button" className="lb-icon-button" aria-label="Close the leaderboard" onClick={onClose}>
-            <BackIcon />
-          </button>
-          <h2 id={`${ids}-title`} className="lb-title">
-            <TrophyIcon />
-            Leaderboard
-          </h2>
           <span className="lb-head-spacer" aria-hidden="true" />
+          <h2 id={`${ids}-title`} className="lb-title">
+            <span className="lb-title-laurel" aria-hidden="true">
+              <LbLaurel />
+            </span>
+            <span className="lb-title-trophy" aria-hidden="true">
+              <LbTrophy />
+            </span>
+            <span className="lb-title-text">Leaderboard</span>
+            <span className="lb-title-laurel" aria-hidden="true">
+              <LbLaurel flip />
+            </span>
+          </h2>
+          <button ref={closeRef} type="button" className="lb-close" aria-label="Close the leaderboard" onClick={onClose}>
+            <CloseIcon />
+          </button>
         </header>
 
-        <div className="lb-controls">
-          <div className="lb-tabs" role="tablist" aria-label="Level">
-            {LEADERBOARD_LEVELS.map((tabLevel, index) => (
-              <button
-                key={tabLevel}
-                ref={(element) => {
-                  tabRefs.current[index] = element;
-                }}
-                type="button"
-                role="tab"
-                id={`${ids}-tab-${tabLevel}`}
-                aria-selected={tabLevel === level}
-                aria-controls={panelId}
-                tabIndex={tabLevel === level ? 0 : -1}
-                className="lb-tab"
-                onClick={() => setLevel(tabLevel)}
-                onKeyDown={(event) => onTabKey(event, index)}
-              >
-                {AI_LEVELS[tabLevel].name}
-              </button>
-            ))}
-          </div>
-
-          <fieldset className="lb-periods">
-            <legend className="sr-only">Period</legend>
-            {PERIODS.map((option) => (
-              <label key={option} className="lb-period">
-                <input type="radio" name={`${ids}-period`} value={option} checked={period === option} onChange={() => setPeriod(option)} />
-                <span>{PERIOD_NAMES[option]}</span>
-              </label>
-            ))}
-          </fieldset>
-          {/* Always one line tall, so switching never moves the layout. */}
-          <p className="lb-resets">{period === "all" ? "Every win since the leaderboard opened" : (resetsIn ?? " ")}</p>
+        <div className="lb-tabs" role="tablist" aria-label="Level">
+          {LEADERBOARD_LEVELS.map((tabLevel, index) => (
+            <button
+              key={tabLevel}
+              ref={(element) => {
+                tabRefs.current[index] = element;
+              }}
+              type="button"
+              role="tab"
+              id={`${ids}-tab-${tabLevel}`}
+              aria-selected={tabLevel === level}
+              aria-controls={panelId}
+              tabIndex={tabLevel === level ? 0 : -1}
+              className="lb-tab"
+              onClick={() => setLevel(tabLevel)}
+              onKeyDown={(event) => onTabKey(event, index)}
+            >
+              <span className="lb-tab-icon" aria-hidden="true">
+                {TAB_ICONS[tabLevel]}
+              </span>
+              <span className="lb-tab-name">{AI_LEVELS[tabLevel].name}</span>
+            </button>
+          ))}
         </div>
+
+        <fieldset className="lb-periods">
+          <legend className="sr-only">Period</legend>
+          {PERIODS.map((option) => (
+            <label key={option} className="lb-period">
+              <input type="radio" name={`${ids}-period`} value={option} checked={period === option} onChange={() => setPeriod(option)} />
+              <span className="lb-period-face">
+                <span className="lb-period-icon" aria-hidden="true">
+                  {option === "all" ? <LbInfinity /> : <LbCalendar tone="cream" />}
+                </span>
+                {PERIOD_NAMES[option]}
+              </span>
+            </label>
+          ))}
+        </fieldset>
+        {/* Always one line tall, so switching never moves the layout. */}
+        <p className="lb-resets">
+          <span className="lb-resets-laurel" aria-hidden="true">
+            <LbLaurel />
+          </span>
+          <span>{period === "all" ? "Every win since the leaderboard opened" : (resetsIn ?? " ")}</span>
+          <span className="lb-resets-laurel" aria-hidden="true">
+            <LbLaurel flip />
+          </span>
+        </p>
 
         <div id={panelId} role="tabpanel" aria-labelledby={`${ids}-tab-${level}`} aria-busy={state.kind === "loading"} className="lb-panel">
           {state.kind === "loading" && <Skeleton />}
@@ -152,7 +214,7 @@ export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; o
           {state.kind === "ready" && state.total === 0 && (
             <div className="lb-state" role="status">
               <span className="lb-state-icon" aria-hidden="true">
-                <TrophyIcon />
+                <LbTrophy />
               </span>
               <p className="lb-state-text">{EMPTY[period]}</p>
               <p className="lb-state-sub">Win a game against the AI on {levelName} to take the top spot.</p>
@@ -164,32 +226,33 @@ export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; o
               <h3 className="sr-only">
                 Top three on {levelName}, {PERIOD_NAMES[period].toLowerCase()}
               </h3>
-              <ol className="lb-podium" key={`${level}-${period}`}>
-                {podium.map((row) => (
-                  <PodiumPlace key={row.rank} row={row} champion={CHAMPION[period]} mine={isMine(row)} onOpen={() => setOpenProfile(row.username)} />
-                ))}
-                {/* Fewer than three players: the free places stay visible, so the podium keeps its shape. */}
-                {[2, 3].filter((rank) => rank > podium.length).map((rank) => (
-                  <li key={`open-${rank}`} className={`lb-place lb-place-${rank} lb-place-open`} aria-hidden="true">
-                    <span className="lb-place-button">
-                      <span className="lb-medal">{rank}</span>
-                      <span className="lb-open-text">Open</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
+              <div className="lb-podium-stage">
+                <ol className="lb-podium" key={`${level}-${period}`}>
+                  {podium[0] && <TopRankedPlayerCard row={podium[0]} mine={isMine(podium[0])} onOpen={() => open(podium[0]!)} />}
+                  {podium[1] ? <SecondRankedPlayerCard row={podium[1]} mine={isMine(podium[1])} onOpen={() => open(podium[1]!)} /> : <OpenPlace rank={2} />}
+                  {podium[2] ? <ThirdRankedPlayerCard row={podium[2]} mine={isMine(podium[2])} onOpen={() => open(podium[2]!)} /> : <OpenPlace rank={3} />}
+                </ol>
+                <span className="lb-stage" aria-hidden="true" />
+              </div>
+
+              {me && meAbove && (
+                <div className="lb-own-place">
+                  <p className="lb-own-place-label">Your place</p>
+                  <Row row={me} mine onOpen={() => open(me)} />
+                </div>
+              )}
 
               {list.length > 0 && (
                 <>
                   <div className="lb-list-head" aria-hidden="true">
-                    <span>Rank</span>
+                    <span>#</span>
                     <span>Player</span>
                     <span>Wins</span>
                   </div>
                   <ol className="lb-list" aria-label={`Players ranked 4 and below on ${levelName}`}>
                     {list.map((row) => (
                       <li key={row.rank}>
-                        <Row row={row} mine={isMine(row)} onOpen={() => setOpenProfile(row.username)} />
+                        <Row row={row} mine={isMine(row)} onOpen={() => open(row)} />
                       </li>
                     ))}
                   </ol>
@@ -203,60 +266,61 @@ export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; o
                       {problemText(state.more)}
                     </p>
                   )}
-                  <button type="button" className="button" disabled={state.more === "loading"} aria-busy={state.more === "loading"} onClick={() => void loadMore()}>
+                  <button
+                    type="button"
+                    className="lb-more-button"
+                    disabled={state.more === "loading"}
+                    aria-busy={state.more === "loading"}
+                    onClick={() => void loadMore()}
+                  >
                     {state.more === "loading" ? "Loading…" : typeof state.more === "object" ? "Try again" : "Load more"}
+                    <ChevronDownIcon />
                   </button>
                 </div>
               )}
             </>
           )}
         </div>
-
-        {/* The player's own row, pinned when it is not on the loaded pages. */}
-        {me && !meShown && (
-          <div className="lb-pinned">
-            <Row row={me} mine onOpen={() => setOpenProfile(me.username)} />
-          </div>
-        )}
+        <div className="lb-scenery" aria-hidden="true" />
       </div>
 
-      {openProfile !== null && <ProfileSheet username={openProfile} onClose={() => setOpenProfile(null)} {...(onTerms ? { onTerms } : {})} />}
+      {openProfile !== null && <ProfileSheet username={openProfile.username} rank={openProfile.rank} onClose={() => setOpenProfile(null)} />}
     </div>
   );
 }
 
-export function PodiumPlace({ row, champion, mine, onOpen }: { row: LeaderboardRow; champion: string; mine: boolean; onOpen: () => void }) {
-  const first = row.rank === 1;
+interface CardProps {
+  row: LeaderboardRow;
+  mine: boolean;
+  onOpen: () => void;
+}
+
+// One podium card: medal, avatar, flag, name, the card's own words, the wins.
+function PodiumCard({ row, mine, onOpen, tier }: CardProps & { tier: 1 | 2 | 3 }) {
+  const { label, tone, className } = TIERS[tier];
   return (
-    <li className={`lb-place lb-place-${row.rank}${mine ? " lb-mine" : ""}`}>
-      <button type="button" className="lb-place-button" aria-label={`${first ? `${champion}. ` : ""}${rowLabel(row, mine)}`} onClick={onOpen}>
-        {first && (
-          <span className="lb-champion-emblem" aria-hidden="true">
-            <span className="lb-laurel lb-laurel-left">
-              <LaurelIcon />
-            </span>
-            <span className="lb-crown">
-              <CrownIcon />
-            </span>
-            <span className="lb-laurel lb-laurel-right">
-              <LaurelIcon flip />
-            </span>
-          </span>
-        )}
-        <span className="lb-medal" aria-hidden="true">
-          {row.rank}
+    <li className={`lb-place lb-place-${tier} ${className}${mine ? " lb-mine" : ""}`}>
+      {tier === 1 && (
+        <span className="lb-place-crown" aria-hidden="true">
+          <LbCrown />
         </span>
-        <span className="lb-place-who" aria-hidden="true">
+      )}
+      <button type="button" className="lb-place-button" aria-label={`${label}. ${rowLabel(row, mine)}`} onClick={onOpen}>
+        <Medal rank={tier} tone={tone} />
+        <span className={`lb-place-avatar lb-ring-${tone}`} aria-hidden="true">
+          <Avatar id={row.avatar} size={tier === 1 ? 72 : 60} />
+        </span>
+        <span className="lb-place-flag" aria-hidden="true">
           <Flag code={row.country} decorative />
-          <span className="lb-name">{row.username}</span>
         </span>
-        {first && (
-          <span className="lb-champion-label" aria-hidden="true">
-            Champion
-          </span>
-        )}
+        <span className="lb-place-name lb-name" aria-hidden="true">
+          {row.username}
+        </span>
+        <span className="lb-place-label" aria-hidden="true">
+          {label}
+        </span>
         <span className="lb-place-wins" aria-hidden="true">
-          <span className="lb-big-number">{row.wins}</span>
+          <span className="lb-big-number lb-num">{row.wins}</span>
           <span className="lb-wins-label">{winsWord(row.wins)}</span>
         </span>
       </button>
@@ -264,49 +328,88 @@ export function PodiumPlace({ row, champion, mine, onOpen }: { row: LeaderboardR
   );
 }
 
+/** The middle of the podium: rank 1, under the crown. */
+export function TopRankedPlayerCard(props: CardProps) {
+  return <PodiumCard {...props} tier={1} />;
+}
+
+/** Left of the podium: rank 2, in silver. */
+export function SecondRankedPlayerCard(props: CardProps) {
+  return <PodiumCard {...props} tier={2} />;
+}
+
+/** Right of the podium: rank 3, in bronze. */
+export function ThirdRankedPlayerCard(props: CardProps) {
+  return <PodiumCard {...props} tier={3} />;
+}
+
+// Fewer than three players: the free places stay, so the podium keeps its shape.
+function OpenPlace({ rank }: { rank: 2 | 3 }) {
+  const { tone, className } = TIERS[rank];
+  return (
+    <li className={`lb-place lb-place-${rank} ${className} lb-place-open`} aria-hidden="true">
+      <span className="lb-place-button">
+        <Medal rank={rank} tone={tone} />
+        <span className="lb-open-text">Open</span>
+      </span>
+    </li>
+  );
+}
+
+function Medal({ rank, tone }: { rank: number; tone: Tone }) {
+  return (
+    <span className={`lb-medal lb-medal-${tone}`} aria-hidden="true">
+      <span className="lb-num">{rank}</span>
+    </span>
+  );
+}
+
 export function Row({ row, mine, onOpen }: { row: LeaderboardRow; mine: boolean; onOpen: () => void }) {
   return (
     <button type="button" className={`lb-row${mine ? " lb-mine" : ""}`} aria-label={rowLabel(row, mine)} onClick={onOpen}>
-      <span className="lb-rank" aria-hidden="true">
+      <span className="lb-rank lb-num" aria-hidden="true">
         {row.rank}
       </span>
       <span className="lb-row-who" aria-hidden="true">
+        <Avatar id={row.avatar} size={36} className="lb-row-avatar" />
         <Flag code={row.country} decorative />
         <span className="lb-name">{row.username}</span>
         {mine && <span className="lb-you">You</span>}
       </span>
-      <span className="lb-row-wins" aria-hidden="true">
+      <span className="lb-row-wins lb-num" aria-hidden="true">
         {row.wins}
       </span>
     </button>
   );
 }
 
-// Grey placeholders in the shapes of the podium and the first rows.
+// Placeholders in the shapes of the podium and the first rows.
 function Skeleton() {
   return (
     <>
-    <div className="lb-skeleton" aria-hidden="true">
-      <div className="lb-podium lb-podium-skeleton">
-        {[2, 1, 3].map((rank) => (
-          <div key={rank} className={`lb-place lb-place-${rank} lb-place-skeleton`}>
-            <span className="lb-bone lb-bone-medal" />
-            <span className="lb-bone lb-bone-name" />
-            <span className="lb-bone lb-bone-number" />
+      <div className="lb-skeleton" aria-hidden="true">
+        <div className="lb-podium lb-podium-skeleton">
+          {[1, 2, 3].map((rank) => (
+            <div key={rank} className={`lb-place lb-place-${rank} lb-place-skeleton`}>
+              <span className="lb-place-button">
+                <span className="lb-bone lb-bone-avatar" />
+                <span className="lb-bone lb-bone-name" />
+                <span className="lb-bone lb-bone-number" />
+              </span>
+            </div>
+          ))}
+        </div>
+        {Array.from({ length: 5 }, (_, index) => (
+          <div key={index} className="lb-row lb-row-skeleton">
+            <span className="lb-bone lb-bone-rank" />
+            <span className="lb-bone lb-bone-line" />
+            <span className="lb-bone lb-bone-rank" />
           </div>
         ))}
       </div>
-      {Array.from({ length: 6 }, (_, index) => (
-        <div key={index} className="lb-row lb-row-skeleton">
-          <span className="lb-bone lb-bone-rank" />
-          <span className="lb-bone lb-bone-line" />
-          <span className="lb-bone lb-bone-rank" />
-        </div>
-      ))}
-    </div>
-    <p className="sr-only" role="status">
-      Loading the leaderboard.
-    </p>
+      <p className="sr-only" role="status">
+        Loading the leaderboard.
+      </p>
     </>
   );
 }

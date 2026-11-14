@@ -268,3 +268,8 @@
 - First AI game: consent, then the new Profile screen, then the board; offline notice without blocking; two players never asked. No automatic country: a custom country picker. Wins are submitted automatically from a queue with safe retries. Usernames can change once in 7 days, old names reserved for 30 days. Migration 2 in a new file (`leaderboard-migration-2.sql`).
 - Tests: handlers for renames and reserved names, PGlite tests for migration 2, the queue and its retries, the gate, the picker's keys and roles, no automatic country left.
 - `?testwin` (D60) checked with the new flow: without a profile the Profile screen comes first; with one the won game is added by itself ("Added. You are number 30 this week on Strongest.").
+
+## 14 Nov 2026: Leaderboard redesign, avatars and the profile icon (D62)
+- The leaderboard, the podium cards and the profile cards rebuilt after the mockups (with the medal ribbon tails, the glossy stage and the mockups' glows), one scroll, 40 original avatars, a profile icon on the home screen, Nunito and tabular numerals self hosted.
+- Tests: 1231 passing in 68 files. Typecheck and production build clean.
+- Browser check (headless Edge, my own Vite on 5180, `?lb=` previews, one width per batch with a fresh browser): every state at 320, 360, 390, 430, 768, 1024, 1280, 1440, 1920, 2560 and phone landscape (844 by 390), with the overflow, inner scroll, clipped number, tap target, small text and console error checks; wheel, touch and Load more scrolling; side by side with the mockups at their own width. Not run against the owner's real Supabase project.

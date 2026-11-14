@@ -26,9 +26,11 @@ import { Learn } from "../src/ui/Learn";
 import { judgeMove } from "../src/ai/judge";
 import { getLegalMoves } from "../src/engine";
 import { scenario } from "../src/ui/devScenarios";
-import { LeaderboardScreen, PodiumPlace, Row } from "../src/ui/leaderboard/LeaderboardScreen";
-import { ProfileStats } from "../src/ui/leaderboard/ProfileSheet";
-import { SubmitWin, SubmitWinDialog } from "../src/ui/leaderboard/SubmitWin";
+import { CountryPicker } from "../src/ui/leaderboard/CountryPicker";
+import { LeaderboardScreen, Row, SecondRankedPlayerCard, ThirdRankedPlayerCard, TopRankedPlayerCard } from "../src/ui/leaderboard/LeaderboardScreen";
+import { ProfileScreen } from "../src/ui/leaderboard/ProfileScreen";
+import { ProfileStats, TierRibbon } from "../src/ui/leaderboard/ProfileSheet";
+import { WinStatus } from "../src/ui/leaderboard/WinStatus";
 import { USERNAME_MESSAGES } from "../src/leaderboard/username";
 
 const noop = () => {};
@@ -68,6 +70,22 @@ const screens: [string, ReactElement][] = [
     }),
   ],
   [
+    "result with the leaderboard line (D61)",
+    createElement(ResultDialog, {
+      winner: "black",
+      mode: "vs-ai",
+      reason: "White has no pieces left.",
+      stats: { black: { moves: 20, captured: 12, kingsMade: 1, bestChain: 1 }, white: { moves: 19, captured: 4, kingsMade: 0, bestChain: 0 } },
+      pieces: { black: 8, white: 0 },
+      totalMoves: 39,
+      durationMs: 300_000,
+      onPlayAgain: noop,
+      onReview: noop,
+      onClose: noop,
+      leaderboard: createElement(WinStatus, { win: { gameId: "g", level: 4, moves: [] } }),
+    }),
+  ],
+  [
     "why content",
     createElement(WhyContent, {
       explanation: {
@@ -83,11 +101,16 @@ const screens: [string, ReactElement][] = [
   // The leaderboard (D57).
   ["home with the leaderboard", createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop, onLeaderboard: noop })],
   ["leaderboard", createElement(LeaderboardScreen, { onClose: noop })],
-  ["podium", createElement(PodiumPlace, { row: { rank: 1, username: "Fan", country: null, wins: 3, bestMoves: 20 }, champion: "Champion this week", mine: true, onOpen: noop })],
-  ["leaderboard row", createElement(Row, { row: { rank: 4, username: "Fan", country: "PK", wins: 1, bestMoves: 20 }, mine: true, onOpen: noop })],
-  ["profile", createElement(ProfileStats, { profile: { username: "Fan", country: "PK", gamesPlayed: 3, wins: 1, losses: 2, winRate: 1 / 3, byLevel: [{ level: 4, wins: 1, losses: 2 }], bestWin: { moves: 20, level: 4 }, weeklyStrongestRank: null } })],
-  ["submit form", createElement(SubmitWin, { win: { gameId: "g", level: 4, moves: [] }, placement: "result", onTerms: noop })],
-  ["submit sheet", createElement(SubmitWinDialog, { win: { gameId: "g", level: 4, moves: [] }, onTerms: noop, onClose: noop })],
+  ["top ranked player card", createElement(TopRankedPlayerCard, { row: { rank: 1, username: "Fan", country: null, avatar: "a01", wins: 3, bestMoves: 20 }, mine: true, onOpen: noop })],
+  ["second ranked player card", createElement(SecondRankedPlayerCard, { row: { rank: 2, username: "Two", country: "GB", avatar: null, wins: 2, bestMoves: 20 }, mine: false, onOpen: noop })],
+  ["third ranked player card", createElement(ThirdRankedPlayerCard, { row: { rank: 3, username: "Three", country: "JP", avatar: "a02", wins: 1, bestMoves: 20 }, mine: false, onOpen: noop })],
+  ["ribbons", createElement("div", null, createElement(TierRibbon, { tier: 1 }), createElement(TierRibbon, { tier: 2 }), createElement(TierRibbon, { tier: 3 }))],
+  ["leaderboard row", createElement(Row, { row: { rank: 4, username: "Fan", country: "PK", avatar: "a03", wins: 1, bestMoves: 20 }, mine: true, onOpen: noop })],
+  ["profile", createElement(ProfileStats, { profile: { username: "Fan", country: "PK", avatar: null, gamesPlayed: 3, wins: 1, losses: 2, winRate: 1 / 3, byLevel: [{ level: 4, wins: 1, losses: 2 }], bestWin: { moves: 20, level: 4 }, weeklyStrongestRank: null } })],
+  // D61, D62: the Profile screen, the first game's version, the picker open, the result line.
+  ["profile screen", createElement(ProfileScreen, { onClose: noop, onTerms: noop })],
+  ["first game profile", createElement(ProfileScreen, { onClose: noop, onTerms: noop, firstGame: true })],
+  ["country picker open", createElement(CountryPicker, { value: null, onChange: noop, initiallyOpen: true })],
   [
     "AI failure details (texts from the code, and a model error with hyphens)",
     createElement(StatusBar, {
@@ -128,7 +151,7 @@ describe("no hyphens or dashes in text shown to players", () => {
   // Texts that only appear after a server answer, so no static render shows them.
   it("the leaderboard's username rules and its messages after an answer", () => {
     for (const message of Object.values(USERNAME_MESSAGES)) expect(message).not.toMatch(DASHES);
-    const sources = ["SubmitWin.tsx", "LeaderboardScreen.tsx", "ProfileSheet.tsx", "Problem.tsx"].map((file) => readFileSync(new URL(`../src/ui/leaderboard/${file}`, import.meta.url), "utf8"));
+    const sources = ["WinStatus.tsx", "winQueue.ts", "ProfileScreen.tsx", "ProfileGate.tsx", "CountryPicker.tsx", "LeaderboardScreen.tsx", "ProfileSheet.tsx", "Problem.tsx"].map((file) => readFileSync(new URL(`../src/ui/leaderboard/${file}`, import.meta.url), "utf8"));
     // Every string literal in these files that reads as a sentence.
     const sentences = sources.flatMap((source) => [...source.matchAll(/"([A-Z][^"]*[a-z][^"]*[.!?])"/g)].map((match) => match[1]!));
     expect(sentences.length).toBeGreaterThan(10);
