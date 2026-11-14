@@ -1,0 +1,52 @@
+/* The animation levels on the board (D53). Root sets data-anim on <html>
+   (off, reduced, standard, cinematic) and --anim-speed (0.75 to 1.5).
+   The move itself is animated by animation/player.ts; these are the CSS
+   parts around it. Loaded last. */
+
+/* Off and Reduced: no lift transition and no popping hints. */
+:root[data-anim="off"] .piece,
+:root[data-anim="reduced"] .piece {
+  transition: none;
+}
+
+:root[data-anim="off"] .square-destination::after,
+:root[data-anim="off"] .square-destination-capture::after,
+:root[data-anim="reduced"] .square-destination::after,
+:root[data-anim="reduced"] .square-destination-capture::after {
+  animation: none;
+}
+
+/* Cinematic: legal destinations appear one ring of distance at a time. */
+:root[data-anim="cinematic"] .square-destination::after,
+:root[data-anim="cinematic"] .square-destination-capture::after {
+  animation-duration: calc(180ms / var(--anim-speed, 1));
+  animation-delay: calc(var(--order, 0) * 35ms / var(--anim-speed, 1));
+}
+
+/* The last move's tint fades in once the piece has landed (the board sets
+   --land-delay to the landing time while a move plays). */
+.square-last-move.square-dark {
+  animation: last-move-in 200ms ease-out backwards;
+  animation-delay: var(--land-delay, 0ms);
+}
+
+@keyframes last-move-in {
+  from {
+    background-color: var(--dark-square);
+  }
+}
+
+/* Reduced: the moved piece appears with a short fade (at most 100 ms). */
+:root[data-anim="reduced"] .square-last-move .piece {
+  animation: piece-fade-in 100ms ease-out;
+}
+
+@keyframes piece-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+:root[data-anim="off"] .square-last-move.square-dark {
+  animation: none;
+}

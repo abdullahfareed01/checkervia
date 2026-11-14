@@ -7,20 +7,9 @@ interface HistoryControlsProps {
   index: number; // position on screen: 0 = start, n = after move n
   total: number; // moves played
   live: boolean;
-  canBack: boolean;
-  canForward: boolean;
   moves: MoveListItem[];
   nameOf: (item: MoveListItem) => string; // "You", "AI", "Black", "White"
   onGo: (to: HistoryTarget) => void;
-}
-
-// One arrow button. Disabled arrows stay visible but greyed out, like chess.com.
-function Arrow({ label, symbol, disabled, onClick }: { label: string; symbol: string; disabled: boolean; onClick: () => void }) {
-  return (
-    <button type="button" className="history-arrow" aria-label={label} title={label} disabled={disabled} onClick={onClick}>
-      <span aria-hidden="true">{symbol}</span>
-    </button>
-  );
 }
 
 // Scrolls `list` (and nothing else) just enough to show `item`.
@@ -56,10 +45,11 @@ const MoveRow = memo(function MoveRow({ item, current, who, onGo }: MoveRowProps
   );
 });
 
-// The history arrows (first, back, forward, latest), where we are, and the
-// list of moves; clicking a move shows the position after it.
+// Where we are in the game, and the list of moves: clicking a move shows the
+// position after it, "Start" the position before the first move. Previous
+// and Next are on the action bar (D50); Home and End work as keys.
 // Memoised: a click that only picks up a piece does not redraw the list.
-export const HistoryControls = memo(function HistoryControls({ index, total, live, canBack, canForward, moves, nameOf, onGo }: HistoryControlsProps) {
+export const HistoryControls = memo(function HistoryControls({ index, total, live, moves, nameOf, onGo }: HistoryControlsProps) {
   const listRef = useRef<HTMLOListElement>(null);
 
   // Keep the move on screen visible in the list. Only the list scrolls:
@@ -80,15 +70,9 @@ export const HistoryControls = memo(function HistoryControls({ index, total, liv
 
   return (
     <section className={`history${live ? "" : " history-reviewing"}`} aria-label="Move history">
-      <div className="history-bar">
-        <Arrow label="First position" symbol="⏮" disabled={!canBack} onClick={() => onGo("first")} />
-        <Arrow label="Previous move" symbol="◀" disabled={!canBack} onClick={() => onGo("back")} />
-        <span className="history-where" aria-live="polite">
-          {where}
-        </span>
-        <Arrow label="Next move" symbol="▶" disabled={!canForward} onClick={() => onGo("forward")} />
-        <Arrow label="Latest position" symbol="⏭" disabled={!canForward} onClick={() => onGo("last")} />
-      </div>
+      <p className="history-where" aria-live="polite">
+        {where}
+      </p>
 
       {!live && (
         <button type="button" className="history-return" onClick={() => onGo("last")}>
@@ -98,6 +82,11 @@ export const HistoryControls = memo(function HistoryControls({ index, total, liv
 
       {moves.length > 0 && (
         <ol className="history-list" ref={listRef}>
+          <li>
+            <button type="button" className="history-item history-start" aria-current={index === 0 ? "step" : undefined} onClick={() => onGo("first")}>
+              Start
+            </button>
+          </li>
           {moves.map((item) => (
             <li key={item.number}>
               <MoveRow item={item} current={item.number === index} who={nameOf(item)} onGo={onGo} />

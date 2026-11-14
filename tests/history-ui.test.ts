@@ -1,4 +1,5 @@
-// Render checks for the history arrows and move list.
+// Render checks for the move list (Previous and Next are on the action
+// bar: tests/action-bar.test.ts).
 import { createElement } from "react";
 import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -18,8 +19,6 @@ function render(overrides: Partial<ComponentProps<typeof HistoryControls>> = {})
       index: 2,
       total: 2,
       live: true,
-      canBack: true,
-      canForward: false,
       moves,
       nameOf: (item) => (item.player === "black" ? "You" : "AI"),
       onGo: () => {},
@@ -28,49 +27,29 @@ function render(overrides: Partial<ComponentProps<typeof HistoryControls>> = {})
   );
 }
 
-// The `disabled` attribute of the button with this accessible label.
-function isDisabled(html: string, label: string): boolean {
-  const button = html.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`))?.[0] ?? "";
-  return button.includes('disabled=""');
-}
-
 describe("HistoryControls", () => {
-  it("has the four arrows", () => {
+  it("has no arrows of its own, and a Start row that goes to the first position", () => {
     const html = render();
-    ["First position", "Previous move", "Next move", "Latest position"].forEach((label) =>
-      expect(html).toContain(`aria-label="${label}"`),
-    );
-  });
-
-  it("at the latest position: forward and latest are disabled, back is enabled", () => {
-    const html = render();
-    expect(isDisabled(html, "Next move")).toBe(true);
-    expect(isDisabled(html, "Latest position")).toBe(true);
-    expect(isDisabled(html, "Previous move")).toBe(false);
-  });
-
-  it("at the start: back and first are disabled", () => {
-    const html = render({ index: 0, live: false, canBack: false, canForward: true });
-    expect(isDisabled(html, "First position")).toBe(true);
-    expect(isDisabled(html, "Previous move")).toBe(true);
-    expect(isDisabled(html, "Next move")).toBe(false);
+    expect(html).not.toContain("history-arrow");
+    expect(html).toContain('<button type="button" class="history-item history-start">Start</button>');
+    expect(render({ index: 0, live: false })).toContain('history-start" aria-current="step">Start');
   });
 
   it("says where we are", () => {
     expect(render()).toContain("Move 2 of 2");
-    expect(render({ index: 0, live: false, canBack: false, canForward: true })).toContain("Start · 2 moves");
-    expect(render({ index: 0, total: 0, moves: [], canBack: false })).toContain("No moves yet");
+    expect(render({ index: 0, live: false })).toContain("Start · 2 moves");
+    expect(render({ index: 0, total: 0, moves: [] })).toContain("No moves yet");
   });
 
   it("while reviewing, offers a way back to the game", () => {
-    const html = render({ index: 1, live: false, canForward: true });
+    const html = render({ index: 1, live: false });
     expect(html).toContain("Back to the game");
     expect(html).toContain("history-reviewing");
     expect(render()).not.toContain("Back to the game");
   });
 
   it("lists the moves and marks the one on screen", () => {
-    const html = render({ index: 1, live: false, canForward: true });
+    const html = render({ index: 1, live: false });
     expect(html).toContain("A3 → B4");
     expect(html).toContain("B6 → A5");
     expect(html.match(/aria-current="step"/g)).toHaveLength(1);

@@ -118,8 +118,7 @@ body::before {
   gap: 8px;
 }
 
-.icon-button,
-.menu-button {
+.icon-button {
   height: 46px;
   border-radius: 14px;
   font: inherit;
@@ -145,14 +144,12 @@ body::before {
   height: 22px;
 }
 
-.icon-button:hover,
-.menu-button:hover {
+.icon-button:hover {
   background: rgba(217, 164, 65, 0.12);
   border-color: var(--gold);
 }
 
 .icon-button:focus-visible,
-.menu-button:focus-visible,
 .menu-item:focus-visible {
   outline: 2px solid var(--choice);
   outline-offset: 2px;
@@ -160,19 +157,6 @@ body::before {
 
 .menu {
   position: relative;
-}
-
-.menu-button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  font-weight: 600;
-}
-
-.menu-button .icon {
-  width: 18px;
-  height: 18px;
 }
 
 .menu-list {
@@ -342,24 +326,6 @@ body::before {
   box-shadow: none;
 }
 
-.app .badge-level {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--gold-text);
-  background: rgba(217, 164, 65, 0.12);
-  box-shadow: inset 0 0 0 1px var(--gold-soft);
-  letter-spacing: 0.02em;
-  text-transform: none;
-}
-
-/* .card-name .badge-level .icon-crown beats the 18px winner-crown rule. */
-.card-name .badge-level .icon-crown {
-  width: 13px;
-  height: 13px;
-  color: var(--gold);
-}
-
 .app .card-status {
   gap: 7px;
   font-size: 0.88rem;
@@ -434,28 +400,21 @@ body::before {
   margin-left: 0;
 }
 
-/* ---------- Board frame with coordinates ---------- */
+/* ---------- Board frame (D50: thin; coordinates in the squares) ---------- */
 
 .board-frame {
-  --edge: max(18px, calc(var(--board-size) * 0.055));
   width: var(--board-size);
   aspect-ratio: 1;
-  display: grid;
-  grid-template-columns: var(--edge) minmax(0, 1fr) var(--edge);
-  grid-template-rows: var(--edge) minmax(0, 1fr) var(--edge);
   padding: 3px;
-  border-radius: 18px;
+  border-radius: 8px;
   background: linear-gradient(160deg, #4b2d1b 0%, #321e12 100%);
   box-shadow:
-    inset 0 0 0 2px #b9893f,
-    inset 0 0 0 5px rgba(0, 0, 0, 0.25),
-    0 14px 32px rgba(0, 0, 0, 0.45);
+    inset 0 0 0 1.5px #b9893f,
+    0 10px 24px rgba(0, 0, 0, 0.4);
 }
 
 /* .board-frame .board beats the board's own size and border in styles.css. */
 .board-frame .board {
-  grid-row: 2;
-  grid-column: 2;
   width: 100%;
   height: 100%;
   border: 0;
@@ -463,66 +422,17 @@ body::before {
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.45);
 }
 
-.board-labels {
-  display: flex;
-  font-size: max(10px, calc(var(--edge) * 0.55));
-  font-weight: 600;
-  color: #e8d3ad;
-  opacity: 0.85;
-  user-select: none;
-}
-
-.board-labels span {
-  flex: 1;
-  display: grid;
-  place-items: center;
-}
-
-.board-labels-top {
-  grid-row: 1;
-  grid-column: 2;
-}
-
-.board-labels-bottom {
-  grid-row: 3;
-  grid-column: 2;
-}
-
-.board-labels-left,
-.board-labels-right {
-  flex-direction: column;
-  grid-row: 2;
-}
-
-.board-labels-left {
-  grid-column: 1;
-}
-
-.board-labels-right {
-  grid-column: 3;
-}
-
 /* The king crown follows the inner board, which is a little smaller now. */
 .board-frame .piece-king::before {
   font-size: calc(var(--board-size) / 17);
 }
 
-/* The last move: its squares get a cool slate tint, the moved piece a ring. */
-.app .square-last-move.square-dark,
-.learn .square-last-move.square-dark {
-  background: #56514a;
-}
-
+/* The last move (D50): its squares keep the warm tint from styles.css and
+   the moved piece gets a solid gold ring. No blue, no glow. */
 .square-last-move .piece {
   box-shadow:
-    0 0 0 3px rgba(120, 196, 255, 0.95),
-    0 0 12px rgba(80, 170, 255, 0.5),
+    0 0 0 3px var(--gold),
     0 3px 5px rgba(0, 0, 0, 0.55);
-}
-
-.app .route-white,
-.learn .route-white {
-  --route-color: #5bb8f5;
 }
 
 .app .route-line {
@@ -603,107 +513,6 @@ body::before {
   text-align: center;
 }
 
-/* ---------- AI move card ---------- */
-
-/* .app .ai-note beats the sidebar note rules in aiReason.css. */
-.app .ai-note {
-  display: block;
-  padding: 10px;
-  border-radius: 18px;
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--panel-line);
-}
-
-.ai-note-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px 12px;
-  border-radius: 14px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
-}
-
-.ai-note-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  margin: 0;
-}
-
-.app .ai-note-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  color: #c9d4de;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.ai-note-move {
-  flex: 1;
-  min-width: 0;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
-.ai-note-info {
-  display: grid;
-  place-items: center;
-  width: 34px;
-  height: 34px;
-  border: 0;
-  border-radius: 50%;
-  color: var(--text-soft);
-  background: transparent;
-  cursor: pointer;
-}
-
-.ai-note-info .icon {
-  width: 22px;
-  height: 22px;
-}
-
-.ai-note-info:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.ai-note-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  width: min(100%, 300px);
-  min-height: 46px;
-  padding: 8px 20px;
-  border-radius: 999px;
-  border: 1.5px solid var(--gold);
-  font: inherit;
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--text);
-  background: linear-gradient(180deg, #4a321f 0%, #36241a 100%);
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.15s ease;
-}
-
-.ai-note-button .icon {
-  width: 22px;
-  height: 22px;
-  color: var(--gold);
-}
-
-.ai-note-button:hover {
-  background: linear-gradient(180deg, #5a3d25 0%, #422c1f 100%);
-  transform: translateY(-1px);
-}
-
-.ai-note-info:focus-visible,
-.ai-note-button:focus-visible {
-  outline: 2px solid var(--choice);
-  outline-offset: 2px;
-}
-
 /* ---------- Dialogs ---------- */
 
 .confirm-question {
@@ -730,12 +539,6 @@ body::before {
 
 .rules-dialog .dialog-actions {
   margin-top: 18px;
-}
-
-/* ---------- Home ---------- */
-
-.home {
-  background: transparent;
 }
 
 /* ---------- Smaller screens ---------- */
@@ -765,11 +568,6 @@ body::before {
 
   .icon-button-space {
     width: 44px;
-  }
-
-  .menu-button {
-    height: 42px;
-    padding: 0 10px;
   }
 
   .segment {
@@ -802,24 +600,8 @@ body::before {
 
 /* Very narrow phones: keep the cards on one line. */
 @media (max-width: 380px) {
-  .app .badge:not(.badge-level) {
-    display: none;
-  }
-
   .app .card-took .captures {
     display: none;
-  }
-
-  .menu-button {
-    font-size: 0;
-    gap: 0;
-    width: 44px;
-    justify-content: center;
-  }
-
-  .menu-button .icon {
-    width: 20px;
-    height: 20px;
   }
 }
 
@@ -837,8 +619,7 @@ body::before {
     font-size: 1.35rem;
   }
 
-  .icon-button,
-  .menu-button {
+  .icon-button {
     height: 38px;
   }
 
@@ -870,16 +651,9 @@ body::before {
     animation: none;
   }
 
-  .ai-note-button,
   .segment {
     transition: none;
   }
-}
-
-/* The speech bubble's tail points at the centre of the larger portrait
-   (7px card padding + half of a 54px avatar). */
-.app .speech {
-  left: 9px;
 }
 
 /* The pill's text already has its own spaces; only the spinner needs a gap. */
@@ -898,7 +672,7 @@ body::before {
 /* Phones held sideways: the cards are narrow, so the robot portrait and the
    level badge say "AI" on their own, and the turn pill is tighter. */
 @media (orientation: landscape) and (max-height: 599px) {
-  .app .badge:not(.badge-level) {
+  .app .badge {
     display: none;
   }
 

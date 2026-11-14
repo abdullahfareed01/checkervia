@@ -1,4 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Checkervia">
+  <title>Checkervia</title>
   <rect width="64" height="64" rx="14" fill="#2b2018"/>
   <circle cx="24" cy="38" r="17" fill="#e9e2d6" stroke="#7aa7c7" stroke-width="2.5"/>
   <circle cx="24" cy="38" r="11" fill="none" stroke="#b9b0a2" stroke-width="1.5"/>

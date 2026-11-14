@@ -1,0 +1,728 @@
+/* The game's Menu sheet (D44, D68), the Terms and notices and the "are you
+   sure?" popup. They follow the game's look: dark leather, a thin bronze
+   rim, gold symbols in dark wells (as on the home menu) and the Fraunces
+   title. They open over the game screen, so they stay calm: dark shadows
+   only, no glow (D41, D42). Loaded after chrome.css. */
+
+/* ---------- Shared parts ---------- */
+
+/* The slim gold scroll bar (the leaderboard's, D62): a gold bar with round
+   ends on a dark rail. Chromium and Safari draw it with the -webkit- rules;
+   setting scrollbar-color there would switch those rules off, so the
+   standard properties are only for browsers without them (Firefox). */
+.gold-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+.gold-scroll::-webkit-scrollbar-track {
+  margin: 8px 0;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: inset 0 0 0 1px rgba(201, 146, 76, 0.16);
+}
+.gold-scroll::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #f2c25a, #b8782a) padding-box;
+}
+.gold-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ffd977, #d08f34) padding-box;
+}
+.gold-scroll::-webkit-scrollbar-corner {
+  background: transparent;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .gold-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: #c9924c rgba(0, 0, 0, 0.32);
+  }
+}
+
+/* The leather panel all three share. */
+.menu-sheet,
+.terms-dialog,
+.confirm-dialog {
+  --sheet-gold: #f4c55c;
+  --sheet-title: #fde3a6;
+  --sheet-cream: #fbedd2;
+  --sheet-soft: #ead6b4;
+  --sheet-rim: rgba(201, 146, 76, 0.45);
+  color: var(--sheet-cream);
+  background:
+    radial-gradient(120% 50% at 50% 0%, rgba(150, 86, 36, 0.3), transparent 70%),
+    linear-gradient(180deg, #3a2414 0%, #2e1c0e 55%, #26170b 100%);
+  box-shadow:
+    0 0 0 1px var(--sheet-rim),
+    inset 0 1px 0 rgba(255, 220, 160, 0.1),
+    0 22px 56px rgba(0, 0, 0, 0.6);
+}
+
+/* A gold symbol in a dark well, like the home menu's cards. */
+.menu-tile-icon,
+.terms-mark,
+.confirm-mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  color: #f6c445;
+  background: linear-gradient(180deg, #22140a 0%, #2c1a0d 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 146, 76, 0.38),
+    inset 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+.menu-tile-icon > svg,
+.terms-mark > svg,
+.confirm-mark > svg {
+  width: 56%;
+  height: 56%;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.5));
+}
+
+/* A square close button with an X. */
+.menu-sheet-close,
+.terms-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(201, 146, 76, 0.4);
+  border-radius: 12px;
+  color: var(--sheet-cream);
+  background: rgba(0, 0, 0, 0.22);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+.menu-sheet-close .lb-svg,
+.terms-close .lb-svg {
+  width: 17px;
+  height: 17px;
+}
+.menu-sheet-close:hover,
+.terms-close:hover {
+  border-color: rgba(244, 197, 92, 0.8);
+  background: rgba(244, 197, 92, 0.1);
+}
+
+.menu-sheet-close:focus-visible,
+.terms-close:focus-visible,
+.menu-tile:focus-visible,
+.confirm-button:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+}
+
+/* The two buttons of a question: gold for the safe choice, deep red for
+   the one that loses something. The Terms' Close uses the gold one. */
+.confirm-button {
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1.2;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.confirm-button:active {
+  transform: translateY(1px);
+}
+.confirm-keep {
+  border: 1.5px solid #ffe08a;
+  color: #2e1904;
+  background: linear-gradient(180deg, #ffd668 0%, #f6b733 55%, #e89a1c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.confirm-keep:hover {
+  border-color: #fff0b8;
+  background: linear-gradient(180deg, #ffde80 0%, #f8c046 55%, #eca428 100%);
+}
+.confirm-go {
+  border: 1.5px solid rgba(236, 128, 112, 0.6);
+  color: #ffe6dd;
+  background: linear-gradient(180deg, #84302a 0%, #5e1d18 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 190, 170, 0.18),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.confirm-go:hover {
+  border-color: rgba(255, 160, 140, 0.85);
+  background: linear-gradient(180deg, #973831 0%, #6c231d 100%);
+}
+
+/* ---------- The Menu sheet (D44, D68) ---------- */
+
+.menu-sheet {
+  width: min(380px, calc(100vw - 32px));
+  /* Opens above the action bar: never taller than the room above it. */
+  max-height: min(calc(100dvh - var(--bar-h, 56px) - 64px), 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 12px 14px 14px;
+  border-radius: 18px;
+}
+
+.menu-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.menu-sheet-title {
+  margin: 0 0 0 2px;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  line-height: 1.1;
+  color: var(--sheet-title);
+}
+
+.menu-setup {
+  display: grid;
+  gap: 8px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid rgba(201, 146, 76, 0.3);
+}
+
+.menu-section-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 2px 0;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f2cf86;
+}
+
+.menu-section-note {
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sheet-soft);
+}
+
+.menu-sheet .segmented {
+  border: 1px solid var(--sheet-rim);
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.menu-sheet .segment {
+  min-height: 46px;
+}
+
+/* The four levels: leather rows with a bronze rim; the chosen one has a
+   gold rim and a gold tick at the end. */
+.level-options-compact {
+  gap: 6px;
+  margin: 0;
+}
+
+.level-options-compact .level-option {
+  min-height: 0;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(74, 44, 25, 0.6) 0%, rgba(50, 30, 14, 0.6) 100%);
+  box-shadow: inset 0 0 0 1px rgba(201, 146, 76, 0.26);
+  transition: box-shadow 0.15s ease;
+}
+
+.level-options-compact .level-option:hover {
+  background: linear-gradient(180deg, rgba(88, 54, 30, 0.7) 0%, rgba(58, 35, 16, 0.7) 100%);
+  box-shadow: inset 0 0 0 1px rgba(244, 197, 92, 0.6);
+}
+
+.level-options-compact .level-option-on,
+.level-options-compact .level-option-on:hover {
+  background: linear-gradient(180deg, rgba(246, 201, 104, 0.17) 0%, rgba(220, 156, 56, 0.07) 100%);
+  box-shadow: inset 0 0 0 2px #e0a93e;
+}
+
+.level-options-compact .level-option-on::after {
+  content: "\2713";
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #3a2006;
+  background: linear-gradient(180deg, #ffe48e 0%, #f7c04a 48%, #e39a28 100%);
+}
+
+.level-options-compact .level-name {
+  color: var(--sheet-cream);
+}
+
+.level-options-compact .level-description {
+  font-size: 0.78rem;
+  color: var(--sheet-soft);
+}
+
+/* The other actions: tiles with a gold symbol over the word, three to a
+   row, like the home menu's cards. */
+.menu-tiles {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 14px;
+}
+
+.menu-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  min-height: 88px;
+  padding: 10px 4px 9px;
+  border: 1px solid rgba(201, 146, 76, 0.36);
+  border-radius: 14px;
+  text-align: center;
+  color: var(--sheet-cream);
+  background:
+    radial-gradient(80% 110% at 30% 0%, rgba(150, 90, 42, 0.26), transparent 70%),
+    linear-gradient(180deg, #45291a 0%, #321d0e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 220, 160, 0.1),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.menu-tile:hover {
+  border-color: rgba(244, 197, 92, 0.75);
+  background:
+    radial-gradient(80% 110% at 30% 0%, rgba(170, 104, 48, 0.32), transparent 70%),
+    linear-gradient(180deg, #4f301d 0%, #382111 100%);
+  transform: translateY(-1px);
+}
+
+.menu-tile:active {
+  transform: translateY(0);
+}
+
+.menu-tile-icon {
+  width: 44px;
+  height: 42px;
+  border-radius: 12px;
+}
+
+/* Filled symbols take the leaderboard's gold metal (LbGradients). Strokes
+   stay flat gold: a gradient on a straight line has no height to spread
+   over, and the line would vanish. */
+.menu-tile-icon svg [fill="currentColor"] {
+  fill: url(#lb-gold);
+}
+
+.menu-tile-icon .lb-crown-svg {
+  width: 72%;
+}
+
+.menu-tile-label {
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+/* Only phones dim the page behind the sheet. */
+.menu-backdrop {
+  display: none;
+}
+
+@media (max-width: 599px) {
+  .menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 29;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  /* A bottom sheet with a grip at the top. */
+  .menu-sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    top: auto;
+    bottom: 0;
+    width: auto;
+    max-height: 88vh;
+    max-height: 88dvh;
+    padding: 20px 14px calc(14px + env(safe-area-inset-bottom));
+    border-radius: 20px 20px 0 0;
+    animation: sheet-up 0.2s ease-out both;
+  }
+
+  .menu-sheet::before {
+    content: "";
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    width: 40px;
+    height: 4px;
+    margin-left: -20px;
+    border-radius: 4px;
+    background: rgba(234, 214, 180, 0.35);
+  }
+}
+
+@keyframes sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+/* ---------- 18+ consent, Terms, the adult chip (D45) ---------- */
+
+.consent-dialog {
+  max-width: 440px;
+}
+
+.consent-text {
+  margin: 10px 0 14px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
+.consent-dialog .link-button {
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+/* The Terms and notices (D68): the head and the foot stay put and only the
+   text between them scrolls, on its own gold scroll bar. A gold line under
+   the head fills as you read; soft fades show that more text is hidden. */
+.terms-dialog {
+  width: min(640px, 100%);
+  max-height: min(88vh, 820px);
+  max-height: min(88dvh, 820px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  border-radius: 20px;
+}
+
+.terms-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 16px 14px 20px;
+}
+
+.terms-mark {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+}
+
+.terms-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.terms-title {
+  margin: 0;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  font-size: 1.5rem;
+  line-height: 1.15;
+  color: var(--sheet-title);
+}
+
+.terms-subtitle {
+  margin: 3px 0 0;
+  font-size: 0.9rem;
+  color: var(--sheet-soft);
+}
+
+.terms-progress {
+  flex: none;
+  height: 3px;
+  margin: 0 20px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: rgba(201, 146, 76, 0.22);
+}
+
+.terms-progress span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #c98a2c, #f4c55c);
+  transform-origin: left center;
+  transition: transform 0.12s linear;
+}
+
+.terms-body {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+
+.terms-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 4px 8px 16px 20px;
+  margin-right: 6px;
+}
+
+.terms-scroll:focus {
+  outline: none;
+}
+
+.terms-scroll:focus-visible {
+  outline: 2px solid rgba(255, 224, 138, 0.7);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+.terms-fade {
+  position: absolute;
+  left: 0;
+  right: 18px; /* keep the scroll bar clear */
+  height: 30px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.terms-fade-top {
+  top: 0;
+  background: linear-gradient(180deg, #34200f, rgba(52, 32, 15, 0));
+}
+
+.terms-fade-end {
+  bottom: 0;
+  background: linear-gradient(0deg, #2a190c, rgba(42, 25, 12, 0));
+}
+
+.terms-fade-on {
+  opacity: 1;
+}
+
+.terms-section {
+  padding: 16px 0 14px;
+  border-bottom: 1px solid rgba(201, 146, 76, 0.16);
+}
+
+.terms-section:last-child {
+  border-bottom: 0;
+}
+
+.terms-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+/* The section's number in a gold coin. */
+.terms-number {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #3a2006;
+  background: linear-gradient(180deg, #ffe48e 0%, #f7c04a 48%, #e39a28 100%);
+  box-shadow: inset 0 -1px 0 rgba(120, 60, 0, 0.35);
+}
+
+.terms-section h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #f6dba6;
+}
+
+/* Small gold dots for the points, the text lined up under the heading. */
+.terms-section ul {
+  margin: 0;
+  padding: 0 0 0 36px;
+  list-style: none;
+}
+
+.terms-section li {
+  position: relative;
+  margin: 7px 0 0;
+  font-size: 0.97rem;
+  line-height: 1.55;
+  color: var(--sheet-soft);
+}
+
+.terms-section li::before {
+  content: "";
+  position: absolute;
+  left: -15px;
+  top: 0.62em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d9a441;
+}
+
+.terms-foot {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px calc(14px + env(safe-area-inset-bottom)) 20px;
+  border-top: 1px solid rgba(201, 146, 76, 0.3);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.terms-more {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--sheet-soft);
+}
+
+.terms-done {
+  min-width: 140px;
+}
+
+@media (max-width: 599px) {
+  .terms-dialog {
+    max-height: 92vh;
+    max-height: 92dvh;
+    border-radius: 18px;
+  }
+
+  .terms-head {
+    gap: 12px;
+    padding: 14px 12px 12px 16px;
+  }
+
+  .terms-mark {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .terms-title {
+    font-size: 1.25rem;
+  }
+
+  .terms-subtitle {
+    font-size: 0.82rem;
+  }
+
+  .terms-progress {
+    margin: 0 16px;
+  }
+
+  .terms-scroll {
+    padding: 2px 6px 14px 16px;
+    margin-right: 4px;
+  }
+
+  .terms-section ul {
+    padding-left: 30px;
+  }
+
+  .terms-section li {
+    font-size: 0.93rem;
+  }
+
+  .terms-foot {
+    padding: 10px 12px calc(12px + env(safe-area-inset-bottom)) 16px;
+  }
+
+  .terms-done {
+    min-width: 120px;
+  }
+}
+
+/* ---------- "Are you sure?" (D68) ----------
+   A symbol in a well, the question as a heading, what happens under it in
+   quieter words, and two buttons of the same width. */
+.confirm-dialog {
+  width: min(400px, 100%);
+  padding: 26px 22px 20px;
+  border-radius: 20px;
+  text-align: center;
+}
+
+.confirm-mark {
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 14px;
+  border-radius: 16px;
+}
+
+.app .confirm-question,
+.confirm-question {
+  margin: 0;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  line-height: 1.2;
+  color: var(--sheet-title);
+}
+
+.confirm-detail {
+  margin: 8px 0 0;
+  font-size: 1rem;
+  line-height: 1.45;
+  color: var(--sheet-soft);
+}
+
+.confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+/* Very narrow phones: one button over the other, the safe one on top. */
+@media (max-width: 340px) {
+  .confirm-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-sheet {
+    animation: none;
+  }
+
+  .menu-tile,
+  .menu-sheet-close,
+  .terms-close,
+  .confirm-button,
+  .level-options-compact .level-option,
+  .terms-progress span,
+  .terms-fade {
+    transition: none;
+  }
+}

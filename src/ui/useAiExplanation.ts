@@ -6,8 +6,8 @@ import { describeFacts, describeLookahead, moveFacts } from "../state/moveFacts"
 import type { FactLine } from "../state/moveFacts";
 import { moveText } from "./notation";
 
-// Everything shown about the AI move on screen: in the speech bubble, the
-// sidebar note and the "Why this move?" popup.
+// Everything shown about the AI move on screen: in the chat bubble, the
+// sidebar note and behind "Why?".
 export interface AiExplanation {
   readonly index: number; // history index of the move (its move number)
   readonly label: string; // e.g. "3,2 → 4,1"
@@ -35,20 +35,22 @@ export function explainShown(mode: GameMode, shown: DisplayedPosition): AiExplan
           ]
         : []),
       ...describeFacts(moveFacts(shown.previousBoard, shown.move, AI_PLAYER)),
-      ...(shown.lookahead ? describeLookahead(shown.lookahead) : []),
+      ...(shown.lookahead ? describeLookahead(shown.lookahead, shown.level) : []),
     ],
   };
 }
 
 /**
- * The explanation for the position on screen, plus whether the popup is
- * open. Showing another position closes the popup.
+ * The explanation for the position on screen, plus whether "Why?" is open.
+ * It starts collapsed for every new move and every new game (a mode or level
+ * change starts a new game), and when another position is shown.
  */
 export function useAiExplanation(mode: GameMode, shown: DisplayedPosition) {
   const explanation = useMemo(() => explainShown(mode, shown), [mode, shown.index, shown.move]);
   const [open, setOpen] = useState(false);
-  useEffect(() => setOpen(false), [shown.index]);
-  const openWhy = useCallback(() => setOpen(true), []);
+  // A new game (also after a mode or level change) goes back to move 0.
+  useEffect(() => setOpen(false), [shown.index, shown.move, mode]);
+  const toggleWhy = useCallback(() => setOpen((value) => !value), []);
   const closeWhy = useCallback(() => setOpen(false), []);
-  return { explanation, open: open && explanation !== null, openWhy, closeWhy };
+  return { explanation, open: open && explanation !== null, toggleWhy, closeWhy };
 }

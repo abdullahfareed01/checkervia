@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 // nothing.)
 const css = readFileSync(new URL("../src/ui/styles.css", import.meta.url), "utf8");
 // The smaller stylesheets must not bring the bare rule back either.
-const otherCss = ["aiReason.css", "menu.css", "learn.css", "chrome.css"].map((name) =>
+const otherCss = ["aiReason.css", "menu.css", "learn.css", "chrome.css", "sheet.css", "bubble.css", "layout.css", "result.css", "motion.css"].map((name) =>
   readFileSync(new URL(`../src/ui/${name}`, import.meta.url), "utf8"),
 );
 
@@ -38,6 +38,8 @@ describe("icon sizes (DEV-005)", () => {
 
   it("still sizes the avatar and result icons", () => {
     expect(css).toMatch(/\.avatar \.icon \{[^}]*width: 78%/);
-    expect(css).toMatch(/\.result-emblem \.icon \{[^}]*width: 64%/);
+    const result = readFileSync(new URL("../src/ui/result.css", import.meta.url), "utf8");
+    expect(result).toMatch(/\.result-emblem-crown \.icon \{[^}]*width: 100%/);
+    expect(result).toMatch(/\.result-stat-icon \.icon \{[^}]*width: 22px/);
   });
 });

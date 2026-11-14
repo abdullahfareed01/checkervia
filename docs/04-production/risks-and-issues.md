@@ -3,7 +3,7 @@
 ## Risks
 | Risk | Likelihood | Impact | Mitigation |
 |---|---|---|---|
-| Multi jump logic is wrong (re-jumps, missed branches) | High | High | Build incrementally, many small tests, document in core-mechanics |
+| Multi jump logic is wrong (rejumps, missed branches) | High | High | Build incrementally, many small tests, document in core mechanics |
 | Forced capture applied inconsistently across pieces | Medium | High | Single legal move function; filter to captures only if any exist |
 | LLM picks illegal or malformed moves | High | Medium | Verify against legal list, 3 retries, fallback message |
 | LLM latency or timeouts make play feel slow | Medium | Medium | Timeout, loading indicator, concise prompt |
@@ -12,17 +12,17 @@
 | Author cannot explain generated code | Medium | High | Small functions, comments, walk through each task |
 | No draw rule allows endless King games | Low | Low | Accepted; New game button |
 | Cost or rate limits on the LLM | Low | Medium | Small prompts, one call per move, cheap model |
-| Someone abuses the public AI endpoint and runs up the OpenRouter bill | Medium | Medium | Size and shape limits, best-effort per-instance rate limit, and a spending cap on the OpenRouter key itself (the only hard limit). Consider Netlify's code-based rate limiting at deploy time |
+| Someone abuses the public AI endpoint and runs up the OpenRouter bill | Medium | Medium | Size and shape limits, best effort per instance rate limit, and a spending cap on the OpenRouter key itself (the only hard limit). Consider Netlify's code based rate limiting at deploy time |
 | Reasoning uses up max_tokens and the answer comes back empty | Medium | Low | max_tokens 1500, reasoning effort low, empty answer counts as a failed attempt and is retried |
 | No OpenRouter provider supports response_format together with the other parameters | Medium | Low | Proxy asks again without response_format; `parseReply` checks the answer either way |
 | Netlify function timeout differs from the docs (older forum posts mention 10 s or 26 s) | Low | Medium | Check the first real slow call in the logs; a timeout shows the fallback message, never a bad move |
 | Scope creep | Medium | Medium | Stick to the scope doc; park ideas |
 
 ## Open issues
-- BUG-001: user reports the AI making illegal moves. Not reproduced yet; see `docs/06-qa/bug-tracker.md`.
+- `BUG-001`: user reports the AI making illegal moves. Not reproduced yet; see `docs/06-qa/bug-tracker.md`.
 
 ## Issue log
 | # | Date | Description | Status |
 |---|---|---|---|
-| 1 | 2026-11-12 | BUG-001 reported by the user after playing vs AI in the browser | Open, waiting for an example |
-| 2 | 2026-11-12 | User feedback: 8 feature requests (history, AI reasons, animation, no scroll, splash, menu and Learn mode, mobile, player icons) | Planned as task 10, waiting for decisions |
+| 1 | 12 Nov 2026 | `BUG-001` reported by the user after playing vs AI in the browser | Open, waiting for an example |
+| 2 | 12 Nov 2026 | User feedback: 8 feature requests (history, AI reasons, animation, no scroll, splash, menu and Learn mode, mobile, player icons) | Planned as task 10, waiting for decisions |

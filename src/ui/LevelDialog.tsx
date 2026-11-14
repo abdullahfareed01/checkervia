@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { AI_LEVELS, LEVELS } from "../ai";
 import type { AiLevel } from "../ai";
+import { LevelOptions } from "./LevelOptions";
 
 interface LevelDialogProps {
   initial: AiLevel; // preselected (the last level chosen)
@@ -33,29 +33,7 @@ export function LevelDialog({ initial, onStart, onCancel }: LevelDialogProps) {
         </h2>
         <p className="dialog-subtitle">You play Black. The AI plays White.</p>
 
-        <div className="level-options" role="radiogroup" aria-label="AI level">
-          {LEVELS.map((option) => (
-            <button
-              key={option}
-              type="button"
-              role="radio"
-              aria-checked={option === level}
-              className={`level-option${option === level ? " level-option-on" : ""}`}
-              onClick={() => setLevel(option)}
-              onDoubleClick={() => onStart(option)}
-            >
-              <span className="level-steps" aria-hidden="true">
-                {LEVELS.map((step) => (
-                  <span key={step} className={step <= option ? "level-step-on" : undefined} />
-                ))}
-              </span>
-              <span className="level-text">
-                <span className="level-name">{AI_LEVELS[option].name}</span>
-                <span className="level-description">{AI_LEVELS[option].description}</span>
-              </span>
-            </button>
-          ))}
-        </div>
+        <LevelOptions value={level} onSelect={setLevel} onConfirm={onStart} />
 
         <div className="dialog-actions">
           <button type="button" className="button" onClick={onCancel}>

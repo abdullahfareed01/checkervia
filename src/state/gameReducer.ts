@@ -50,12 +50,18 @@ export interface HistoryEntry {
   // The AI's own explanation of `move`, as the model wrote it (not verified).
   // Absent for human moves, the start position and AI replies without one.
   readonly reason?: string;
-  // What the engine's look-ahead said about this AI move (higher levels only).
+  // What the engine's look-ahead said about this AI move.
   readonly lookahead?: ChosenLookahead;
+  // The level the AI played this move at (AI moves only).
+  readonly level?: AiLevel;
   // The AI's reaction (trash talk) to the player's move just before, and the
   // engine's verdict on that move when it found it remarkable.
   readonly reaction?: string;
   readonly judgement?: MoveJudgement;
+  // After this AI move the engine proved the player's position lost: every
+  // move of theirs loses by force within its search (Change 4, the resign
+  // hint).
+  readonly provenLoss?: boolean;
 }
 
 // The extra details an AI move can carry into its history entry.
@@ -64,6 +70,8 @@ interface AiMoveDetails {
   readonly lookahead?: ChosenLookahead | undefined;
   readonly reaction?: string | undefined;
   readonly judgement?: MoveJudgement | undefined;
+  readonly level?: AiLevel | undefined;
+  readonly provenLoss?: boolean | undefined;
 }
 
 // Where to go in the history: one of the four arrows, or a move number.
@@ -99,14 +107,18 @@ export interface GameState {
   // can be recognised and ignored.
   readonly aiRequestId: number;
   readonly aiFailureReasons: readonly string[];
-  // How strong the AI plays (see src/ai/difficulty.ts). Can change at any
-  // time; it applies from the AI's next turn.
+  // How strong the AI plays (see src/ai/difficulty.ts). Fixed for the whole
+  // game, so a game (and later a leaderboard win) belongs to one level;
+  // choosing another level starts a new game (D44).
   readonly aiLevel: AiLevel;
+  // Who resigned, if the game ended that way (Change 4).
+  readonly resignedBy: Player | null;
 }
 
 export type GameAction =
   | { type: "click"; position: Position }
-  | { type: "newGame" }
+  // A new game; `mode` and `level` change them for it (else they are kept).
+  | { type: "newGame"; mode?: GameMode; level?: AiLevel }
   | { type: "setMode"; mode: GameMode }
   | {
       type: "aiMoved";
@@ -116,10 +128,11 @@ export type GameAction =
       lookahead?: ChosenLookahead | undefined;
       reaction?: string | undefined;
       judgement?: MoveJudgement | undefined;
+      provenLoss?: boolean | undefined;
     }
+  | { type: "resign" }
   | { type: "aiFailed"; requestId: number; reasons: readonly string[] }
   | { type: "aiRetry" }
-  | { type: "setAiLevel"; level: AiLevel }
   | { type: "history"; to: HistoryTarget };
 
 export interface GameOptions {
@@ -128,6 +141,9 @@ export interface GameOptions {
   mode?: GameMode;
   aiRequestId?: number;
   aiLevel?: AiLevel;
+  // Moves to play through the reducer before the game is shown (the
+  // development only ?testwin= helper, D60). See playRecord.ts.
+  record?: readonly Move[];
 }
 
 // The AI is "thinking" whenever it is the AI's turn in a game that is not over.
@@ -160,6 +176,7 @@ export function createGameState(options: GameOptions = {}): GameState {
     aiRequestId: options.aiRequestId ?? 0,
     aiFailureReasons: [],
     aiLevel: options.aiLevel ?? DEFAULT_AI_LEVEL,
+    resignedBy: null,
   };
 }
 
@@ -216,8 +233,10 @@ function playMove(state: GameState, move: Move, ai: AiMoveDetails = {}): GameSta
         player: mover,
         ...(ai.reason ? { reason: ai.reason } : {}),
         ...(ai.lookahead ? { lookahead: ai.lookahead } : {}),
+        ...(ai.level ? { level: ai.level } : {}),
         ...(ai.reaction ? { reaction: ai.reaction } : {}),
         ...(ai.judgement ? { judgement: ai.judgement } : {}),
+        ...(ai.provenLoss ? { provenLoss: true } : {}),
       },
     ],
     movesPlayed: state.movesPlayed + 1,
@@ -301,7 +320,27 @@ function handleAiMoved(state: GameState, requestId: number, move: Move, ai: AiMo
       aiFailureReasons: ["The AI chose a move that is not legal."],
     };
   }
-  return playMove(state, legal, ai);
+  return playMove(state, legal, { ...ai, level: state.aiLevel });
+}
+
+// The side giving up: the player in a game against the AI (the AI never
+// resigns), otherwise the side to move. The other side wins; a pending AI
+// reply is dropped (new request id). Only while the game is still going.
+function handleResign(state: GameState): GameState {
+  if (state.winner) return state;
+  const resignedBy = state.mode === "vs-ai" ? opponentOf(AI_PLAYER) : state.currentPlayer;
+  return {
+    ...state,
+    winner: opponentOf(resignedBy),
+    resignedBy,
+    legalMoves: [],
+    selected: null,
+    pendingRoutes: [],
+    viewIndex: null,
+    aiPhase: "idle",
+    aiRequestId: state.aiRequestId + 1,
+    aiFailureReasons: [],
+  };
 }
 
 function handleAiFailed(
@@ -351,7 +390,11 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case "click":
       return handleClick(state, action.position);
     case "newGame":
-      return createGameState({ mode: state.mode, aiRequestId: state.aiRequestId + 1, aiLevel: state.aiLevel });
+      return createGameState({
+        mode: action.mode ?? state.mode,
+        aiRequestId: state.aiRequestId + 1,
+        aiLevel: action.level ?? state.aiLevel,
+      });
     case "setMode":
       return action.mode === state.mode
         ? state
@@ -360,9 +403,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return handleAiMoved(state, action.requestId, action.move, action);
     case "aiFailed":
       return handleAiFailed(state, action.requestId, action.reasons);
-    case "setAiLevel":
-      return action.level === state.aiLevel ? state : { ...state, aiLevel: action.level };
     case "aiRetry":
       return handleAiRetry(state);
+    case "resign":
+      return handleResign(state);
   }
 }

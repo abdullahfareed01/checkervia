@@ -5,8 +5,9 @@
 2. **State** (`src/state`): game state and transitions (reducer). Holds board, current player, selection, mode, status. Calls the engine.
 3. **UI** (`src/ui`): React components. Render state, dispatch actions. No rule logic.
 4. **AI** (`src/ai`): builds the prompt from engine output, calls the proxy, validates the reply against the legal list, handles retries.
+5. **Leaderboard shared** (`src/leaderboard`): pure rules used by both the browser and the leaderboard functions: username rules, UTC periods, the ranking order, the country list and the wire format (D56). Imports only the engine and `src/ai` (the word lists and the level type).
 
-Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui` trigger `ai`. The engine imports nothing from other layers.
+Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `leaderboard` → `ai`, `engine`; `state`/`ui` trigger `ai`. The engine imports nothing from other layers. Server code in `netlify/` may import `src/engine` and `src/leaderboard`; nothing in `src/` imports `netlify/`.
 
 ## Folder structure
 ```
@@ -53,7 +54,11 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 │   │   ├── index.ts          # public API
 │   │   ├── client.ts         # callModel: POST to /.netlify/functions/ai-move, with timeout
 │   │   ├── health.ts         # GET health check: ready / offline / unreachable
-│   │   ├── difficulty.ts     # the four AI levels and their look-ahead depth
+│   │   ├── difficulty.ts     # the four AI levels: turns ahead, moves offered, Easy slips
+│   │   ├── candidates.ts     # the level's best few moves (deterministic, for the server too)
+│   │   ├── language.ts       # word lists, language rules, the dash sanitizer and the 140 character cap
+│   │   ├── lines.ts          # local line banks: picking without repeats (banks in linesGentle.ts, linesFierce.ts)
+│   │   ├── endgame.ts        # proven loss (resign hint) and tips after the AI wins
 │   │   ├── search.ts         # look-ahead: negamax + alpha-beta, scores every legal move
 │   │   ├── searchWorker.ts   # runs the search in a Web Worker
 │   │   ├── analyzer.ts       # worker with timeout and fallbacks; never fails a turn
@@ -70,11 +75,24 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 │       ├── useAiStatus.ts    # health check at start, splash fade
 │       ├── ConfirmButton.tsx # button that asks first (New game, Menu)
 │       ├── LevelDialog.tsx   # asks for the AI level when Play vs AI is chosen
+│       ├── LevelOptions.tsx  # the four levels as a radio list (dialog and Menu sheet)
+│       ├── MenuSetup.tsx     # mode and level at the top of the game's Menu sheet
+│       ├── consent.ts        # 18+ consent steps and the stored acceptance (version, time)
+│       ├── ConsentDialog.tsx # the consent steps, and the gate in front of Strongest
+│       ├── TermsDialog.tsx   # Terms and notices (draft text, contact email)
 │       ├── TopBar.tsx        # back arrow, crowned title (GameTitle), Menu list
 │       ├── ConfirmDialog.tsx # "are you sure?" popup for actions that lose a game
 │       ├── RulesDialog.tsx   # the rules over the game (from the Menu)
-│       ├── chrome.css        # the look from mockup/mockup_design.png (loaded last)
-│       ├── SpeechBubble.tsx  # the AI's speech bubble (reasons now, reactions later)
+│       ├── chrome.css        # the look from mockup/mockup_design.png
+│       ├── sheet.css         # the Menu sheet (bottom sheet on phones), loaded last
+│       ├── ChatBubble.tsx    # the AI's chat bubble in a fixed slot, with a live region
+│       ├── bubble.ts         # what the bubble shows: typing, idle, hint, reaction, greeting
+│       ├── usePersonality.ts # greeting, idle lines, resign hint, end of game line and tips
+│       ├── idleTimer.ts      # 30 and 60 second idle timer; the tips reveal
+│       ├── session.ts        # this tab's wins and losses (sessionStorage)
+│       ├── ResignButton.tsx  # Resign with a confirmation sheet
+│       ├── LanguageInfo.tsx  # what the 18+ badge explains
+│       ├── useMediaQuery.ts  # phone and landscape phone queries
 │       ├── useAiExplanation.ts # the AI move on screen: label, reason, engine facts
 │       ├── gameView.tsx      # helpers: board view, player cards, win reason
 │       ├── useAiLevel.ts     # remembers the chosen level in the browser
@@ -87,8 +105,8 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 │       ├── ModeSelector.tsx  # Two players / Play vs AI
 │       ├── PlayerCard.tsx    # card above/below the board: icon, name, pieces, to move
 │       ├── ResultDialog.tsx  # end-of-game popup with stats
-│       ├── AiMoveNote.tsx    # sidebar note after an AI move, "Why this move?" button
-│       ├── AiReasonDialog.tsx # popup: model reason (unchecked) + engine facts
+│       ├── AiMoveNote.tsx    # "AI played E3 → D4" and "Why?" in the side panel
+│       ├── WhyContent.tsx    # what "Why?" shows, inline or as a phone sheet
 │       ├── aiReason.css      # styles for the two above
 │       ├── HistoryControls.tsx # history arrows, "Move x of y", move list
 │       ├── useHistoryView.ts # when to animate (one step forward only); arrow keys
@@ -114,14 +132,14 @@ Dependency direction: `ui` -> `state` -> `engine`; `ai` -> `engine`; `state`/`ui
 - `getWinner(board, playerToMove): Player | null`
 
 ## Data flow (human move)
-Click -> UI dispatch `select` / `move` -> reducer asks engine for legal moves -> engine validates and applies -> new state -> UI re-renders.
+Click → UI dispatch `select` / `move` → reducer asks engine for legal moves → engine validates and applies → new state → UI rerenders.
 
 ## Data flow (AI move)
 1. The human (Black) plays a move. The reducer sets `aiPhase = "thinking"` and a new `aiRequestId`. The board is locked.
 2. `useGame` sees the new request id and calls `startAiTurn` (`state/aiController.ts`).
 3. `chooseMove(board, "white", callModel)` builds the prompt and calls `callModel` (`ai/client.ts`).
 4. `callModel` POSTs `{ prompt, retryNote? }` to `/.netlify/functions/ai-move`.
-5. The function (`netlify/aiMoveHandler.ts`) validates and rate-limits the request, adds the retry note, and calls OpenRouter with the key from `OPENROUTER_API_KEY` and the model from `LLM_MODEL`. It returns `{ text }` only.
+5. The function (`netlify/aiMoveHandler.ts`) validates and rate limits the request, adds the retry note, and calls OpenRouter with the key from `OPENROUTER_API_KEY` and the model from `LLM_MODEL`. It returns `{ text }` only.
 6. `parseReply` checks the number against the legal list. Invalid answer or error: retry up to 3 times.
 7. Success: dispatch `aiMoved` with the request id. The reducer plays the move through the same `playMove` as a human move, only if it is in `legalMoves`.
 8. Failure: dispatch `aiFailed`. The UI shows the fallback message and a Retry button; the board stays locked; no move is played. Retry dispatches `aiRetry` (new request id) and runs the flow again.
@@ -136,8 +154,18 @@ Stale replies: New game, a mode change and Retry all change `aiRequestId`. The r
 - Timeouts: Netlify stops the function at 60 s (fixed), the provider call at 55 s, the browser request at 65 s.
 - Rate limit: best effort, in function memory (see `ai-opponent.md` for what that can and cannot do).
 
+## Leaderboard functions (`netlify/leaderboard`, D56)
+- One pure handler per function in `netlify/leaderboard/handlers/`, each a one line wrapper in `netlify/functions/` through `serve()` in `netlify/leaderboard/netlify.ts`, the same split as the AI proxy.
+- Storage sits behind `LeaderboardStore` (`store.ts`): `supabaseStore.ts` for Postgres (service role key, the SQL in `docs/07-deployment/leaderboard-migration.sql`) and `memoryStore.ts` for tests.
+- `replay.ts` replays a claimed win through the real engine from the starting position; `security.ts` makes tokens and hashes with Web Crypto; `http.ts` holds body parsing, errors, the token check and the rate limits (kept in the store, so they hold across function instances).
+
+## Leaderboard screens (`src/ui/leaderboard`, D57)
+- `api.ts` calls the functions and returns ok, offline or failed (never throws); `profile.ts` keeps the device id, the profile with its token and the last unsubmitted win in localStorage; `useLeaderboardGame.ts` gives each game an id, keeps a qualifying win and reports finished games.
+- `LeaderboardScreen.tsx` (tabs, periods, podium, list, pinned own row), `ProfileSheet.tsx`, `SubmitWin.tsx` (in the result panel, and on its own sheet from the Menu and Settings), `Flag.tsx` and `flags.ts` (the SVG files of `flag-icons`), styles in `src/ui/leaderboard.css`.
+- Development only: `devServer.ts` and `DevResultPreview.tsx` behind `?lb=`, which run the real handlers on the memory store in the browser. They are the one place `src/` imports `netlify/`, and the production build leaves them out (checked by its test).
+
 ## Rules
 - Engine never mutates inputs.
-- Moves have a stable id (index in the legal list), so the AI picks an id, not free-form coordinates.
+- Moves have a stable id (index in the legal list), so the AI picks an id, not free form coordinates.
 - The proxy only forwards the prompt; validation is in the app code, not in the function or model.
 - The reducer never decides a move for the AI. It only plays one that is in `legalMoves`.

@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { Frame } from "../learn/frames";
 import { frameDelay, targetIndex } from "../learn/playback";
 import type { PlaybackTarget } from "../learn/playback";
-import { moveDuration } from "./moveGeometry";
-import { prefersReducedMotion } from "./MovingPiece";
+import { moveAnimationTime } from "./animation/plan";
+import { settingsStore } from "./settings";
 
 /**
  * Plays the Learn frames. Autoplay moves on after each frame's reading time
@@ -18,7 +18,7 @@ export function useLessonPlayer(frames: readonly Frame[]) {
 
   useEffect(() => {
     if (!playing || atEnd) return undefined;
-    const animation = frame.move && !prefersReducedMotion() ? moveDuration(frame.move) : 0;
+    const animation = frame.move ? moveAnimationTime(frame.move, settingsStore().get().animation) : 0;
     const timer = setTimeout(() => setIndex((i) => Math.min(i + 1, frames.length - 1)), frameDelay(frame, animation));
     return () => clearTimeout(timer);
   }, [playing, atEnd, frame, frames.length]);

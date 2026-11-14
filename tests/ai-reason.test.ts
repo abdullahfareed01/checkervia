@@ -1,5 +1,5 @@
-// Render checks for the AI's move note and the "Why this move?" popup (their
-// look is checked by eye).
+// Render checks for the AI's move line in its bubble under the board (D64)
+// and what "Why?" shows (Change 2; the look is checked by eye in the browser).
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -7,8 +7,8 @@ import { describe, expect, it } from "vitest";
 import { createGameState, gameReducer } from "../src/state/gameReducer";
 import type { GameAction, GameState } from "../src/state/gameReducer";
 import { displayedPosition } from "../src/state/history";
-import { AiMoveNote } from "../src/ui/AiMoveNote";
-import { AiReasonDialog } from "../src/ui/AiReasonDialog";
+import { AiCoach } from "../src/ui/AiCoach";
+import { WhyContent, WhySheet, hasWhy } from "../src/ui/WhyContent";
 import { explainShown } from "../src/ui/useAiExplanation";
 
 const at = (row: number, col: number): GameAction => ({ type: "click", position: { row, col } });
@@ -24,10 +24,14 @@ function afterAiMove(reason: string | null): GameState {
   });
 }
 
-const note = (state: GameState) =>
-  renderToStaticMarkup(
-    createElement(AiMoveNote, { explanation: explainShown(state.mode, displayedPosition(state)), onWhy: () => {} }),
-  );
+// The AI row under the board with a reaction to the AI move on screen, and
+// Why? when that move has something to explain (D64, D65).
+const note = (state: GameState, open = false) => {
+  const explanation = explainShown(state.mode, displayedPosition(state));
+  if (!hasWhy(explanation)) return "";
+  const message = { key: "move", text: "Nice try.", tone: "banter" as const, why: true };
+  return renderToStaticMarkup(createElement(AiCoach, { message, mood: "neutral", whyOpen: open, onWhy: () => {} }));
+};
 
 describe("explainShown", () => {
   it("explains an AI move: label, the model's reason and engine facts", () => {
@@ -43,11 +47,24 @@ describe("explainShown", () => {
   });
 });
 
-describe("AiMoveNote", () => {
-  it("shows the AI's move and the Why button after an AI move", () => {
+describe("Why? in the bubble (D64, D65)", () => {
+  it("shows only the line and a collapsed Why? after an AI move, beside the robot", () => {
     const html = note(afterAiMove("Keeps the centre."));
-    expect(html).toContain("AI played");
-    expect(html).toContain("Why this move?");
+    expect(html).toContain("Nice try.");
+    expect(html).not.toContain("I played");
+    expect(html).toContain("coach-avatar");
+    expect(html).toMatch(/<button type="button" class="speech-why" aria-expanded="false"[^>]*>Why\?<\/button>/);
+    expect(html).not.toContain("Keeps the centre.");
+    expect(html).not.toContain("Checked by the game engine");
+    expect(html).not.toContain("No reason");
+  });
+
+  it("when open, says so with aria-expanded but adds nothing under the board (the answer floats)", () => {
+    const html = note(afterAiMove("Keeps the centre."), true);
+    expect(html).toContain('aria-expanded="true"');
+    expect(html).toContain('aria-controls="why-panel"');
+    expect(html).not.toContain('id="why-panel"');
+    expect(html).not.toContain("Keeps the centre.");
   });
 
   it("shows nothing after a human move or in two-player mode", () => {
@@ -63,36 +80,34 @@ describe("AiMoveNote", () => {
   });
 });
 
-describe("AiReasonDialog", () => {
-  const render = (reason: string | null) =>
-    renderToStaticMarkup(
-      createElement(AiReasonDialog, {
-        moveLabel: "3,2 → 4,1",
-        moveNumber: 2,
-        reason,
-        facts: [
-          { tone: "good", text: "The moved piece cannot be captured next turn." },
-          { tone: "info", text: "It chose 1 of 7 legal moves." },
-        ],
-        onClose: () => {},
-      }),
-    );
+describe("what Why? shows", () => {
+  const facts = [
+    { tone: "good" as const, text: "The moved piece cannot be captured next turn." },
+    { tone: "info" as const, text: "It chose 1 of 7 legal moves." },
+  ];
+  const explanation = (reason: string | null, list = facts) => ({ index: 2, label: "C3 → D4", reason, reaction: null, facts: list });
+  const render = (reason: string | null, list = facts) => renderToStaticMarkup(createElement(WhyContent, { explanation: explanation(reason, list) }));
 
-  it("is a modal dialog with a title and the move", () => {
+  it("first the engine's checked facts, then the AI's own words, each labelled", () => {
     const html = render("Safe square.");
-    expect(html).toContain('role="dialog"');
-    expect(html).toContain('aria-modal="true"');
-    expect(html).toContain("Why the AI played this");
-    expect(html).toContain("Move 2: 3,2 → 4,1");
+    expect(html).toContain("Checked by the game engine");
+    expect(html).toContain("AI generated, may be wrong");
+    expect(html.indexOf("Checked by the game engine")).toBeLessThan(html.indexOf("AI generated, may be wrong"));
+    expect(html).toContain("ai-fact-good");
+    expect(html).toContain("Safe square.");
   });
 
-  it("keeps the model's words apart from the engine's facts", () => {
-    const html = render("Safe square.");
-    expect(html).toContain("In its own words");
-    expect(html).toContain("The game does not check it.");
+  it("without an explanation from the AI, only the engine part", () => {
+    const html = render(null);
     expect(html).toContain("Checked by the game engine");
-    expect(html).toContain("ai-fact-good");
-    expect(html).toContain("It chose 1 of 7 legal moves.");
+    expect(html).not.toContain("AI generated");
+    expect(html).not.toMatch(/no reason/i);
+  });
+
+  it("with neither, there is no Why? at all", () => {
+    expect(hasWhy(explanation(null, []))).toBe(false);
+    expect(hasWhy(explanation("x", []))).toBe(true);
+    expect(hasWhy(null)).toBe(false);
   });
 
   it("shows the model's text as plain text, never as HTML", () => {
@@ -101,19 +116,23 @@ describe("AiReasonDialog", () => {
     expect(html).toContain("&lt;img");
   });
 
-  it("says so when there is no reason", () => {
-    expect(render(null)).toContain("The model gave no reason for this move.");
+  it("a card floating above the page, with a close button", () => {
+    const html = renderToStaticMarkup(createElement(WhySheet, { explanation: explanation("Safe."), onClose: () => {} }));
+    expect(html).toContain('role="dialog"');
+    expect(html).toContain('id="why-panel"');
+    expect(html).toContain('aria-label="Close"');
+    expect(html).toContain("Why AI played C3 → D4");
   });
 });
 
-// BUG-002: the popup was drawn inside the note, whose fade-in animation makes
-// it its own stacking layer, so the board's route line showed on top of the
-// popup. It must be rendered under <body>. (The server renderer used by these
-// tests cannot render portals, so this checks the source.)
-describe("Why-this-move popup placement (BUG-002)", () => {
+// BUG-002: a popup drawn inside the game area can end up under the board's
+// route line. The phone sheet must be rendered under <body>. (The server
+// renderer used by these tests cannot render portals, so this checks the
+// source.)
+describe("Why? sheet placement (BUG-002)", () => {
   const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
 
-  it("renders the popup through a portal into document.body", () => {
-    expect(source).toMatch(/createPortal\(\s*<AiReasonDialog[\s\S]*?\/>,\s*document\.body,?\s*\)/);
+  it("renders the Why sheet through a portal into document.body", () => {
+    expect(source).toMatch(/createPortal\(<WhySheet[\s\S]*?\/>, document\.body\)/);
   });
 });

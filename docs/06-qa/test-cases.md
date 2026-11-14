@@ -9,12 +9,12 @@ Run with `netlify dev` and a real key unless noted.
 | 3 | Play vs AI | Level popup with four levels; the last choice preselected |
 | 4 | Choose Expert, Start game | AI card shows "BOT" and "Expert" |
 | 5 | Make a move | Typing dots in a speech bubble above/below the AI card; then its reason |
-| 6 | Pick up a piece while the bubble shows | Bubble turns see-through; clicks reach the board |
+| 6 | Pick up a piece while the bubble shows | Bubble turns see through; clicks reach the board |
 | 7 | Play your move | Bubble is replaced by typing dots for the AI's next reply |
 | 8 | Wait without moving | Bubble leaves after 20 to 40 s |
 | 9 | "Why?" | Popup: the model's words (unchecked) and engine facts, incl. "Looking 6 turns ahead" |
 | 10 | Play a long game (40+ moves) | No stutter; the board never moves; the move list scrolls by itself only |
-| 11 | History arrows / Left, Right, Home, End | View-only review; board locked; "Back to the game" |
+| 11 | History arrows / Left, Right, Home, End | View only review; board locked; "Back to the game" |
 | 12 | Capture available | Pieces that must capture have a red ring; other pieces cannot be picked |
 | 13 | Double jump | Route drawn with numbered landings and crosses; the piece hops |
 | 14 | Two routes to one square | Asked to click the next landing square |

@@ -5,6 +5,8 @@ import { getLegalMoves } from "../engine";
 import type { Board, Move, Player } from "../engine";
 import { analyzeHere } from "./analyzer";
 import type { Analyze, Lookahead } from "./analyzer";
+import { pickCandidates } from "./candidates";
+import { checkReaction, checkReason } from "./language";
 import { AI_LEVELS } from "./difficulty";
 import type { AiLevel } from "./difficulty";
 import { parseReply } from "./parseReply";
@@ -17,23 +19,41 @@ export type CallModel = (prompt: string, retryNote?: string) => Promise<string>;
 
 // What the engine's look-ahead said about the chosen move, for the popup.
 export interface ChosenLookahead {
-  readonly depth: number;
+  readonly depth: number; // turns (plies) searched
   readonly score: number; // the chosen move's score
   readonly best: number; // the best score of any legal move
+  readonly offered: number; // how many moves the model could choose from
+  readonly legal: number; // how many legal moves there were
+  readonly scoresShown: boolean; // false on an Easy-level slip (no scores in the prompt)
 }
 
 export type ChooseMoveResult =
-  // `reason` is the model's own explanation, if it gave one (not verified).
+  // `reason` is the model's own explanation, if it gave one (not verified,
+  // but always clean: see language.ts).
   // `lookahead` is present when the level used the engine's look-ahead.
-  // `reaction` is the model's line about the opponent's last move (its
-  // trash talk); only kept when there was a move to react to.
+  // `reaction` is the model's line about the opponent's last move; only kept
+  // when there was a move to react to, and replaced by a clean line if it
+  // breaks the level's language rules (D45).
   | { ok: true; move: Move; attempts: number; reason?: string; reaction?: string; lookahead?: ChosenLookahead }
   | { ok: false; reasons: string[]; attempts: number };
 
 export interface ChooseMoveOptions {
-  level?: AiLevel; // default: 1 (Beginner, no look-ahead); the app always passes one
+  // The app always passes one. Without a level the model gets every legal
+  // move and no engine help (the original brief's mode, used by many tests).
+  level?: AiLevel;
   analyze?: Analyze; // default: search on the page (the app passes the worker)
   opponent?: OpponentMove; // the opponent's last move and the engine's verdict
+  random?: () => number; // decides the Easy level's slips; default Math.random
+}
+
+// What the model is offered: the moves it may choose from (all legal moves,
+// or the level's best few), the scores to show with them, and what the
+// popup will say about the look-ahead.
+interface Offer {
+  readonly choices: readonly Move[];
+  readonly shown?: Lookahead; // scores for `choices`, if the prompt shows them
+  readonly info?: Omit<ChosenLookahead, "score">;
+  readonly scoreOf?: readonly number[]; // look-ahead score of each choice
 }
 
 type AttemptResult =
@@ -73,32 +93,47 @@ async function attempt(
   return { move, index: parsed.number - 1, explanation: parsed.reason, reaction: parsed.reaction };
 }
 
-// The look-ahead for this level, or undefined for Beginner. A failing or
-// malformed look-ahead never stops the turn: the model then chooses without
-// scores, exactly as at Beginner level.
-async function lookaheadFor(
-  board: Board,
-  player: Player,
-  moves: readonly Move[],
-  options: ChooseMoveOptions,
-): Promise<Lookahead | undefined> {
-  const depth = AI_LEVELS[options.level ?? 1].depth;
-  if (depth === 0) return undefined;
+// The look-ahead scores, or undefined if the search failed or sent scores
+// that do not fit the move list.
+async function scoresFor(board: Board, player: Player, moves: readonly Move[], depth: number, analyze: Analyze) {
   try {
-    const result = await (options.analyze ?? analyzeHere)(board, player, depth);
+    const result = await analyze(board, player, depth);
     const usable = result.scores.length === moves.length && result.scores.every(Number.isFinite);
-    return usable ? result : undefined;
+    return usable ? result.scores : undefined;
   } catch {
     return undefined;
   }
 }
 
+// Works out what the model is offered at this level (D44). The engine scores
+// every legal move `depth` turns ahead; the model gets the level's best few
+// (every move at Easy). On an Easy slip the scores are left out, so the model
+// chooses on its own. Returns null when a level that limits the moves could
+// not score them: it cannot build its list, so the turn fails (Retry).
+async function offerFor(board: Board, player: Player, moves: readonly Move[], options: ChooseMoveOptions): Promise<Offer | null> {
+  if (options.level === undefined) return { choices: moves };
+  const { depth, candidates, slipChance } = AI_LEVELS[options.level];
+  const scores = await scoresFor(board, player, moves, depth, options.analyze ?? analyzeHere);
+  if (!scores) return candidates === undefined ? { choices: moves } : null;
+
+  const picked = pickCandidates(scores, candidates);
+  const scoreOf = picked.map((index) => scores[index]!);
+  const slip = slipChance > 0 && (options.random ?? Math.random)() < slipChance;
+  return {
+    choices: picked.map((index) => moves[index]!),
+    scoreOf,
+    ...(slip ? {} : { shown: { depth, scores: scoreOf } }),
+    info: { depth, best: Math.max(...scores), offered: picked.length, legal: moves.length, scoresShown: !slip },
+  };
+}
+
 // Picks a move for `player` using the model.
-// - At the higher levels the engine first scores every legal move by looking
-//   ahead, and the scores go into the prompt.
+// - At every level the engine first scores the legal moves by looking ahead;
+//   the model is offered the level's best few, with their scores.
 // - Calls the model once, then retries up to `maxRetries` times (default 3),
 //   so at most 1 + maxRetries calls.
-// - The move returned always comes from the engine's legal list.
+// - The move returned always comes from the offered list, which comes from
+//   the engine's legal list.
 // - If every attempt fails, returns the reasons. It never guesses or picks
 //   at random.
 export async function chooseMove(
@@ -113,8 +148,11 @@ export async function chooseMove(
     return { ok: false, reasons: ["There are no legal moves to choose from."], attempts: 0 };
   }
 
-  const lookahead = await lookaheadFor(board, player, moves, options);
-  const prompt = buildPrompt(board, player, moves, lookahead, options.opponent);
+  const offer = await offerFor(board, player, moves, options);
+  if (!offer) {
+    return { ok: false, reasons: ["The engine's look ahead failed, so the AI's moves could not be listed."], attempts: 0 };
+  }
+  const prompt = buildPrompt(board, player, offer.choices, offer.shown, options.opponent, moves.length);
   // A reaction only counts when there was a move to react to.
   const wantsReaction = Boolean(options.opponent);
   const totalCalls = 1 + Math.max(0, Math.trunc(maxRetries));
@@ -122,18 +160,17 @@ export async function chooseMove(
   let retryNote: string | undefined;
 
   for (let call = 1; call <= totalCalls; call++) {
-    const result = await attempt(callModel, prompt, retryNote, moves);
+    const result = await attempt(callModel, prompt, retryNote, offer.choices);
     if ("move" in result) {
       const { move, index, explanation, reaction } = result;
+      const verdict = options.opponent?.judgement?.verdict ?? null;
       return {
         ok: true,
         move,
         attempts: call,
-        ...(explanation === undefined ? {} : { reason: explanation }),
-        ...(wantsReaction && reaction !== undefined ? { reaction } : {}),
-        ...(lookahead
-          ? { lookahead: { depth: lookahead.depth, score: lookahead.scores[index]!, best: Math.max(...lookahead.scores) } }
-          : {}),
+        ...(explanation === undefined ? {} : { reason: checkReason(explanation) }),
+        ...(wantsReaction && reaction ? { reaction: checkReaction(reaction, options.level, verdict) } : {}),
+        ...(offer.info && offer.scoreOf ? { lookahead: { ...offer.info, score: offer.scoreOf[index]! } } : {}),
       };
     }
 

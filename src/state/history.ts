@@ -1,5 +1,6 @@
 // Read-only facts about the game history, for the arrows and the move list.
 import type { ChosenLookahead } from "../ai/chooseMove";
+import type { AiLevel } from "../ai/difficulty";
 import type { MoveJudgement } from "../ai/judge";
 import type { Board, Move, Player } from "../engine";
 import { displayedIndex } from "./gameReducer";
@@ -16,6 +17,7 @@ export interface DisplayedPosition {
   readonly previousBoard: Board | null;
   readonly reason: string | null; // the AI's explanation of `move`, if any
   readonly lookahead: ChosenLookahead | null; // engine look-ahead for `move`, if any
+  readonly level: AiLevel | null; // the AI's level for `move` (AI moves only)
   readonly reaction: string | null; // the AI's reaction to the move before, if any
   readonly judgement: MoveJudgement | null; // the engine's verdict on that move
   readonly live: boolean; // true when this is the current position
@@ -33,6 +35,7 @@ export function displayedPosition(state: GameState): DisplayedPosition {
     previousBoard: index > 0 ? state.history[index - 1]!.board : null,
     reason: entry.reason ?? null,
     lookahead: entry.lookahead ?? null,
+    level: entry.level ?? null,
     reaction: entry.reaction ?? null,
     judgement: entry.judgement ?? null,
     live: state.viewIndex === null,

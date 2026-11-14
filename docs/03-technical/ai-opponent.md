@@ -17,12 +17,36 @@
 6. After 1 + 3 attempts with no valid answer: dispatch `aiFailed`. The UI shows the fallback message and a Retry button. Nothing is played and the board stays locked.
 7. A reply for an old request id (New game, mode change, Retry) is ignored by the reducer.
 
-## Difficulty levels and look-ahead (prompt v3; square names since v4)
-- Levels: Beginner (no look-ahead), Casual (2 turns), Strong (4 turns), Expert (6 turns). See D36.
-- For levels 2 to 4 the prompt gets a block before the move list ("Engine look-ahead: for every move below, the game engine tried every possible sequence of moves for the next N turns ..."), and each move line ends with `| score +1.0` (material lead in pieces after best play) or `| forced win in 3 turns`, `| forced loss in 2 turns`, `| wins the game at once`.
-- Example line: `5: (3,4) -> (5,2) | captures (4,3) | score +1.0`.
-- The search runs in a Web Worker. Fallbacks: a worker error or a 10 s timeout gives a 2-turn search on the page; any other look-ahead problem gives a Beginner prompt. A turn never fails because of the look-ahead.
+## Difficulty levels and look ahead (prompt v7, D44)
+- A **turn** (a **ply**) is one move by one side; a multi jump counts as one turn. "Looks 6 turns ahead" means 3 moves by each side, starting with the AI's own move.
+- How a move is chosen: the engine scores every legal move by searching ahead (negamax with alpha beta pruning in `src/ai/search.ts`, run in a Web Worker so the board never freezes). Each score is the material lead (a piece 1.0, a King 1.6) after best play by both sides for that many turns, or a forced win or loss. While a capture is pending the search goes on, up to 8 extra turns, so an exchange is never judged half way. `src/ai/candidates.ts` keeps the level's best few; the model chooses one of them by number; the number is checked against that list.
+- The same search judges the player's moves for the AI's reactions (`judge.ts`, always 4 turns, D42).
+
+| Level | Turns ahead | Moves offered to the model | Search time (median / max) |
+| --- | --- | --- | --- |
+| Easy | 1 | every legal move; about 3 turns in 10 without scores (deliberate slips) | 0.1 / 1.4 ms |
+| Medium (default) | 2 | the best 5 | 0.3 / 2.6 ms |
+| Hard | 4 | the best 4 | 2.9 / 28 ms |
+| Strongest | 6 | the best 3 | 25 / 268 ms |
+
+- Times: Node, 919 positions from 8 varied self play games. A whole game's recheck at Strongest (one search per AI move) took 1.1 to 3.6 s.
+- The prompt gets a block before the move list ("Engine look ahead: ... for the next N turns (a turn is one move by one side; your move is the first turn) ..."), and each line ends with `| score +1.0` or `| forced win in 3 turns`. When only some moves are offered, the heading says so: "Moves to choose from (the engine's best 3 of your 9 legal moves; choose one of these):".
+- Ties at the cut are broken by the engine's move order, so the list is the same every time for the same position and level (the server can recompute it).
+- Fallbacks: if the worker fails or takes over 10 s, the same search runs on the page at the same depth. If the look ahead still fails, Medium, Hard and Strongest cannot build their list, so the turn fails and Retry is shown; Easy plays on without scores.
 - The proxy accepts prompts up to 8000 characters (the tested worst case is well below).
+
+## Language rules (prompt v8, D45)
+- Easy, Medium, Hard: a friendly, playful voice. No swearing, no insults, no name calling.
+- Strongest (after the 18+ consent): a cocky trash talker. Insults about the play are fine. Mild swearing (damn, hell, crap, ass, shit and similar) only right after a move the engine verified as a blunder. Grudging respect, without swearing, after a great move. After an ordinary move: taunts, no swearing.
+- Every level: never the f word or stronger, slurs, hate, sexual content, remarks about real world looks, family or identity, threats.
+- Enforced in code by `src/ai/language.ts` (all word lists in one file), after every reply: normalise the text (lower case, accents, leetspeak like sh1t, masks like f*ck, stretched letters, dots inside words, spaced out letters), match whole words with common endings, check phrases for family, identity and threats. A line that breaks the rules for its level and verdict is replaced with a clean fallback line ("Oops, that one hands me a chance."). The reason must always be clean. Hyphens and dashes are removed from both.
+- What it cannot do: it catches listed words, not meaning. An insult in plain words ("You play like a toaster") passes at every level; at Easy to Hard the clean prompt is what keeps it rare. New slurs or creative spellings not covered by the normalising also pass. Fallback lines are fixed text, so they repeat.
+- There is no AI line after the player wins (the AI has no turn left), so "respect after a win" has nothing to filter.
+
+## Lines without a model call (D48)
+- Greetings, idle lines, resigning, the end of the game and the resign hint come from local banks (`src/ai/lines.ts`), 10 lines per level and context, never one of the last 3 shown in that context. Every line passes `checkReaction` for its level, `withoutDashes` and the 140 character cap (tested).
+- The resign hint is the engine's, not the model's: `provenLost` searches 6 turns and fires only when every move of the player loses by force.
+- Tips after the AI wins come from engine searches 4 turns deep of the player's own moves (`gameTips`).
 
 ## Prompt format (version v2, still the base of v3)
 All prompt text lives in `src/ai/prompt.ts` (`PROMPT_VERSION = "v3"`). v2 differed from v1 only in the reply instruction: `{"move": <number>, "reason": "<why>"}`, the reason being one short sentence of at most 20 words. The example below is v1; apart from that one line it is unchanged. Order:
@@ -88,7 +112,7 @@ Legal moves, as (row,column):
 | A reason longer than 200 characters | accepted; the reason is cut to 200 characters. Whitespace is collapsed. |
 | Same move stated twice | accepted |
 | `3.0` | accepted (it is a whole number) |
-| Number below 1 or above the list length (0, -2, 99) | rejected: not in the list |
+| Number below 1 or above the list length (0, minus 2, 99) | rejected: not in the list |
 | Decimal such as `2.5` | rejected: must be a whole number |
 | `"3"` (string), `null`, `true`, `[3]` | rejected: must be a number |
 | No JSON, broken JSON, no `"move"` field, empty text | rejected: no `"move"` field found |
@@ -119,8 +143,8 @@ Legal moves, as (row,column):
 
 ## Serverless proxy (`netlify/`)
 - Health check: `GET /.netlify/functions/ai-move` answers `{ "ready": true }` or `{ "ready": false }` (key and model set or not). It never calls the provider and is not rate limited. The splash screen and home menu use it (D34).
-- `netlify/functions/ai-move.ts` is a thin wrapper. The logic is `handleAiMove` in `netlify/aiMoveHandler.ts`, a pure function that takes a fake-able `fetch`.
-- POST only (405 otherwise). Body: `{ prompt: string, retryNote?: string }` and nothing else. `prompt` is required, non-empty, at most 4000 characters; `retryNote` at most 500. Anything else gets 400 `Invalid request.`
+- `netlify/functions/ai-move.ts` is a thin wrapper. The logic is `handleAiMove` in `netlify/aiMoveHandler.ts`, a pure function that takes a fakeable `fetch`.
+- POST only (405 otherwise). Body: `{ prompt: string, retryNote?: string }` and nothing else. `prompt` is required, nonempty, at most 4000 characters; `retryNote` at most 500. Anything else gets 400 `Invalid request.`
 - Returns `{ text }` (the model's message content) or `{ error }` with a short generic message. Never the key, never a raw provider error. Provider details go to the function log only, with the key blanked out.
 - Statuses: 400 bad body, 405 wrong method, 429 rate limited, 500 not configured, 502 provider problem or empty answer, 504 provider timed out.
 - Each request is a single user message. Nothing from earlier turns is stored.
@@ -133,9 +157,9 @@ Legal moves, as (row,column):
 - These are ceilings. With low reasoning effort a normal answer should take a few seconds. A turn can take up to 4 attempts, so the worst case is long; that is why the UI shows "AI is thinking" and can fall back.
 
 ### Rate limiting: what it can and cannot do
-- What it is: an in-memory counter per client, 20 requests per 60 s. The client is identified by the `x-nf-client-connection-ip` header, which Netlify sets itself. Refused requests are not counted, and memory is capped at 1000 clients.
-- Why only best effort: Netlify runs functions as short-lived instances that do not share memory. Each instance has its own counter, a new instance starts at zero, and instances are recycled when idle. A determined caller who spreads requests across instances, or waits for a restart, gets past it. It slows a casual flood of requests from one address; it is not a guarantee and not a budget control.
-- Real protection, in order of strength: (1) a spending cap or credit limit on the OpenRouter key, which holds no matter what; (2) at deploy time, Netlify's code-based rate limiting, which runs at the platform edge (config `rateLimit` with `windowLimit`, `windowSize`, `aggregateBy`; it needs a `path` in the function config, cannot live in `netlify.toml`, and can take up to 10 s to start blocking). It was not added now because it needs a custom path and I cannot verify it without deploying; (3) the size and shape limits above, which stop one request being expensive.
+- What it is: an in memory counter per client, 20 requests per 60 s. The client is identified by the `x-nf-client-connection-ip` header, which Netlify sets itself. Refused requests are not counted, and memory is capped at 1000 clients.
+- Why only best effort: Netlify runs functions as short lived instances that do not share memory. Each instance has its own counter, a new instance starts at zero, and instances are recycled when idle. A determined caller who spreads requests across instances, or waits for a restart, gets past it. It slows a casual flood of requests from one address; it is not a guarantee and not a budget control.
+- Real protection, in order of strength: (1) a spending cap or credit limit on the OpenRouter key, which holds no matter what; (2) at deploy time, Netlify's code based rate limiting, which runs at the platform edge (config `rateLimit` with `windowLimit`, `windowSize`, `aggregateBy`; it needs a `path` in the function config, cannot live in `netlify.toml`, and can take up to 10 s to start blocking). It was not added now because it needs a custom path and I cannot verify it without deploying; (3) the size and shape limits above, which stop one request being expensive.
 
 ## Testing
 - Fake models in `src/ai/*.test.ts`: valid first reply, invalid then valid, out of range, decimal, zero, negative, garbage, JSON with extra text, four bad replies (exactly 4 calls), a model that throws, and the retry note containing the reason.
@@ -145,12 +169,12 @@ Legal moves, as (row,column):
 
 ## Testing with a real key (by hand)
 See the README for setup (`netlify dev`). Things to look at:
-- The terminal running `netlify dev` prints server-side messages from the function (for example "structured output refused" or "reply had no usable content"). They never contain the key.
+- The terminal running `netlify dev` prints server side messages from the function (for example "structured output refused" or "reply had no usable content"). They never contain the key.
 - The fallback panel has a "Details" section with the reasons for each failed attempt.
 - Count how many AI turns needed a retry, and how long a turn takes. Those go in the prompt log.
 
 ## Metrics for the write up
-- Rejected-answer rate per prompt version.
+- Rejected answer rate per prompt version.
 - Average latency per move.
 - Subjective play quality.
 
@@ -159,9 +183,14 @@ Add a row for every prompt version. Fill in the result after real testing.
 
 | Version | Date | Change | Result |
 |---|---|---|---|
-| v1 | 2026-11-12 | Baseline: rules summary, board grid, direction statement, numbered legal moves, JSON reply `{"move": <number>}`. No strategy hints. | First live check (10 AI turns, scripted Black, through `netlify dev`): 10 calls, 0 rejected answers, 0 retries, 0 illegal moves, 0 fallbacks. The proxy never needed the "without response_format" fallback. Latency 1.0 to 14.4 s, median about 3 s; 3 of 10 turns took about 14 s. Play strength not judged yet (the AI always picked a legal move, forced captures included). Needs a longer game and a human opponent. |
-| v2 | 2026-11-12 | Reply asks for `{"move": <number>, "reason": "<why>"}`, the reason one short sentence (max 20 words). Proxy schema now requires `move` (integer) and `reason` (string). The reason is never checked and never decides anything: a reply is judged by its move alone. | Not run live yet. Tested with fake models only. To check: whether the reasons are sensible, and whether latency or the rejection rate changed compared with v1. |
-| v3 | 2026-11-12 | Difficulty levels. Levels 2 to 4 add an "Engine look-ahead" block and a score per move line (2, 4 or 6 turns of full search by the engine). Prompt limit raised to 8000 characters. | Live check in headless Edge through `netlify dev`: 42 AI turns (3 per level, then 15 at Strong and 15 at Expert, scripted Black): 0 failures, 0 page errors, 2.0 to 5.6 s per turn. At levels 2 to 4 the model picked a top-scored move every time (36 of 36); after 15 turns the Strong and Expert AIs were 3 pieces ahead. |
-| v4 | 2026-11-13 | Squares named as on the board: columns A to H, rows 8 (top) to 1 (bottom), e.g. `1: A3 -> B4`; the board grid has letters on top and rows 8 to 1; directions now "Black moves up toward row 8". Nothing else changed. | Live check (headless Edge, `netlify dev`): 8 AI turns at Beginner and Expert, 0 failures, 0 page errors; Expert chose a top-scored move 4 of 4. Replies took 3.7 to 13 s (v3 had 2.0 to 5.6 s); the prompt is the same size, so this is most likely provider speed varying between runs; keep watching. |
-| v5 | 2026-11-13 | Reply is `{"move", "reason", "reaction"}`. Before the move list, one line about the opponent's last move: after an engine-judged blunder, ask for a gentle playful tease (max 15 words, never insulting); after a great move, warm praise; otherwise `set "reaction" to ""`. | Live check (headless Edge, `netlify dev`, `?scenario=react`): 3 blunders, 3 friendly teases ("Oops, a little slip there, huh?", "Nice try, but that slip cost you a piece!", "Oops, that slip lost you a piece!"); 2 safe moves, no reaction. 0 failures, replies in 1.4 to 2.9 s. |
-| v6 | 2026-11-13 | Trash-talking rival persona; a reaction after every player move (engine verdict added when there is one); the AI's last 3 lines quoted so it does not repeat itself; no "Nice try", no "pawns"; limits: about the game only (no slurs, hate, real-world personal topics, sex or threats). | Live check (headless Edge, `?scenario=react`, real model): first try had 6 of 6 lines opening with "Nice try" and used "pawn"; after the variety rules, 6 different, much sharper lines (e.g. "What a brain-fart, moving into my capture—now you'll eat dust!", "Your move was as stale as week-old coffee, time to brew some real trouble."), all about the game; 0 failures, replies in 1.2 to 2.7 s. The model's lines are not checked: one called a forward move "stepping back". |
+| v1 | 12 Nov 2026 | Baseline: rules summary, board grid, direction statement, numbered legal moves, JSON reply `{"move": <number>}`. No strategy hints. | First live check (10 AI turns, scripted Black, through `netlify dev`): 10 calls, 0 rejected answers, 0 retries, 0 illegal moves, 0 fallbacks. The proxy never needed the "without response_format" fallback. Latency 1.0 to 14.4 s, median about 3 s; 3 of 10 turns took about 14 s. Play strength not judged yet (the AI always picked a legal move, forced captures included). Needs a longer game and a human opponent. |
+| v2 | 12 Nov 2026 | Reply asks for `{"move": <number>, "reason": "<why>"}`, the reason one short sentence (max 20 words). Proxy schema now requires `move` (integer) and `reason` (string). The reason is never checked and never decides anything: a reply is judged by its move alone. | Not run live yet. Tested with fake models only. To check: whether the reasons are sensible, and whether latency or the rejection rate changed compared with v1. |
+| v3 | 12 Nov 2026 | Difficulty levels. Levels 2 to 4 add an "Engine look ahead" block and a score per move line (2, 4 or 6 turns of full search by the engine). Prompt limit raised to 8000 characters. | Live check in headless Edge through `netlify dev`: 42 AI turns (3 per level, then 15 at Strong and 15 at Expert, scripted Black): 0 failures, 0 page errors, 2.0 to 5.6 s per turn. At levels 2 to 4 the model picked a top scored move every time (36 of 36); after 15 turns the Strong and Expert AIs were 3 pieces ahead. |
+| v4 | 13 Nov 2026 | Squares named as on the board: columns A to H, rows 8 (top) to 1 (bottom), e.g. `1: A3 -> B4`; the board grid has letters on top and rows 8 to 1; directions now "Black moves up toward row 8". Nothing else changed. | Live check (headless Edge, `netlify dev`): 8 AI turns at Beginner and Expert, 0 failures, 0 page errors; Expert chose a top scored move 4 of 4. Replies took 3.7 to 13 s (v3 had 2.0 to 5.6 s); the prompt is the same size, so this is most likely provider speed varying between runs; keep watching. |
+| v5 | 13 Nov 2026 | Reply is `{"move", "reason", "reaction"}`. Before the move list, one line about the opponent's last move: after an engine judged blunder, ask for a gentle playful tease (max 15 words, never insulting); after a great move, warm praise; otherwise `set "reaction" to ""`. | Live check (headless Edge, `netlify dev`, `?scenario=react`): 3 blunders, 3 friendly teases ("Oops, a little slip there, huh?", "Nice try, but that slip cost you a piece!", "Oops, that slip lost you a piece!"); 2 safe moves, no reaction. 0 failures, replies in 1.4 to 2.9 s. |
+| v6 | 13 Nov 2026 | Trash talking rival persona; a reaction after every player move (engine verdict added when there is one); the AI's last 3 lines quoted so it does not repeat itself; no "Nice try", no "pawns"; limits: about the game only (no slurs, hate, real world personal topics, sex or threats). | Live check (headless Edge, `?scenario=react`, real model): first try had 6 of 6 lines opening with "Nice try" and used "pawn"; after the variety rules, 6 different, much sharper lines (e.g. "What a brain fart, moving into my capture, now you'll eat dust!", "Your move was as stale as week old coffee, time to brew some real trouble."), all about the game; 0 failures, replies in 1.2 to 2.7 s. The model's lines are not checked: one called a forward move "stepping back". |
+| v7 | 13 Nov 2026 | Levels Easy / Medium / Hard / Strongest (D44): the model is offered only the engine's best 5 / 4 / 3 moves at Medium / Hard / Strongest (all at Easy), numbered from 1, with a heading saying so; the look ahead text explains what a turn is. | Live check (headless Edge, `netlify dev`, real model): 2 turns per level, 8 turns, 0 failures, 1.5 to 5.6 s per turn; one Easy slip seen; every popup showed the right level, depth and number of moves offered. |
+| v8 | 13 Nov 2026 | Two voices: clean and playful at Easy, Medium, Hard; trash talk at Strongest, mild swearing only after an engine verified blunder, never the f word. "Do not use hyphens or dashes." Lines checked in code by `language.ts`. | Live check (`?scenario=react` and `?scenario=react-strong`, real model): Strongest after a blunder swore mildly ("What a stupid blunder, you just handed me a piece, damn!"); after a safe move it taunted without swearing; Medium after a blunder stayed clean ("Oops that slip cost you a piece, watch your diagonals!"). 8 turns, 0 failures, 1.3 to 2.3 s. Found: the model wrote a non breaking hyphen (so\u2011called), which the dash filter missed; fixed with a regression test. It still sometimes opens with "Nice try" despite the prompt. |
+| v9 | 13 Nov 2026 | "Do not use hyphens, em dashes or en dashes: write compound words as separate words or as one word" (D46). | The code sanitizer stays the real guarantee; the prompt only makes it rarer. |
+| v10 | 13 Nov 2026 | "at most 140 characters" for the reaction (D47). | Enforced in code too (`capLength`, cut at a word boundary). Live: every reply in the layout check (10 sizes) fitted. |
+| v11 | 13 Nov 2026 | "You may laugh (haha, hehe, lol) when it fits." (D48). | Live: Strongest after a blunder: "What a crap move, you just handed me a piece, guess you are playing checkers in the dark!"; no failures. |

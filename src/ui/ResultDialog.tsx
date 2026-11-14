@@ -1,8 +1,29 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import type { GameTip } from "../ai/endgame";
 import type { Player } from "../engine";
 import type { GameMode, SideStats } from "../state/gameReducer";
 import { AI_PLAYER } from "../state/gameReducer";
-import { RobotIcon, TrophyIcon } from "./icons";
+import { PieceArt, Ribbon, Scenery } from "./art";
+import type { RibbonTone } from "./art";
+import { toneClasses } from "./ChatBubble";
+import {
+  BulbIcon,
+  CrownIcon,
+  HourglassIcon,
+  HumanIcon,
+  JumpIcon,
+  LaurelIcon,
+  ListIcon,
+  PiecesIcon,
+  PlayIcon,
+  RobotAvatar,
+  StopwatchIcon,
+  SwapIcon,
+  SwordsIcon,
+} from "./icons";
+import { TIPS_DELAY_MS, revealAfter } from "./idleTimer";
+import type { EndLine } from "./usePersonality";
 
 interface ResultDialogProps {
   winner: Player;
@@ -13,7 +34,17 @@ interface ResultDialogProps {
   totalMoves: number;
   durationMs: number | null; // from the first move to the end
   onPlayAgain: () => void;
+  onReview: () => void; // close and step through the game from the start
   onClose: () => void; // close and look at the final board
+  // Against the AI (Change 4): its line, shown at once in the chat bubble
+  // style; and after the AI won, its tips from the engine (null while the
+  // engine works them out; undefined: no tips, for example after a win).
+  aiLine?: EndLine | null | undefined;
+  tips?: readonly GameTip[] | null | undefined;
+  tipsShownAtStart?: boolean; // tests render the revealed state
+  onTipsShown?: ((tips: readonly string[]) => void) | undefined; // the AI voice may read them
+  // After a win that can go on the leaderboard: its form (D57).
+  leaderboard?: ReactNode;
 }
 
 type Outcome = "victory" | "defeat" | "winner";
@@ -36,22 +67,39 @@ export function formatDuration(ms: number): string {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+// The ribbon's words, in title case as in mockup/winner_screen.png (D51).
 const TITLES: Record<Outcome, (winnerName: string) => string> = {
-  victory: () => "You win!",
-  defeat: () => "AI wins",
-  winner: (name) => `${name} wins!`,
+  victory: () => "You Win!",
+  defeat: () => "AI Wins",
+  winner: (name) => `${name} Wins`,
 };
 
+// Shown in the pill when there is no AI line (two players).
 const SUBTITLES: Record<Outcome, string> = {
   victory: "You outplayed the robot.",
   defeat: "The robot takes this one. Try again?",
   winner: "Well played, both of you.",
 };
 
+// The ribbon's colour (owner's choice, D51): red for the AI, green for you,
+// the winning side's colour in a two player game.
+function ribbonTone(outcome: Outcome, winner: Player): RibbonTone {
+  if (outcome === "defeat") return "ai";
+  if (outcome === "victory") return "you";
+  return winner;
+}
+
+// Who is in the gold ring: the robot, you, or the winning side's piece.
+function Portrait({ outcome, winner }: { outcome: Outcome; winner: Player }) {
+  if (outcome === "defeat") return <RobotAvatar />;
+  if (outcome === "victory") return <HumanIcon />;
+  return <PieceArt kind={winner === "black" ? "king" : "white"} />;
+}
+
 // Falling confetti for a win. Positions are fixed per index (not random), so
 // the popup looks the same every time and renders the same on the server.
 function Confetti() {
-  const colours = ["#ffcf40", "#5bc8ff", "#ff5a8a", "#9dff7a"];
+  const colours = ["#ffd56a", "#f3e2bd", "#e8902c", "#7fc98f"];
   return (
     <div className="confetti" aria-hidden="true">
       {Array.from({ length: 28 }, (_, i) => (
@@ -69,23 +117,37 @@ function Confetti() {
   );
 }
 
-// The popup at the end of a game: who won, why, and the stats of both sides.
-export function ResultDialog(props: ResultDialogProps) {
-  const { winner, mode, reason, stats, pieces, totalMoves, durationMs, onPlayAgain, onClose } = props;
-  const outcome = outcomeOf(mode, winner);
-  const playAgainRef = useRef<HTMLButtonElement>(null);
+interface StatRow {
+  label: string;
+  icon: ReactNode;
+  value: (player: Player) => string | number;
+}
 
-  // Put the keyboard on the main button when the popup opens.
-  useEffect(() => playAgainRef.current?.focus(), []);
+// The end of a game (D51, after mockup/winner_screen.png): the winner in a
+// gold ring under a crown between laurels, a ribbon with the result, the
+// AI's line, why the game ended, both sides' stats, and what to do next.
+export function ResultDialog(props: ResultDialogProps) {
+  const { winner, mode, reason, stats, pieces, totalMoves, durationMs, onPlayAgain, onReview, onClose, aiLine, tips } = props;
+  const outcome = outcomeOf(mode, winner);
+  const tone = ribbonTone(outcome, winner);
+  const playAgainRef = useRef<HTMLButtonElement>(null);
+  // The tips fade in after about 5 seconds; "Show tips now" skips the wait.
+  const [tipsShown, setTipsShown] = useState(props.tipsShownAtStart ?? false);
+  useEffect(() => (tips === undefined ? undefined : revealAfter(TIPS_DELAY_MS, () => setTipsShown(true))), [tips === undefined]);
+
+  // Put the keyboard on the main button when the popup opens, without
+  // scrolling to it: on short screens the panel opens at its top, so the
+  // result is the first thing seen.
+  useEffect(() => playAgainRef.current?.focus({ preventScroll: true }), []);
 
   // Both columns: the winner first.
   const sides: Player[] = [winner, winner === "black" ? "white" : "black"];
-  const rows: { label: string; value: (player: Player) => string | number }[] = [
-    { label: "Pieces left", value: (p) => pieces[p] },
-    { label: "Pieces captured", value: (p) => stats[p].captured },
-    { label: "Kings made", value: (p) => stats[p].kingsMade },
-    { label: "Best multi jump", value: (p) => (stats[p].bestChain > 1 ? `${stats[p].bestChain} in one move` : "–") },
-    { label: "Moves", value: (p) => stats[p].moves },
+  const rows: StatRow[] = [
+    { label: "Pieces left", icon: <PiecesIcon />, value: (p) => pieces[p] },
+    { label: "Pieces captured", icon: <SwordsIcon />, value: (p) => stats[p].captured },
+    { label: "Kings made", icon: <CrownIcon />, value: (p) => stats[p].kingsMade },
+    { label: "Best multi jump", icon: <JumpIcon />, value: (p) => (stats[p].bestChain > 1 ? `${stats[p].bestChain} in one move` : "None") },
+    { label: "Moves", icon: <SwapIcon />, value: (p) => stats[p].moves },
   ];
 
   return (
@@ -102,20 +164,42 @@ export function ResultDialog(props: ResultDialogProps) {
       >
         {outcome !== "defeat" && <Confetti />}
 
-        <div className="result-emblem" aria-hidden="true">
-          {outcome === "defeat" ? <RobotIcon thinking /> : <TrophyIcon />}
+        <div className="result-hero">
+          <div className="result-emblem" aria-hidden="true">
+            <span className="result-emblem-crown">
+              <CrownIcon />
+            </span>
+            <span className="result-laurel result-laurel-left">
+              <LaurelIcon />
+            </span>
+            <span className={`result-portrait result-portrait-${outcome}`}>
+              <Portrait outcome={outcome} winner={winner} />
+            </span>
+            <span className="result-laurel result-laurel-right">
+              <LaurelIcon flip />
+            </span>
+          </div>
+          <div className="result-banner">
+            <Ribbon tone={tone} />
+            <h2 id="result-title" className={`result-title result-title-${tone}`}>
+              {TITLES[outcome](nameOf(mode, winner))}
+            </h2>
+          </div>
         </div>
 
-        <h2 id="result-title" className="result-title">
-          {TITLES[outcome](nameOf(mode, winner))}
-        </h2>
-        <p className="result-subtitle">{SUBTITLES[outcome]}</p>
-        <p className="result-reason">{reason}</p>
+        {aiLine ? (
+          <p className={`result-line ${toneClasses(aiLine)}`}>{aiLine.text}</p>
+        ) : (
+          <p className="result-line result-subtitle">{SUBTITLES[outcome]}</p>
+        )}
+        <p className="result-reason">
+          <span>{reason}</span>
+        </p>
 
         <table className="result-stats">
           <thead>
             <tr>
-              <th scope="col">
+              <th scope="col" colSpan={2}>
                 <span className="sr-only">Stat</span>
               </th>
               {sides.map((side) => (
@@ -129,10 +213,13 @@ export function ResultDialog(props: ResultDialogProps) {
           <tbody>
             {rows.map((row) => (
               <tr key={row.label}>
+                <td className="result-stat-icon" aria-hidden="true">
+                  {row.icon}
+                </td>
                 <th scope="row">{row.label}</th>
                 {sides.map((side) => (
                   <td key={side} className={side === winner ? "result-col-winner" : undefined}>
-                    {row.value(side)}
+                    <span className={`result-value result-value-${side}`}>{row.value(side)}</span>
                   </td>
                 ))}
               </tr>
@@ -141,19 +228,85 @@ export function ResultDialog(props: ResultDialogProps) {
         </table>
 
         <p className="result-meta">
-          <span>{totalMoves} moves in total</span>
-          {durationMs !== null && <span>Game time {formatDuration(durationMs)}</span>}
+          <span>
+            <HourglassIcon />
+            {totalMoves} {totalMoves === 1 ? "move" : "moves"} in total
+          </span>
+          {durationMs !== null && (
+            <span>
+              <StopwatchIcon />
+              Game time: {formatDuration(durationMs)}
+            </span>
+          )}
         </p>
 
         <div className="result-actions">
-          <button ref={playAgainRef} type="button" className="button button-primary" onClick={onPlayAgain}>
-            Play again
+          <button ref={playAgainRef} type="button" className="result-play" onClick={onPlayAgain}>
+            <PlayIcon />
+            Play Again
           </button>
-          <button type="button" className="button" onClick={onClose}>
-            View board
+          <button type="button" className="result-review" onClick={onReview}>
+            <ListIcon />
+            Review Game
           </button>
         </div>
+
+        {props.leaderboard}
+
+        {tips !== undefined && <AiTips tips={tips} shown={tipsShown} onShowNow={() => setTipsShown(true)} onShown={props.onTipsShown} />}
+
+        <Scenery className="result-scenery" />
       </div>
     </div>
+  );
+}
+
+// "Tips from the AI" (Change 4): up to three tips worked out by the engine
+// from this game. Hidden for the first seconds with a "Show tips now" link;
+// the reveal is announced once to screen readers.
+function AiTips({
+  tips,
+  shown,
+  onShowNow,
+  onShown,
+}: {
+  tips: readonly GameTip[] | null;
+  shown: boolean;
+  onShowNow: () => void;
+  onShown?: ((tips: readonly string[]) => void) | undefined;
+}) {
+  // Once the tips are on screen, the AI voice may read them (D54).
+  useEffect(() => {
+    if (shown && tips) onShown?.(tips.map((tip) => tip.text));
+  }, [shown, tips]);
+  return (
+    <section className="result-tips" aria-label="Tips from the AI">
+      <p className="sr-only" aria-live="polite">
+        {shown && tips ? "Tips from the AI are shown below." : ""}
+      </p>
+      {shown ? (
+        <div className="result-tips-body">
+          <h3>
+            <BulbIcon />
+            Tips from the AI
+          </h3>
+          <p className="result-tips-caption">Checked by the game engine</p>
+          {tips ? (
+            <ul>
+              {tips.map((tip) => (
+                <li key={tip.text}>{tip.text}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="result-tips-caption">The engine is still looking at your game.</p>
+          )}
+        </div>
+      ) : (
+        <button type="button" className="link-button result-tips-link" onClick={onShowNow}>
+          <BulbIcon />
+          Show tips now
+        </button>
+      )}
+    </section>
   );
 }

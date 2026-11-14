@@ -1,11 +1,11 @@
 # Game Design Document
 
 ## Summary
-- Draft: browser checkers, 2 players or vs LLM AI. See `docs/01-concept/game-concept.md`.
+- Checkervia: browser checkers, 2 players or vs LLM AI. See `docs/01-concept/game-concept.md`.
 
 ## Rules
 - Full rule set lives in `core-mechanics.md`; this page is the overview.
-- Black moves first. Forward-only for regular pieces, Kings both ways. Forced capture, any capture choice allowed. Crowning mid-chain ends the turn. No draw.
+- Black moves first. Forward only for regular pieces, Kings both ways. Forced capture, any capture choice allowed. Crowning mid chain ends the turn. No draw.
 
 ## Modes
 - **Two players:** both sides controlled by clicks on one screen.
@@ -27,7 +27,7 @@
 
 ## Edge cases
 - Player has pieces but no legal moves: loses.
-- Mid-chain: only the chaining piece is selectable and only its continuations are highlighted.
+- Mid chain: only the chaining piece is selectable and only its continuations are highlighted.
 - AI fails after retries: fallback message, game is not corrupted, user can retry or start a new game.
 
 ## Testing the design

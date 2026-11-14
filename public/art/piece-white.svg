@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 96">
+  <!-- A cream checkers piece seen from above at an angle (D51). -->
+  <defs>
+    <linearGradient id="side" x1="0" x2="1" y1="0" y2="0">
+      <stop offset="0" stop-color="#a88a5e"/>
+      <stop offset="0.35" stop-color="#e6d3ad"/>
+      <stop offset="0.7" stop-color="#cdb184"/>
+      <stop offset="1" stop-color="#9c7d52"/>
+    </linearGradient>
+    <radialGradient id="top" cx="0.4" cy="0.35" r="0.75">
+      <stop offset="0" stop-color="#fffaf0"/>
+      <stop offset="0.6" stop-color="#f0e0bf"/>
+      <stop offset="1" stop-color="#d6bf93"/>
+    </radialGradient>
+  </defs>
+  <path d="M6 40V60A54 28 0 0 0 114 60V40Z" fill="url(#side)"/>
+  <ellipse cx="60" cy="40" rx="54" ry="28" fill="url(#top)"/>
+  <ellipse cx="60" cy="40" rx="40" ry="20" fill="none" stroke="#c9ad7f" stroke-width="3"/>
+  <ellipse cx="60" cy="41.5" rx="40" ry="20" fill="none" stroke="#fff7e6" stroke-width="1.2" opacity="0.6"/>
+  <path d="M20 31c9-9 24-13 38-13" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.6"/>
+</svg>

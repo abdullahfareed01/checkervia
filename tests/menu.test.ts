@@ -6,7 +6,6 @@ import type { ComponentProps } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { App } from "../src/ui/App";
-import { ConfirmButton } from "../src/ui/ConfirmButton";
 import { Home } from "../src/ui/Home";
 import { HowToPlay } from "../src/ui/HowToPlay";
 import { Root } from "../src/ui/Root";
@@ -23,6 +22,7 @@ const home = (overrides: Partial<ComponentProps<typeof Home>> = {}) =>
       onHowToPlay: noop,
       onLearn: noop,
       onRecheck: noop,
+      onTerms: noop,
       ...overrides,
     }),
   );
@@ -44,47 +44,86 @@ describe("Root (first render)", () => {
   });
 });
 
-describe("Splash", () => {
-  it("marks the game as loaded and the AI step as running", () => {
+describe("Splash (D51)", () => {
+  it("once React runs: the bar at the AI check, as a real progress bar", () => {
     const html = renderToStaticMarkup(createElement(Splash, { leaving: false }));
     expect(html).toContain('role="status"');
-    expect(html).toContain('<li class="splash-step splash-step-done">Game loaded</li>');
-    expect(html).toContain('<li class="splash-step">Checking the AI…</li>');
+    expect(html).toMatch(/<div class="splash-bar" role="progressbar" aria-label="Loading" aria-valuemin="0" aria-valuemax="100" aria-valuenow="66" aria-valuetext="Checking the AI">/);
+    expect(html).toContain('<span class="splash-bar-fill" style="width:66%"></span>');
+    expect(html).toContain('<p class="splash-note">Checking the AI…</p>');
   });
 
-  it("fades out with both steps done", () => {
+  it("fades out full, saying Ready", () => {
     const html = renderToStaticMarkup(createElement(Splash, { leaving: true }));
     expect(html).toContain("splash splash-leaving");
-    expect(html.match(/splash-step-done/g)).toHaveLength(2);
+    expect(html).toContain('aria-valuenow="100"');
+    expect(html).toContain('<p class="splash-note">Ready</p>');
   });
 
-  it("matches the static splash in index.html, which shows before the JavaScript", () => {
+  it("has the mockup's parts: frame, logo, title, crown divider, CHECKERS, board scenery", () => {
+    const html = renderToStaticMarkup(createElement(Splash, { leaving: false }));
+    for (const part of ["splash-frame", "splash-logo", "splash-title", "splash-divider", "splash-crown", "splash-sub", "scenery-board", "scenery-piece-white", "scenery-piece-king"]) {
+      expect(html).toContain(part);
+    }
+    expect(html).toContain('<h1 class="splash-title">Checkervia</h1>');
+    expect(html).toContain('<p class="splash-sub">Checkers</p>');
+  });
+
+  it("matches the static splash in index.html, which shows the first step before the JavaScript", () => {
     const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
     expect(page).toMatch(/<div id="root">\s*<!--[^>]*-->\s*<div class="splash"/);
-    for (const name of ["splash-logo", "splash-title", "splash-steps", "splash-step", ".splash-leaving", ".splash-step-done"]) {
+    for (const name of ["splash-frame", "splash-logo", "splash-title", "splash-divider", "splash-sub", "splash-bar", "splash-note", ".splash-leaving", "scenery-board"]) {
       expect(page).toContain(name);
     }
-    // Same logo drawing: every shape of the React logo is in the static one.
-    const logo = renderToStaticMarkup(createElement(Logo));
-    for (const shape of logo.match(/<(circle|path) [^>]*>/g)!) {
-      const attributes = shape.replace(/stroke-width/g, "stroke-width").replace(/\/?>$/, "").trim();
-      expect(page.replace(/\s+\/>/g, ">")).toContain(attributes);
+    expect(page).toContain('aria-valuenow="30"');
+    expect(page).toContain('<p class="splash-note">Loading the game…</p>');
+    // The same drawings: React and the static page use the same image files.
+    for (const src of ["/art/logo.svg", "/art/piece-white.svg", "/art/piece-king.svg"]) {
+      expect(renderToStaticMarkup(createElement(Splash, { leaving: false }))).toContain(`src="${src}"`);
+      expect(page).toContain(`src="${src}"`);
     }
+    // (The server renderer may add its own preload link before the image.)
+    expect(renderToStaticMarkup(createElement(Logo))).toContain('<img class="logo" src="/art/logo.svg" alt=""/>');
+  });
+
+  it("loads the title font from this site, with a Georgia fallback", () => {
+    const page = readFileSync(new URL("../index.html", import.meta.url), "utf8");
+    expect(page).toContain('src: url("/fonts/fraunces-black-latin.woff2") format("woff2");');
+    expect(page).toContain('font-family: "Fraunces", Georgia');
+    expect(readFileSync(new URL("../public/fonts/fraunces-black-latin.woff2", import.meta.url), "utf8").length).toBeGreaterThan(1000);
+    expect(readFileSync(new URL("../public/fonts/OFL.txt", import.meta.url), "utf8")).toContain("SIL Open Font License");
   });
 });
 
 describe("Home", () => {
-  it("offers Play vs AI, 2 Players, Learn and How to play", () => {
+  it("offers Play vs AI, 2 Players, Learn and How to Play", () => {
     const html = home();
     expect(html).toContain("Play vs AI");
     expect(html).toContain("2 Players");
     expect(html).toContain("Learn");
-    expect(html).toContain("How to play");
+    expect(html).toContain("How to Play");
+  });
+
+  it("has the mockup's parts: frame, checkered floor, icon wells, a line and a chevron on every card (D66)", () => {
+    const html = home({ onLeaderboard: noop, onSettings: noop, onProfile: noop });
+    for (const part of ["home-frame", "home-scenery", "home-logo", "game-title-large", "icon-laurel", "lb-gradients"]) expect(html).toContain(part);
+    const cards = html.match(/<button type="button" class="menu-card[^]*?<\/button>/g) ?? [];
+    expect(cards).toHaveLength(5);
+    for (const card of cards) {
+      expect(card).toContain('class="menu-icon"');
+      expect(card).toContain('class="menu-divider"');
+      expect(card).toContain('class="menu-chevron"');
+    }
+    expect(cards[0]).toContain("robot-face");
+    expect(cards[2]).toContain("icon-gradcap");
+    // The profile has a crown badge; the foot has Settings and the Terms with their icons.
+    expect(html).toMatch(/class="home-profile"[^]*class="home-profile-badge"/);
+    expect(html).toMatch(/icon-gear[^]*<span>Settings<\/span>[^]*home-foot-divider[^]*icon-document[^]*<span>Terms &amp; Notices<\/span>/);
   });
 
   it("shows the AI as online when the check passed, with no warning", () => {
     const html = home({ aiStatus: "ready" });
-    expect(html).toContain("AI online");
+    expect(html).toContain("AI Online");
     expect(html).not.toContain("Check again");
   });
 
@@ -120,34 +159,20 @@ describe("HowToPlay", () => {
   });
 });
 
-describe("Menu button in the game", () => {
-  it("has a back arrow when the game was opened from the main menu", () => {
+describe("Menu button in the game (D50)", () => {
+  it("is on the action bar, and there is no back arrow (the Menu has Main menu)", () => {
     const html = renderToStaticMarkup(createElement(App, { onMenu: noop }));
-    expect(html).toContain('aria-label="Back to the main menu"');
-    expect(html).toContain(">Menu<");
-    expect(html).toContain('aria-haspopup="menu"');
-  });
-
-  it("has no back arrow without a main menu to return to (the Menu still offers New game and the rules)", () => {
-    const html = renderToStaticMarkup(createElement(App));
     expect(html).not.toContain("Back to the main menu");
-    expect(html).toContain(">Menu<");
+    expect(html).toMatch(/<nav class="action-bar" aria-label="Game actions">[\s\S]*aria-haspopup="dialog"[\s\S]*>Menu</);
+    const header = html.match(/<header class="topbar">([\s\S]*?)<\/header>/)![1]!;
+    expect(header).not.toContain("bar-button");
+    expect(header).not.toContain(">Menu<");
   });
-});
 
-describe("ConfirmButton", () => {
-  it("renders a plain button with its label and classes", () => {
-    const html = renderToStaticMarkup(
-      createElement(ConfirmButton, {
-        label: "Menu",
-        className: "button-menu",
-        needsConfirmation: true,
-        question: "Leave?",
-        confirmLabel: "Yes",
-        onConfirm: noop,
-      }),
-    );
-    expect(html).toBe('<button type="button" class="button button-menu">Menu</button>');
+  it("uses a hamburger icon, not the dotted grid", () => {
+    const html = renderToStaticMarkup(createElement(App));
+    expect(html).toContain("icon-menu");
+    expect(html).not.toContain("icon-dots");
   });
 });
 

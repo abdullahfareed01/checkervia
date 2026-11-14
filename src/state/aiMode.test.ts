@@ -333,23 +333,31 @@ describe("AI difficulty level", () => {
     expect(createGameState({ mode: "vs-ai", aiLevel: 4 }).aiLevel).toBe(4);
   });
 
-  it("can change at any time, even while the AI is thinking, without touching the game", () => {
+  it("is fixed for a game: choosing another level starts a new game at it (D44)", () => {
     const thinking = thinkingState();
-    const changed = gameReducer(thinking, { type: "setAiLevel", level: 4 });
-    expect(changed.aiLevel).toBe(4);
-    expect({ ...changed, aiLevel: thinking.aiLevel }).toEqual(thinking);
-    expect(gameReducer(changed, { type: "setAiLevel", level: 4 })).toBe(changed);
+    const strongest = gameReducer(thinking, { type: "newGame", mode: "vs-ai", level: 4 });
+    expect(strongest.aiLevel).toBe(4);
+    expect(strongest.history).toHaveLength(1);
+    expect(strongest.aiRequestId).toBe(thinking.aiRequestId + 1);
+    const twoPlayer = gameReducer(createGameState(), { type: "newGame", mode: "vs-ai", level: 3 });
+    expect(twoPlayer).toMatchObject({ mode: "vs-ai", aiLevel: 3 });
   });
 
   it("is kept by New game and by a mode change", () => {
-    const expert = gameReducer(thinkingState(), { type: "setAiLevel", level: 4 });
-    expect(gameReducer(expert, { type: "newGame" }).aiLevel).toBe(4);
-    expect(gameReducer(expert, { type: "setMode", mode: "two-player" }).aiLevel).toBe(4);
+    const strongest = gameReducer(thinkingState(), { type: "newGame", level: 4 });
+    expect(gameReducer(strongest, { type: "newGame" }).aiLevel).toBe(4);
+    expect(gameReducer(strongest, { type: "setMode", mode: "two-player" }).aiLevel).toBe(4);
+  });
+
+  it("is recorded on every AI move in the history", () => {
+    const thinking = createGameState({ mode: "vs-ai", currentPlayer: "white", aiLevel: 3 });
+    const state = gameReducer(thinking, { type: "aiMoved", requestId: thinking.aiRequestId, move: thinking.legalMoves[0]! });
+    expect(state.history.at(-1)!.level).toBe(3);
   });
 
   it("stores the engine's look-ahead for the AI's move in its history entry", () => {
     const thinking = thinkingState();
-    const lookahead = { depth: 6, score: 100, best: 100 };
+    const lookahead = { depth: 6, score: 100, best: 100, offered: 3, legal: 7, scoresShown: true };
     const state = gameReducer(thinking, {
       type: "aiMoved",
       requestId: thinking.aiRequestId,

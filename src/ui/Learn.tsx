@@ -5,7 +5,7 @@ import type { Frame } from "../learn/frames";
 import { LESSONS } from "../learn/lessons";
 import type { HistoryTarget } from "../state/gameReducer";
 import { pieceCounts } from "../state/selectors";
-import { FactList } from "./AiReasonDialog";
+import { FactList } from "./WhyContent";
 import { Board } from "./Board";
 import type { BoardView } from "./Board";
 import { PlayerCard } from "./PlayerCard";
@@ -64,7 +64,7 @@ export function Learn({ onMenu }: { onMenu: () => void }) {
   return (
     <main className="app learn">
       <header className="topbar">
-        <TopBar title="Learn" onBack={onMenu} items={[{ label: "Main menu", onSelect: onMenu }]} />
+        <TopBar title="Learn" onBack={onMenu} />
       </header>
 
       <section className="game" aria-label="Lesson board">

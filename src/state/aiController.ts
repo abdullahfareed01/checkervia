@@ -2,9 +2,11 @@
 // fake model and a fake dispatch.
 import { chooseMove, judgeMove } from "../ai";
 import { analyze } from "../ai/analyzer";
+import { provenLost } from "../ai/endgame";
 import type { CallModel, MoveJudgement } from "../ai";
+import { strongLanguage } from "../ai/language";
 import type { OpponentMove } from "../ai/prompt";
-import { squareName } from "../engine";
+import { applyMove, opponentOf, squareName } from "../engine";
 import type { GameAction, GameState } from "./gameReducer";
 
 // How many of its own recent lines the AI is shown, to avoid repeating itself.
@@ -19,7 +21,12 @@ async function lastOpponentMove(state: GameState): Promise<OpponentMove | undefi
   if (!last?.move || !last.player || !before) return undefined;
   const judgement: MoveJudgement | null = await judgeMove(before.board, last.move, last.player, analyze);
   const recentLines = state.history.flatMap((entry) => (entry.reaction ? [entry.reaction] : [])).slice(-RECENT_LINES);
-  return { label: [last.move.from, ...last.move.path].map(squareName).join(" -> "), judgement, recentLines };
+  return {
+    label: [last.move.from, ...last.move.path].map(squareName).join(" -> "),
+    judgement,
+    recentLines,
+    strongLanguage: strongLanguage(state.aiLevel),
+  };
 }
 
 // Starts asking the model for a move, for a state whose AI phase is
@@ -43,11 +50,14 @@ export function startAiTurn(
       analyze,
       ...(opponent ? { opponent } : {}),
     });
-    return { result, judgement: opponent?.judgement ?? null };
+    // After the AI's move: is the player's position now proven lost? (The
+    // resign hint, Change 4.)
+    const provenLoss = result.ok && (await provenLost(applyMove(state.board, result.move), opponentOf(state.currentPlayer), analyze));
+    return { result, judgement: opponent?.judgement ?? null, provenLoss };
   };
 
   run().then(
-    ({ result, judgement }) => {
+    ({ result, judgement, provenLoss }) => {
       if (cancelled) return;
       dispatch(
         result.ok
@@ -60,6 +70,7 @@ export function startAiTurn(
               // The AI's trash talk, and the engine's verdict when it had one.
               ...(result.reaction ? { reaction: result.reaction } : {}),
               ...(judgement ? { judgement } : {}),
+              ...(provenLoss ? { provenLoss } : {}),
             }
           : { type: "aiFailed", requestId, reasons: result.reasons },
       );

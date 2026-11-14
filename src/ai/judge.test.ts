@@ -22,12 +22,12 @@ describe("judgeMove with given scores", () => {
     const judgement = await judgeMove(start, opening[2]!, "black", fixed([0, 0, -100, 0, 0, 0, 0]));
     expect(judgement?.verdict).toBe("blunder");
     expect(judgement?.detail).toContain("loses about 1.0 piece");
-    expect(judgement?.detail).toContain("A3 -> B4");
+    expect(judgement?.detail).toContain("A3 → B4");
   });
 
   it("calls a missed forced win a blunder", async () => {
     const judgement = await judgeMove(start, opening[1]!, "black", fixed([WIN - 3, 0, 0, 0, 0, 0, 0]));
-    expect(judgement).toEqual({ verdict: "blunder", detail: "It missed a forced win: A3 -> B4 wins in 3 turns." });
+    expect(judgement).toEqual({ verdict: "blunder", detail: "It missed a forced win: A3 → B4 wins in 3 turns." });
   });
 
   it("says when a move now loses by force", async () => {
@@ -87,7 +87,7 @@ describe("judgeMove with the real engine", () => {
     expect(judgement?.verdict).toBe("blunder");
     expect(judgement?.detail).toContain("loses about 1.0 piece");
     // Two moves tie for best (D6 -> C5 keeps the piece, B8 -> A7 waits); either may be named.
-    expect(judgement?.detail).toMatch(/\((D6 -> C5|B8 -> A7)\)/);
+    expect(judgement?.detail).toMatch(/\((D6 → C5|B8 → A7)\)/);
   });
 
   it("does not react to the safe move", async () => {

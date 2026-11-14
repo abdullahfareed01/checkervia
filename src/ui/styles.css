@@ -9,7 +9,7 @@
   --capture: #ff5a5f;
   --choice: #4cc9f0;
   --route-black: #e3b341; /* route colour for Black's moves */
-  --route-white: #7fb3d9; /* route colour for White's moves */
+  --route-white: #f1dfb8; /* route colour for White's moves: warm ivory (D50) */
 
   --gap: 10px;
   --card-h: 60px;
@@ -87,13 +87,6 @@ h1 {
   gap: 12px;
 }
 
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px;
-}
-
 @media (min-width: 900px) and (min-height: 600px) {
   html,
   body {
@@ -118,13 +111,13 @@ h1 {
     /* Height left after the two cards, the gaps and the padding; width left
        after the sidebar. The smaller wins. */
     --board-size: min(
-      calc(100vh - 2 * var(--card-h) - 2 * var(--gap) - 40px),
-      calc(100vw - var(--sidebar-w) - 32px - 48px),
+      calc(100vh - 2 * var(--card-h) - 2 * var(--gap) - 40px - var(--slot-space, 0px)),
+      calc(100vw - var(--sidebar-w) - 32px - 48px - var(--winbar-space, 0px)),
       800px
     );
     --board-size: min(
-      calc(100dvh - 2 * var(--card-h) - 2 * var(--gap) - 40px),
-      calc(100vw - var(--sidebar-w) - 32px - 48px),
+      calc(100dvh - 2 * var(--card-h) - 2 * var(--gap) - 40px - var(--slot-space, 0px)),
+      calc(100vw - var(--sidebar-w) - 32px - 48px - var(--winbar-space, 0px)),
       800px
     );
   }
@@ -561,10 +554,6 @@ h1 {
   color: var(--text-soft);
 }
 
-.status-hint-capture {
-  color: #ffb3b5;
-}
-
 .status-winner .status-main {
   font-size: 1.6rem;
   color: var(--highlight);
@@ -664,20 +653,6 @@ h1 {
   border-color: #d9686d;
 }
 
-.confirm {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  text-align: center;
-}
-
-.confirm p {
-  margin: 0;
-  width: 100%;
-}
-
 /* ---------- Board ---------- */
 
 .board {
@@ -738,7 +713,7 @@ button.square:focus-visible {
 
 /* The squares the last move started and ended on: a lighter tint. */
 .square-last-move.square-dark {
-  background: #95653d;
+  background: var(--last-move-square, #95653d); /* per board theme (settings.css) */
 }
 
 /* The selected square: a solid inner ring. */
@@ -870,26 +845,85 @@ button.square:focus-visible {
   justify-content: center;
 }
 
+/* The moving piece (D53): its box travels square to square; inside it the
+   shadow stays on the board and the piece rises in the middle of each hop.
+   Animated by animation/player.ts with transforms and opacity only. */
 .ghost-mover {
   z-index: 2;
   will-change: transform;
 }
 
-/* The moving piece is lifted: a deeper shadow while it travels. */
-.ghost-mover .piece {
-  box-shadow: 0 10px 14px rgba(0, 0, 0, 0.5);
+.ghost-shadow {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: 5%;
+  height: 24%;
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0));
+  opacity: 0.55;
+  will-change: transform, opacity;
 }
 
-/* A captured piece shows until the mover passes over it, then fades. */
+.ghost-lift,
+.ghost-piece,
 .ghost-captured {
-  animation: capture-out 220ms ease-in forwards;
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-@keyframes capture-out {
-  to {
-    opacity: 0;
-    transform: scale(0.4);
-  }
+.ghost-lift,
+.ghost-captured {
+  will-change: transform, opacity;
+}
+
+/* Lifted: a softer, wider shadow of its own. */
+.ghost-piece .piece {
+  box-shadow:
+    0 9px 14px rgba(0, 0, 0, 0.42),
+    inset 0 2px 3px rgba(255, 255, 255, 0.35);
+}
+
+/* Cinematic: a faint ring where a captured piece was. No particles. */
+.ghost-dust {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  border: 2px solid rgba(240, 222, 190, 0.7);
+  opacity: 0;
+}
+
+/* A new King: the crown drops in and a soft light sweeps across the piece. */
+.ghost-crown {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  font-size: calc(var(--board-size) / 15);
+  line-height: 1;
+  color: #e3b341;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+}
+
+.ghost-sheen-clip {
+  position: absolute;
+  z-index: 1;
+  width: 80%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.ghost-sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, rgba(255, 246, 214, 0) 30%, rgba(255, 246, 214, 0.8) 50%, rgba(255, 246, 214, 0) 70%);
+  opacity: 0;
 }
 
 /* ---------- Pieces ---------- */
@@ -960,8 +994,7 @@ button.square:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .spinner,
   .robot-thinking .robot-light,
-  .robot-thinking .robot-eyes,
-  .ghost-captured {
+  .robot-thinking .robot-eyes {
     animation: none;
   }
 }
@@ -989,180 +1022,6 @@ button.square:focus-visible {
   animation: fade-in 0.25s ease-out both;
 }
 
-.result {
-  --accent: #e3b341;
-  --accent-soft: rgba(227, 179, 65, 0.25);
-  position: relative;
-  overflow: hidden;
-  width: min(440px, 100%);
-  max-height: calc(100dvh - 32px);
-  overflow-y: auto;
-  padding: 28px 24px 22px;
-  border-radius: 20px;
-  text-align: center;
-  background: #241b14;
-  box-shadow:
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 24px 60px rgba(0, 0, 0, 0.6);
-  animation: pop-in 0.3s ease-out both;
-}
-
-/* The AI won: a cool steel-blue theme instead of gold. */
-.result-defeat {
-  --accent: #9fb8c8;
-  --accent-soft: rgba(159, 184, 200, 0.2);
-  background: #18212a;
-}
-
-.result-emblem {
-  width: 92px;
-  height: 92px;
-  margin: 0 auto 10px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--accent);
-  background: rgba(255, 255, 255, 0.05);
-  box-shadow: 0 0 0 1px var(--accent-soft);
-}
-
-.result-emblem .icon {
-  width: 64%;
-  height: 64%;
-}
-
-.icon-trophy .trophy-shine {
-  stroke: rgba(255, 255, 255, 0.7);
-}
-
-.result-defeat .icon-robot .robot-eye,
-.result-defeat .icon-robot .robot-mouth {
-  fill: #18212a;
-}
-
-.result-title {
-  margin: 0;
-  font-size: 2.1rem;
-  letter-spacing: 0.04em;
-  color: var(--accent);
-}
-
-.result-subtitle {
-  margin: 6px 0 2px;
-  font-size: 1rem;
-  color: var(--text);
-}
-
-.result-reason {
-  margin: 0 0 16px;
-  font-size: 0.9rem;
-  color: var(--text-soft);
-}
-
-.result-stats {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 0.92rem;
-  border-radius: 12px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.25);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.result-stats th,
-.result-stats td {
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.result-stats tbody tr:last-child th,
-.result-stats tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-.result-stats thead th {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-soft);
-}
-
-.result-stats thead th .disc {
-  margin-right: 6px;
-  vertical-align: -0.1em;
-}
-
-.result-stats tbody th {
-  text-align: left;
-  font-weight: 500;
-  color: var(--text-soft);
-}
-
-.result-stats td {
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-.result-stats .result-col-winner {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.result-meta {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 6px 18px;
-  margin: 12px 0 18px;
-  font-size: 0.85rem;
-  color: var(--text-soft);
-}
-
-.result-actions {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.result-actions .button-primary {
-  min-width: 150px;
-}
-
-/* Confetti: thin strips falling through the popup. */
-.confetti {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.confetti span {
-  position: absolute;
-  top: -12px;
-  width: 6px;
-  height: 12px;
-  border-radius: 2px;
-  opacity: 0.9;
-  animation-name: confetti-fall;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
-
-@keyframes confetti-fall {
-  0% {
-    transform: translateY(0) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 0.95;
-  }
-  100% {
-    transform: translateY(560px) rotate(540deg);
-    opacity: 0;
-  }
-}
-
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -1177,14 +1036,9 @@ button.square:focus-visible {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .result,
   .result-backdrop,
   .dots::after {
     animation: none;
-  }
-
-  .confetti {
-    display: none;
   }
 }
 
@@ -1201,14 +1055,8 @@ button.square:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
-.history-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
 .history-where {
-  flex: 1;
+  margin: 0;
   text-align: center;
   font-size: 0.85rem;
   color: var(--text-soft);
@@ -1345,15 +1193,18 @@ button.square:focus-visible {
 
 /* ---------- Motion (calm: movement, no glow) ---------- */
 
-/* A picked-up piece lifts a little. */
+/* A picked up piece lifts a little (scale 1.06) and its shadow grows, over
+   120 ms at the chosen animation speed (D53). */
 .piece {
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  transition:
+    transform calc(120ms / var(--anim-speed, 1)) ease-out,
+    box-shadow calc(120ms / var(--anim-speed, 1)) ease-out;
 }
 
 .square-selected .piece {
   transform: translateY(-3px) scale(1.06);
   box-shadow:
-    0 8px 10px rgba(0, 0, 0, 0.45),
+    0 9px 13px rgba(0, 0, 0, 0.4),
     inset 0 2px 3px rgba(255, 255, 255, 0.35);
 }
 
@@ -1399,11 +1250,6 @@ button.square:focus-visible {
   animation: pop-in-small 0.3s 0.3s cubic-bezier(0.2, 1.5, 0.5, 1) backwards;
 }
 
-/* The result popup's emblem floats gently. */
-.result-emblem {
-  animation: emblem-float 3s ease-in-out infinite;
-}
-
 @keyframes bar-in {
   from {
     transform: scaleY(0);
@@ -1437,12 +1283,6 @@ button.square:focus-visible {
   }
 }
 
-@keyframes emblem-float {
-  50% {
-    transform: translateY(-5px);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .piece,
   .square-selected .piece {
@@ -1457,8 +1297,7 @@ button.square:focus-visible {
   .route,
   .route-line,
   .route-stop,
-  .route-capture,
-  .result-emblem {
+  .route-capture {
     animation: none;
   }
 }

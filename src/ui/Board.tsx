@@ -1,9 +1,15 @@
-import { memo, useLayoutEffect, useState } from "react";
+import { memo, useLayoutEffect, useMemo, useRef, useState } from "react";
+import type React from "react";
 import type { Board as BoardType, Move, Piece, Position } from "../engine";
 import { isDarkSquare, pieceAt, samePosition } from "../engine";
 import type { Destination } from "../state/selectors";
-import { MovingPiece, prefersReducedMotion } from "./MovingPiece";
-import { FILE_LABELS, RANK_LABELS } from "./notation";
+import { planMove, staggerOrder } from "./animation/plan";
+import type { AnimationOptions, MovePlan } from "./animation/plan";
+import { playPlan } from "./animation/player";
+import type { PlayerHandlers } from "./animation/player";
+import type { MoveBeat } from "./feedback";
+import { MoveAnimation } from "./MoveAnimation";
+import { useSettings } from "./settings";
 import { RouteOverlay } from "./RouteOverlay";
 import { Square, sameMarks } from "./Square";
 import type { SquareMarks } from "./Square";
@@ -27,6 +33,11 @@ export interface BoardView {
 interface BoardProps {
   view: BoardView;
   onSquareClick: (position: Position) => void;
+  // The move animation tells the game when each landing happens (its sound
+  // and vibration) and while input must wait (the hops), never longer.
+  onMoveBeat?: ((beat: MoveBeat) => void) | undefined;
+  // `key` is the move's animation key: unlocking it means that move landed.
+  onMoveLock?: ((locked: boolean, key: number) => void) | undefined;
 }
 
 function includes(list: readonly Position[], position: Position): boolean {
@@ -38,6 +49,8 @@ function marksFor(view: BoardView, position: Position): SquareMarks {
   const lastMove = view.lastMove;
 
   return {
+    // Cinematic: legal destinations appear one ring of distance at a time.
+    order: destination && view.selected ? staggerOrder(view.selected, position) : 0,
     selected: view.selected !== null && samePosition(view.selected, position),
     selectable: !view.locked && includes(view.selectable, position),
     mustCapture: includes(view.mustCapture, position),
@@ -49,19 +62,61 @@ function marksFor(view: BoardView, position: Position): SquareMarks {
   };
 }
 
-// Which move is animating right now (by key), or null. A new key starts the
-// animation; it ends when MovingPiece reports it is done.
-function useMoveAnimation(view: BoardView): [boolean, () => void] {
-  const [animatingKey, setAnimatingKey] = useState<number | null>(null);
+interface Playback {
+  key: number;
+  plan: MovePlan;
+}
+
+/**
+ * Plans the move on screen when the board's animation key changes to a new
+ * positive number (a new move, or one step forward in the history), from
+ * the board before it. Animated levels show it with MoveAnimation; Off and
+ * Reduced show the result at once but still sound each landing.
+ */
+function useMovePlayback(
+  view: BoardView,
+  options: AnimationOptions,
+  onBeat: BoardProps["onMoveBeat"],
+  onLock: BoardProps["onMoveLock"],
+): [Playback | null, PlayerHandlers] {
+  const [active, setActive] = useState<Playback | null>(null);
   const key = view.moveKey ?? 0;
+  // The latest callbacks, read when a landing happens, and the key of the
+  // move being played.
+  const callbacks = useRef({ onBeat, onLock });
+  callbacks.current = { onBeat, onLock };
+  const playing = useRef(0);
 
   useLayoutEffect(() => {
-    const canAnimate = key > 0 && view.lastMove !== null && view.previousBoard && !prefersReducedMotion();
-    setAnimatingKey(canAnimate ? key : null);
-    // Only a new move starts an animation.
+    const move = view.lastMove;
+    const before = view.previousBoard;
+    if (key <= 0 || !move || !before) {
+      setActive(null);
+      return undefined;
+    }
+    const crowned = pieceAt(before, move.from)?.kind === "man" && pieceAt(view.board, move.to)?.kind === "king";
+    const plan = planMove(move, crowned, options);
+    if (!plan.animated) {
+      setActive(null);
+      return playPlan(plan, {}, { onBeat: (beat) => callbacks.current.onBeat?.(beat) });
+    }
+    setActive({ key, plan });
+    playing.current = key;
+    callbacks.current.onLock?.(true, key);
+    // A new move, a new game or leaving: the lock never outlives the plan.
+    return () => callbacks.current.onLock?.(false, key);
+    // Only a new key starts a plan.
   }, [key]);
 
-  return [animatingKey !== null && animatingKey === key, () => setAnimatingKey(null)];
+  const handlers = useMemo<PlayerHandlers>(
+    () => ({
+      onBeat: (beat) => callbacks.current.onBeat?.(beat),
+      onUnlock: () => callbacks.current.onLock?.(false, playing.current),
+      onDone: () => setActive(null),
+    }),
+    [],
+  );
+  return [active && active.key === key ? active : null, handlers];
 }
 
 interface BoardRowProps {
@@ -106,20 +161,6 @@ const BoardRow = memo(function BoardRow({ row, pieces, marks, locked, hiddenCol,
   );
 }, sameRow);
 
-// One edge of coordinate labels: column letters (top, bottom) or row
-// numbers (left, right). Decoration for sighted players; screen readers get
-// the square names from each square's label.
-const Labels = memo(function Labels({ kind, edge }: { kind: "files" | "ranks"; edge: "top" | "bottom" | "left" | "right" }) {
-  const labels = kind === "files" ? FILE_LABELS : RANK_LABELS;
-  return (
-    <div className={`board-labels board-labels-${edge}`} aria-hidden="true">
-      {labels.map((label) => (
-        <span key={label}>{label}</span>
-      ))}
-    </div>
-  );
-});
-
 // Identifies a move on screen, for restarting the route animation.
 function routeKey(move: Move, moveKey: number): string {
   const squares = [move.from, ...move.path].map(({ row, col }) => `${row}${col}`).join("-");
@@ -127,17 +168,22 @@ function routeKey(move: Move, moveKey: number): string {
 }
 
 // Draws the 8x8 grid. It only renders what it is given and reports clicks.
-export function Board({ view, onSquareClick }: BoardProps) {
-  const [animating, finishAnimation] = useMoveAnimation(view);
+export function Board({ view, onSquareClick, onMoveBeat, onMoveLock }: BoardProps) {
+  const settings = useSettings();
+  const [playback, handlers] = useMovePlayback(view, settings.animation, onMoveBeat, onMoveLock);
+  const animating = playback !== null;
   const lastMove = view.lastMove;
   const mover = lastMove ? pieceAt(view.board, lastMove.to) : null;
 
   return (
-    // The wooden frame carries the A-H and 8-1 labels on all four sides.
+    // A thin wooden frame; the coordinates are in the squares' corners.
     <div className="board-frame">
-      <Labels kind="files" edge="top" />
-      <Labels kind="ranks" edge="left" />
-      <div className={`board${view.locked ? " board-locked" : ""}`} aria-label="Checkers board">
+      <div
+        className={`board${view.locked ? " board-locked" : ""}`}
+        aria-label="Checkers board"
+        // The last move highlight fades in once the piece has landed.
+        style={{ "--land-delay": `${playback ? playback.plan.landing : 0}ms` } as React.CSSProperties}
+      >
         {view.board.map((rowSquares, row) => (
           <BoardRow
             key={row}
@@ -154,12 +200,10 @@ export function Board({ view, onSquareClick }: BoardProps) {
           // animation plays again for every move.
           <RouteOverlay key={routeKey(lastMove, view.moveKey ?? 0)} move={lastMove} player={mover.player} />
         )}
-        {animating && lastMove && view.previousBoard && (
-          <MovingPiece move={lastMove} before={view.previousBoard} onDone={finishAnimation} />
+        {playback && lastMove && view.previousBoard && (
+          <MoveAnimation move={lastMove} before={view.previousBoard} plan={playback.plan} handlers={handlers} />
         )}
       </div>
-      <Labels kind="ranks" edge="right" />
-      <Labels kind="files" edge="bottom" />
     </div>
   );
 }

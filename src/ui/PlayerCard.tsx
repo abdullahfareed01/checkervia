@@ -1,6 +1,10 @@
 import { memo } from "react";
 import type { Player } from "../engine";
-import { CrownIcon, HumanIcon, RobotAvatar } from "./icons";
+import type { AiMood } from "./aiMood";
+import { CrownIcon, HumanIcon, InfoIcon } from "./icons";
+import { RobotFace } from "./RobotFace";
+import { avatarUrl } from "./leaderboard/Avatar";
+import { isAvatarId } from "../leaderboard/avatars";
 
 // At most this many captured pieces are drawn in the stack; the number says
 // the rest.
@@ -10,11 +14,16 @@ interface PlayerCardProps {
   player: Player;
   name: string; // "You", "AI", "Black", "White"
   robot: boolean; // the AI gets a robot, people get a person icon
-  level?: string | undefined; // the AI's level, e.g. "Expert"
+  // The AI's chips in the name row (Change 4, D50): one level chip, its
+  // voice at this level ("Playful" for Medium), and at Strongest the 18+
+  // badge, a button that explains the language rules.
+  chips?: { level: string; voice: string; onAdultInfo?: (() => void) | undefined } | undefined;
   pieces: number; // pieces left on the board
   captured: number; // opponent pieces this side has taken
   toMove: boolean;
   thinking: boolean;
+  mood?: AiMood | undefined; // the robot's face (D64); thinking when unset and thinking
+  portrait?: string | null | undefined; // the player's chosen avatar id (D65); a person icon without one
   winner: boolean;
   placement: "top" | "bottom";
 }
@@ -57,11 +66,13 @@ export const PlayerCard = memo(function PlayerCard({
   player,
   name,
   robot,
-  level,
+  chips,
   pieces,
   captured,
   toMove,
   thinking,
+  mood,
+  portrait,
   winner,
   placement,
 }: PlayerCardProps) {
@@ -81,16 +92,34 @@ export const PlayerCard = memo(function PlayerCard({
 
   return (
     <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.`}>
-      <div className="avatar">{robot ? <RobotAvatar thinking={thinking} /> : <HumanIcon />}</div>
+      <div className={`avatar${!robot && isAvatarId(portrait) ? " avatar-portrait" : ""}`}>
+        {robot ? (
+          <RobotFace mood={mood ?? (thinking ? "thinking" : "neutral")} />
+        ) : isAvatarId(portrait) ? (
+          <img src={avatarUrl(portrait)} alt="" width={48} height={48} decoding="async" draggable={false} />
+        ) : (
+          <HumanIcon />
+        )}
+      </div>
 
       <div className="card-text">
         <p className="card-name">
           <span className="card-name-text">{name}</span>
           {robot && <span className="badge">BOT</span>}
-          {level && (
-            <span className="badge badge-level">
-              <CrownIcon />
-              {level}
+          {chips && (
+            <span className="card-chips">
+              <span className="chip-level" title={`${chips.level} level`}>
+                {chips.voice}
+              </span>
+              {chips.onAdultInfo && (
+                <button type="button" className="chip-adult" aria-label="18 plus, strong language. About the language rules" onClick={chips.onAdultInfo}>
+                  <span className="chip-adult-age">18+</span>
+                  <span className="chip-adult-text">Strong language</span>
+                  <span className="chip-adult-info" aria-hidden="true">
+                    <InfoIcon />
+                  </span>
+                </button>
+              )}
             </span>
           )}
           {winner && <CrownIcon />}
@@ -105,6 +134,7 @@ export const PlayerCard = memo(function PlayerCard({
             {text}
             {state === "thinking" && <span className="dots" aria-hidden="true" />}
           </span>
+
         </p>
       </div>
 

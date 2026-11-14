@@ -1,0 +1,772 @@
+/* The AI under the board (D64): its robot with its mood and its chat
+   bubble, as on chess.com, and what "Why?" shows (Change 2). The bubble no
+   longer sits between the AI card and the board: the board is right under
+   the card, and the AI card is a little taller instead. Flat, no glow. */
+
+/* ---------- Sizes ---------- */
+
+/* --coach-h: the row's one height (the robot, or the bubble's padding and
+   its lines of text, whichever is taller), so nothing under it moves.
+   --ai-card-extra: how much taller the AI card is than yours; the board's
+   size formulas take it off the height (as --slot-space). */
+/* Wide screens: the bubble sits in the side panel, narrower than the old
+   one under the card, so it takes up to 4 lines there (the panel has the
+   height). */
+.app-ai {
+  --bubble-font: 15px;
+  --bubble-leading: 1.3;
+  --bubble-lines: 4;
+  --coach-h: 104px; /* padding 2 x 11, 4 lines of 19.5 */
+  --coach-avatar: 56px;
+  --ai-card-extra: 12px;
+  --slot-space: var(--ai-card-extra);
+}
+
+/* Phones held upright: up to 3 lines. The mode switch moves out of the
+   header (it is in the Menu sheet). */
+@media (max-width: 599px) {
+  .app .mode {
+    display: none;
+  }
+
+  :root {
+    --card-h: 48px;
+  }
+
+  .app-ai {
+    --bubble-font: 16px;
+    --bubble-leading: 1.22;
+    --bubble-lines: 3;
+    --coach-h: 80px; /* padding 2 x 9, 3 lines of 19.5 */
+    --coach-avatar: 52px;
+  }
+}
+
+/* Phones held sideways: the board is sized from the height alone, so the
+   AI card keeps the same height as yours. */
+@media (orientation: landscape) and (max-height: 599px) {
+  .app-ai {
+    --bubble-font: 15px;
+    --bubble-leading: 1.3;
+    --bubble-lines: 3;
+    --coach-h: 82px; /* padding 2 x 11, 3 lines of 19.5 */
+    --coach-avatar: 48px;
+    --ai-card-extra: 0px;
+  }
+}
+
+/* ---------- The AI card, a little taller ---------- */
+
+.app-ai .card-top {
+  height: calc(var(--card-h) + var(--ai-card-extra));
+}
+
+.app-ai .card-top .avatar {
+  width: calc(var(--card-h) + var(--ai-card-extra) - 12px);
+  height: calc(var(--card-h) + var(--ai-card-extra) - 12px);
+}
+
+@media (max-width: 599px) {
+  .app-ai .card-top .card-name {
+    font-size: 1.1rem;
+  }
+
+  .app-ai .card-top .card-count {
+    font-size: 1.45rem;
+  }
+}
+
+/* The captured pieces come back on the AI card where there is room. */
+@media (min-width: 381px) and (max-width: 599px) {
+  .app-ai .card-top .card-took .captures {
+    display: inline-flex;
+  }
+}
+
+/* ---------- The robot and its bubble under the board ---------- */
+
+.coach {
+  display: flex;
+  align-items: flex-start;
+  gap: 2px;
+  height: var(--coach-h);
+}
+
+.coach-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: var(--coach-avatar);
+  height: var(--coach-avatar);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #24313d, #141c24);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  transition: box-shadow 0.2s ease;
+}
+
+.coach-avatar .robot-face {
+  width: 88%;
+  height: 88%;
+}
+
+/* The mood in a thin ring as well as on the face (no glow). */
+.coach-avatar-angry {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(255, 90, 79, 0.75);
+}
+
+.coach-avatar-starstruck,
+.coach-avatar-proud {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(255, 210, 74, 0.8);
+}
+
+.coach-avatar-wink {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(79, 195, 255, 0.6);
+}
+
+.coach-avatar-annoyed {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(232, 160, 90, 0.7);
+}
+
+.coach-avatar-sleepy {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(140, 150, 160, 0.5);
+}
+
+.coach-avatar-smug {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(79, 195, 255, 0.6);
+}
+
+.coach-avatar-nervous {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(159, 220, 255, 0.45);
+}
+
+.coach-avatar-defeated {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(140, 150, 160, 0.6);
+}
+
+.coach-avatar-shocked {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(244, 197, 92, 0.75);
+}
+
+.coach-avatar-laughing,
+.coach-avatar-happy {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 0 1.5px rgba(79, 195, 255, 0.6);
+}
+
+/* ---------- The bubble ---------- */
+
+.speech-slot {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  height: 100%;
+}
+
+.speech {
+  /* Colours per tone; dark ink on a light tint, contrast above 7 to 1. */
+  --bubble-bg: #ffffff;
+  --bubble-ink: #1f1b17;
+  position: relative;
+  margin-left: 9px;
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+  width: fit-content;
+  max-width: min(520px, calc(100% - 9px));
+  padding: 11px 12px 11px 16px;
+  border-radius: 16px;
+  color: var(--bubble-ink);
+  background: var(--bubble-bg);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+  animation: bubble-in 150ms ease-out both;
+}
+
+.speech-respect {
+  --bubble-bg: #e0f0e3;
+  --bubble-ink: #112f1c;
+}
+
+/* The tail points left, at the robot's face, near the top (as chess.com). */
+.speech::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: -9px;
+  width: 10px;
+  height: 18px;
+  background: var(--bubble-bg);
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
+/* Up to 4 lines (3 on phones). Whole lines are clipped, so a long line is
+   cut between words. AI text is plain text. */
+.speech-line {
+  flex: 1;
+  margin: 0;
+  max-height: calc(var(--bubble-lines) * var(--bubble-leading) * 1em);
+  overflow: hidden;
+  font-size: var(--bubble-font);
+  line-height: var(--bubble-leading);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* What the line is about, in words as well as colour. */
+.speech-label {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.5;
+  vertical-align: 1px;
+  color: #ffffff;
+}
+
+/* A line with 18+ words: red text on the neutral bubble (contrast above
+   6 to 1). The words themselves and the 18+ badge say it too. */
+.speech-adult {
+  --bubble-ink: #9b1c12;
+}
+
+.speech-roast .speech-label {
+  background: #9c3b17;
+}
+
+.speech-respect .speech-label {
+  background: #2a6e3f;
+}
+
+/* "Why?": small to the eye, but a 44px touch target. */
+.speech-why {
+  position: relative;
+  flex: none;
+  min-height: 28px;
+  padding: 2px 8px;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  background: transparent;
+  cursor: pointer;
+}
+
+.speech-why::after {
+  content: "";
+  position: absolute;
+  inset: -8px -4px;
+}
+
+.speech-why {
+  color: #1f5379;
+}
+
+.speech-why:hover {
+  background: rgba(0, 0, 0, 0.07);
+}
+
+.speech-why:focus-visible {
+  outline: 2px solid var(--choice);
+  outline-offset: 2px;
+}
+
+/* Typing dots while the AI thinks. */
+.speech-typing {
+  display: flex;
+  gap: 6px;
+  margin: 6px 4px;
+}
+
+.speech-typing span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8f857b;
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+.speech-typing span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.speech-typing span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* A wave: each dot rises and brightens in turn (D70). */
+@keyframes typing {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes bubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+/* ---------- The robot's moods (D64) ----------
+   A new face pops in; a laugh bounces the head and sheds a tear, anger
+   shakes it and turns the antenna light red, a capture gets
+   a small nod. Only at the Standard and Cinematic animation levels. */
+
+.robot-face .robot-head,
+.robot-face .robot-expression,
+.robot-face .robot-tear {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.robot-face .robot-expression {
+  transform-origin: 50% 50%;
+  animation: face-pop 0.22s ease-out both;
+}
+
+.robot-face-laughing .robot-head {
+  animation: robot-laugh 0.3s ease-in-out 6;
+}
+
+.robot-face-laughing .robot-tear {
+  animation: robot-tear 1.2s ease-in both;
+}
+
+.robot-face-angry .robot-head {
+  animation: robot-shake 0.45s ease-in-out 2;
+}
+
+.robot-face-angry .robot-light {
+  fill: #ff3b30;
+  animation: blink 0.5s ease-in-out 4;
+}
+
+.robot-face-happy .robot-head {
+  animation: robot-nod 0.6s ease-in-out 1;
+}
+
+/* Shocked (D69): one quick jolt back, then it settles, still smirking. */
+.robot-face-shocked .robot-head {
+  animation: robot-jolt 0.5s ease-out 1;
+}
+
+@keyframes robot-jolt {
+  25% {
+    transform: translateY(-2px) scale(1.05);
+  }
+  60% {
+    transform: translateY(0.5px) scale(0.99);
+  }
+}
+
+@keyframes face-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+
+@keyframes robot-laugh {
+  50% {
+    transform: translateY(-1.6px) rotate(-3deg);
+  }
+}
+
+@keyframes robot-shake {
+  20% {
+    transform: translateX(-1.4px) rotate(-2.5deg);
+  }
+  40% {
+    transform: translateX(1.4px) rotate(2.5deg);
+  }
+  60% {
+    transform: translateX(-1px) rotate(-1.5deg);
+  }
+  80% {
+    transform: translateX(1px) rotate(1.5deg);
+  }
+}
+
+@keyframes robot-nod {
+  40% {
+    transform: translateY(1.2px);
+  }
+}
+
+@keyframes robot-tear {
+  from {
+    opacity: 0;
+    transform: translateY(-1px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(1.5px);
+  }
+}
+
+/* ---------- Signs of life (D71) ----------
+   Between reactions the robot is never frozen: it breathes, blinks every
+   few seconds and glances around; smug, it blinks slowly; nervous, a bead
+   of sweat runs down and its eyes dart; defeated, its head droops and the
+   antenna light dims. */
+
+.robot-face .robot-eyes {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+
+.robot-face-neutral .robot-head,
+.robot-face-smug .robot-head,
+.robot-face-nervous .robot-head {
+  animation: robot-breathe 3.4s ease-in-out infinite;
+}
+
+.robot-face-neutral .robot-eyes {
+  animation: robot-look 7.2s ease-in-out infinite;
+}
+
+.robot-face-smug .robot-eyes,
+.robot-face-happy .robot-eyes {
+  animation: robot-blink 5.2s ease-in-out infinite;
+}
+
+.robot-face-nervous .robot-eyes {
+  animation: robot-dart 2.6s ease-in-out infinite;
+}
+
+.robot-face-nervous .robot-sweat {
+  transform-box: fill-box;
+  animation: robot-sweat 2.4s ease-in infinite;
+}
+
+.robot-face-defeated .robot-head {
+  animation: robot-droop 0.9s ease-out forwards;
+}
+
+.robot-face-defeated .robot-light {
+  fill: #6e5a63;
+}
+
+@keyframes robot-breathe {
+  50% {
+    transform: translateY(0.7px);
+  }
+}
+
+/* Glance left, glance right, then a blink. */
+@keyframes robot-look {
+  0%,
+  30%,
+  100% {
+    transform: translateX(0) scaleY(1);
+  }
+  36%,
+  48% {
+    transform: translateX(-1.6px) scaleY(1);
+  }
+  54%,
+  66% {
+    transform: translateX(1.6px) scaleY(1);
+  }
+  72%,
+  88% {
+    transform: translateX(0) scaleY(1);
+  }
+  92% {
+    transform: translateX(0) scaleY(0.1);
+  }
+  96% {
+    transform: translateX(0) scaleY(1);
+  }
+}
+
+@keyframes robot-blink {
+  0%,
+  90%,
+  100% {
+    transform: scaleY(1);
+  }
+  94% {
+    transform: scaleY(0.12);
+  }
+}
+
+@keyframes robot-dart {
+  0%,
+  40%,
+  100% {
+    transform: translateX(0);
+  }
+  50%,
+  60% {
+    transform: translateX(-2.4px);
+  }
+  70% {
+    transform: translateX(0.6px);
+  }
+}
+
+@keyframes robot-sweat {
+  0% {
+    opacity: 0;
+    transform: translateY(-1px);
+  }
+  20% {
+    opacity: 1;
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+}
+
+@keyframes robot-droop {
+  to {
+    transform: translateY(1.6px) rotate(-5deg);
+  }
+}
+
+/* ---------- More reactions (D72) ---------- */
+
+/* Wink: the closed eye opens again after a moment, once. */
+.robot-face-wink .robot-head {
+  animation: robot-nod 0.6s ease-in-out 1;
+}
+
+/* Starstruck: the stars pulse and the head bounces. */
+.robot-face-starstruck .robot-stars {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: robot-stars 0.7s ease-in-out 4;
+}
+
+.robot-face-starstruck .robot-head {
+  animation: robot-laugh 0.35s ease-in-out 4;
+}
+
+/* Proud: chin up, and the crown drops on. */
+.robot-face-proud .robot-head {
+  animation: robot-proud 0.8s ease-out forwards;
+}
+
+.robot-face-proud .robot-crown {
+  transform-box: fill-box;
+  animation: robot-crown 0.5s ease-out both;
+}
+
+/* Annoyed: a slow eye roll. */
+.robot-face-annoyed .robot-roll {
+  animation: robot-roll 1.4s ease-in-out 1;
+}
+
+/* Sleepy: the head nods off slowly and the z's float up. */
+.robot-face-sleepy .robot-head {
+  animation: robot-doze 4s ease-in-out infinite;
+}
+
+.robot-face-sleepy .robot-zz {
+  transform-box: fill-box;
+  animation: robot-zz 2.6s ease-in-out infinite;
+}
+
+@keyframes robot-stars {
+  50% {
+    transform: scale(1.25) rotate(12deg);
+  }
+}
+
+@keyframes robot-proud {
+  to {
+    transform: translateY(-1px) rotate(3deg);
+  }
+}
+
+@keyframes robot-crown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes robot-roll {
+  0% {
+    transform: translate(0, 2px);
+  }
+  30% {
+    transform: translate(-2px, 0);
+  }
+  60% {
+    transform: translate(2px, -0.5px);
+  }
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes robot-doze {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: translateY(1px) rotate(-4deg);
+  }
+}
+
+@keyframes robot-zz {
+  0% {
+    opacity: 0;
+    transform: translate(0, 2px);
+  }
+  30%,
+  70% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(2px, -3px);
+  }
+}
+
+html[data-anim="off"] .robot-face *,
+html[data-anim="reduced"] .robot-face * {
+  animation: none !important;
+}
+
+/* ---------- What "Why?" shows ---------- */
+
+.why-content {
+  display: grid;
+  gap: 10px;
+}
+
+.why-section {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.why-section h3 {
+  margin: 0 0 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.why-reason {
+  margin: 0;
+  padding-left: 12px;
+  font-size: 0.95rem;
+  line-height: 1.45;
+  box-shadow: inset 2px 0 0 #9fb8c8;
+  overflow-wrap: anywhere;
+}
+
+/* A card floating above the page; nothing under it moves. A sheet from the
+   bottom on phones, a centred card on larger screens. */
+.why-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.why-sheet {
+  width: 100%;
+  max-height: 75vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--gold-soft) transparent;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  border-radius: 18px 18px 0 0;
+  background: #241b14;
+  box-shadow: 0 0 0 1px var(--gold-soft);
+  animation: why-sheet-up 150ms ease-out both;
+}
+
+@media (min-width: 600px) {
+  .why-sheet-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .why-sheet {
+    width: min(480px, 100%);
+    max-height: 90vh;
+    padding: 14px 18px 18px;
+    border-radius: 18px;
+  }
+}
+
+.why-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.why-sheet-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.why-sheet-close {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 12px;
+  font-size: 1.5rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+}
+
+.why-sheet-close:focus-visible {
+  outline: 2px solid var(--choice);
+}
+
+@keyframes why-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .speech,
+  .speech-typing span,
+  .why-sheet,
+  .robot-face * {
+    animation: none !important;
+  }
+}
+
+/* ---------- The resign hint (Change 4) ---------- */
+
+/* The resign hint: a subtle gold outline, no glow. */
+.button-resign-hint {
+  box-shadow: inset 0 0 0 2px var(--gold);
+}
+

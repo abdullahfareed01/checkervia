@@ -1,10 +1,10 @@
 # Project Overview
 
-**Draft** is a browser checkers game (8x8) for two players on one screen, or one player against an LLM-powered AI. Built as a mentor's project; every rule is meant to be explainable line by line.
+**Checkervia** is a browser checkers game (8x8) for two players on one screen, or one player against an LLM powered AI. Built as a mentor's project; every rule is meant to be explainable line by line.
 
 ## Features
-- Two-player hot-seat play: click a piece, then click its destination
-- Play vs AI at four levels (Beginner to Expert): the engine looks up to 6 turns ahead for the model; the AI explains itself in a speech bubble, and trash-talks you like a cocky rival (roasting blunders, grudging respect for great moves)
+- Two player hot seat play: click a piece, then click its destination
+- Play vs AI at four levels (Easy, Medium, Hard, Strongest): the engine looks 1 to 6 turns ahead (a turn is one move by one side) and offers the model only its best few moves; the AI explains itself in a speech bubble, and reacts to your moves: clean, playful banter at Easy to Hard; trash talk at Strongest, behind an 18+ notice
 - Learn mode (two robots play scripted lessons), How to play, move history, result popup
 - A framed board with A to H / 1 to 8 labels; all move names use them (e.g. E3 → G5)
 - Full rules: forced capture, multi jumps, Kings, winner announcement
@@ -48,4 +48,4 @@ Notes:
 - Progress: `docs/04-production/task-backlog.md`
 
 ## Status
-All features are built and tested (530 tests). Left: GitHub push, Netlify deploy (see `docs/07-deployment/deployment-guide.md`), and a screen recording. Progress: `docs/04-production/task-backlog.md`.
+All features are built and tested (812 tests). Left: GitHub push, Netlify deploy (see `docs/07-deployment/deployment-guide.md`), and a screen recording. Progress: `docs/04-production/task-backlog.md`.

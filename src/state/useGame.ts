@@ -3,6 +3,7 @@ import { callModel } from "../ai";
 import type { Position } from "../engine";
 import { startAiTurn } from "./aiController";
 import { createGameState, gameReducer } from "./gameReducer";
+import { playRecord } from "./playRecord";
 import type { AiLevel } from "../ai/difficulty";
 import type { GameMode, GameOptions, HistoryTarget } from "./gameReducer";
 
@@ -11,7 +12,8 @@ import type { GameMode, GameOptions, HistoryTarget } from "./gameReducer";
 // `initial` sets up the first game only (used by the dev preview scenarios);
 // New game always starts from the standard position.
 export function useGame(initial?: GameOptions) {
-  const [state, dispatch] = useReducer(gameReducer, initial, (options) => createGameState(options));
+  // A recorded game (D60) is played through the reducer's own actions first.
+  const [state, dispatch] = useReducer(gameReducer, initial, (options) => playRecord(createGameState(options), options?.record ?? []));
 
   // Whenever a new AI request starts, ask the model. The effect re-runs only
   // when the request id changes. Its cleanup cancels the pending request, so a
@@ -31,7 +33,10 @@ export function useGame(initial?: GameOptions) {
   const setMode = useCallback((mode: GameMode) => dispatch({ type: "setMode", mode }), []);
   const retryAi = useCallback(() => dispatch({ type: "aiRetry" }), []);
   const goHistory = useCallback((to: HistoryTarget) => dispatch({ type: "history", to }), []);
-  const setAiLevel = useCallback((level: AiLevel) => dispatch({ type: "setAiLevel", level }), []);
+  // A new game against the AI at `level` (a level is fixed for a game).
+  const playAi = useCallback((level: AiLevel) => dispatch({ type: "newGame", mode: "vs-ai", level }), []);
 
-  return { state, click, newGame, setMode, retryAi, goHistory, setAiLevel };
+  const resign = useCallback(() => dispatch({ type: "resign" }), []);
+
+  return { state, click, newGame, setMode, retryAi, goHistory, playAi, resign };
 }

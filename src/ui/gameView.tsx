@@ -1,5 +1,6 @@
 // Small helpers that turn game state into what the game screen shows.
 import { AI_LEVELS } from "../ai";
+import { strongLanguage } from "../ai/language";
 import { opponentOf } from "../engine";
 import type { Board as BoardType, Player } from "../engine";
 import { AI_PLAYER, canHumanAct } from "../state/gameReducer";
@@ -12,6 +13,7 @@ import {
   routeChoiceSquares,
   selectablePieces,
 } from "../state/selectors";
+import type { AiMood } from "./aiMood";
 import type { BoardView } from "./Board";
 import { PlayerCard } from "./PlayerCard";
 
@@ -41,6 +43,7 @@ export function winReasonOf(state: GameState): string | null {
   if (!state.winner) return null;
   const loser = opponentOf(state.winner);
   const name = loser === "black" ? "Black" : "White";
+  if (state.resignedBy) return state.mode === "vs-ai" ? "You resigned." : `${name} resigned.`;
   return pieceCounts(state.board)[loser] === 0
     ? `${name} has no pieces left.`
     : `${name} has no legal moves.`;
@@ -53,7 +56,15 @@ export function nameOf(mode: GameMode, player: Player): string {
 
 // Card details for one side. Piece counts follow the board on screen, so they
 // match the position being reviewed. The AI's card shows its level.
-export function cardFor(state: GameState, board: BoardType, player: Player, placement: "top" | "bottom") {
+export function cardFor(
+  state: GameState,
+  board: BoardType,
+  player: Player,
+  placement: "top" | "bottom",
+  onAdultInfo?: () => void, // opens the language rules (Strongest's 18+ badge)
+  mood: AiMood = "neutral", // the AI's face (D64)
+  portrait: string | null = null, // the player's chosen avatar id (D65)
+) {
   const counts = pieceCounts(board);
   const isAi = state.mode === "vs-ai" && player === AI_PLAYER;
   const toMove = state.winner === null && state.currentPlayer === player;
@@ -63,11 +74,21 @@ export function cardFor(state: GameState, board: BoardType, player: Player, plac
       player={player}
       name={nameOf(state.mode, player)}
       robot={isAi}
-      level={isAi ? AI_LEVELS[state.aiLevel].name : undefined}
+      chips={
+        isAi
+          ? {
+              level: AI_LEVELS[state.aiLevel].name,
+              voice: AI_LEVELS[state.aiLevel].voice,
+              onAdultInfo: strongLanguage(state.aiLevel) ? onAdultInfo : undefined,
+            }
+          : undefined
+      }
       pieces={counts[player]}
       captured={PIECES_PER_SIDE - counts[opponentOf(player)]}
       toMove={toMove}
       thinking={isAi && state.aiPhase === "thinking"}
+      mood={isAi ? mood : undefined}
+      portrait={isAi ? null : portrait}
       winner={state.winner === player}
       placement={placement}
     />

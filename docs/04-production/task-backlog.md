@@ -12,7 +12,7 @@
   - [x] If any capture exists, only captures are legal
 - [x] 4. Multi jumps (engine)
   - [x] Chain continues in the same turn
-  - [x] No re-jumping the same piece; any branch may be chosen
+  - [x] No re jumping the same piece; any branch may be chosen
 - [x] 5. Kings (engine)
   - [x] Crowning on far row
   - [x] Backward moves and captures for Kings
@@ -21,36 +21,43 @@
   - [x] No pieces left
   - [x] No legal moves
   - [x] Winner announced, board locked
-- [x] 7. Turn display, piece counts and New game (with confirmation mid-game)
+- [x] 7. Turn display, piece counts and New game (with confirmation mid game)
 - [x] 8. AI mode (built and tested with fakes; still to be tried once by hand with a real key)
   - [x] Serverless proxy function with env key (`netlify/`, OpenRouter, `OPENROUTER_API_KEY` and `LLM_MODEL`)
   - [x] Prompt builder and move numbers (`src/ai`, tested with fake models)
   - [x] Reply parsing, validation and 3 retries (`chooseMove`, tested with fake models)
   - [x] Real model client (`src/ai/client.ts`, calls the proxy)
   - [x] Fallback message in the UI when `chooseMove` fails, with Retry
-  - [x] Mode toggle and AI-turn UI lock
+  - [x] Mode toggle and AI turn UI lock
   - [x] Stale replies ignored after New game or a mode change
   - [x] `.env.example`, README steps for `netlify dev`
   - [x] Live check with a real key through `netlify dev` (10 AI turns, scripted Black, v1 row filled in). Still worth one human game in the browser.
-- [ ] 10. User feedback round 1 (started 2026-11-12 with the recommended defaults: view-only history, model reason plus verified facts, SVG robot, recorded Learn game, desktop fit from about 1024x640, health check for the splash)
-  - [x] Phase 0: investigate BUG-001. Engine cross-checked (0 differences); a display issue fixed in Phase 2. User reviewed; closed.
+- [ ] 10. User feedback round 1 (started 12 Nov 2026 with the recommended defaults: view only history, model reason plus verified facts, SVG robot, recorded Learn game, desktop fit from about 1024x640, health check for the splash)
+  - [x] Phase 0: investigate `BUG-001`. Engine cross checked (0 differences); a display issue fixed in Phase 2. User reviewed; closed.
   - [x] Phase 1: responsive layout, no page scroll on desktop, player cards with human and robot icons (needs a look in the browser)
   - [x] Phase 2: move animation and highlighted route (needs a look in the browser)
   - [x] Feedback: neon style for the route, animation and highlights, no solid borders
   - [x] Feedback: result popup with stats (You win / AI wins / two players), replacing the green winner glow
   - [x] Feedback: redesigned player cards (AI card especially)
-  - [x] Bug DEV-005: huge yellow crown on the winner's card (fixed, regression test)
+  - [x] Bug `DEV-005`: huge yellow crown on the winner's card (fixed, regression test)
   - [x] Phase 3: history arrows (forward disabled at the latest position), move list, keyboard arrows (needs a look in the browser)
-  - [x] Phase 4: AI reason popup, plus engine-verified facts (prompt v2; needs a look in the browser and one live run)
+  - [x] Phase 4: AI reason popup, plus engine verified facts (prompt v2; needs a look in the browser and one live run)
   - [x] Phase 5: home menu (Play vs AI, 2 Players, How to play) and splash screen tied to real loading (health check). Learn is added to the menu in Phase 6. Needs a look in the browser.
-  - [x] Phase 6: Learn mode, a two-robot teaching game (4 recorded lessons, every move engine-checked; needs a look in the browser)
-  - [x] Difficulty levels (user request): Beginner / Casual / Strong / Expert bar; engine look-ahead of 0, 2, 4, 6 turns for the model; checked live (42 turns, 0 failures)
-  - [x] User feedback round 2: calm professional look (no neon), level popup instead of the bar, level badge on the AI card, AI speech bubble, long-game jank fixed (DEV-009)
-  - [x] AI reactions to the player's moves in the speech bubble (engine-judged blunders and great moves; teasing and praise; D42)
-  - [x] Phase 7: mobile polish; every screen checked at 11 sizes (phones portrait and landscape, tablets, desktops); bubble above the AI card on phones; two-column layout for phones held sideways
+  - [x] Phase 6: Learn mode, a two robot teaching game (4 recorded lessons, every move engine checked; needs a look in the browser)
+  - [x] Difficulty levels (user request): Beginner / Casual / Strong / Expert bar; engine look ahead of 0, 2, 4, 6 turns for the model; checked live (42 turns, 0 failures)
+  - [x] User feedback round 2: calm professional look (no neon), level popup instead of the bar, level badge on the AI card, AI speech bubble, long game jank fixed (`DEV-009`)
+  - [x] AI reactions to the player's moves in the speech bubble (engine judged blunders and great moves; teasing and praise; D42)
+  - [x] Phase 7: mobile polish; every screen checked at 11 sizes (phones portrait and landscape, tablets, desktops); bubble above the AI card on phones; two column layout for phones held sideways
 - [ ] 9. Deploy, GitHub, recording, write up
-  - [x] Release prep: deployment guide, release checklist, test plan and cases, submission checklist, browser-tab icon, production build checked
+  - [x] Release prep: deployment guide, release checklist, test plan and cases, submission checklist, browser tab icon, production build checked
   - [x] Write up drafted (`docs/08-submission/writeup.md`); links to add after release
   - [ ] GitHub repository pushed (needs the owner's GitHub account)
   - [ ] Netlify deploy with env vars (needs the owner's Netlify account and key)
   - [ ] Short screen recording of a game (needs the owner)
+- [ ] 11. Leaderboard (owner's request, D56; nothing live before the owner approves phase 4)
+  - [x] Phase 3: server side. Migration, seven functions with pure handlers, replay check of wins, rate limits, storage interface with Supabase and in memory adapters, tests, setup steps, Terms text (still "Coming soon"). Waiting for the owner's review.
+  - [ ] Supabase project created and the three variables set (needs the owner)
+  - [x] Phase 4: screens (submit form, leaderboard, profile sheet, links), and the Terms describe it as live. Waiting for the owner's review; nothing is deployed.
+  - [x] Profile first and automatic wins (D61): the Profile screen before the first AI game, the custom country picker, automatic wins with a retry queue, renames. Waiting for the owner's review.
+  - [x] Redesign after the mockups, avatars and the profile icon (D62). Waiting for the owner's review.
+  - [ ] Run `leaderboard-migration-2.sql` in Supabase before this version goes live (needs the owner)
