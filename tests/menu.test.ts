@@ -96,17 +96,34 @@ describe("Splash (D51)", () => {
 });
 
 describe("Home", () => {
-  it("offers Play vs AI, 2 Players, Learn and How to play", () => {
+  it("offers Play vs AI, 2 Players, Learn and How to Play", () => {
     const html = home();
     expect(html).toContain("Play vs AI");
     expect(html).toContain("2 Players");
     expect(html).toContain("Learn");
-    expect(html).toContain("How to play");
+    expect(html).toContain("How to Play");
+  });
+
+  it("has the mockup's parts: frame, checkered floor, icon wells, a line and a chevron on every card (D66)", () => {
+    const html = home({ onLeaderboard: noop, onSettings: noop, onProfile: noop });
+    for (const part of ["home-frame", "home-scenery", "home-logo", "game-title-large", "icon-laurel", "lb-gradients"]) expect(html).toContain(part);
+    const cards = html.match(/<button type="button" class="menu-card[^]*?<\/button>/g) ?? [];
+    expect(cards).toHaveLength(5);
+    for (const card of cards) {
+      expect(card).toContain('class="menu-icon"');
+      expect(card).toContain('class="menu-divider"');
+      expect(card).toContain('class="menu-chevron"');
+    }
+    expect(cards[0]).toContain("robot-face");
+    expect(cards[2]).toContain("icon-gradcap");
+    // The profile has a crown badge; the foot has Settings and the Terms with their icons.
+    expect(html).toMatch(/class="home-profile"[^]*class="home-profile-badge"/);
+    expect(html).toMatch(/icon-gear[^]*<span>Settings<\/span>[^]*home-foot-divider[^]*icon-document[^]*<span>Terms &amp; Notices<\/span>/);
   });
 
   it("shows the AI as online when the check passed, with no warning", () => {
     const html = home({ aiStatus: "ready" });
-    expect(html).toContain("AI online");
+    expect(html).toContain("AI Online");
     expect(html).not.toContain("Check again");
   });
 

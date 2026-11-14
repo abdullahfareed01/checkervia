@@ -126,7 +126,7 @@ describe("Terms and notices", () => {
     const home = renderToStaticMarkup(
       createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop }),
     );
-    expect(home).toContain(">Terms and notices<");
+    expect(home).toContain(">Terms &amp; Notices<");
   });
 });
 

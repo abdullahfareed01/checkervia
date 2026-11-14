@@ -1,44 +1,6 @@
-/* The sidebar note for the AI's move, the engine facts list, and the
-   dialogs (level choice and others). The chat bubble is in bubble.css. Kept apart from
+/* The engine facts list and the dialogs (level choice and others). The
+   AI under the board and its bubble are in bubble.css. Kept apart from
    styles.css, which is already long. Flat and quiet: no glows. */
-
-/* ---------- Sidebar note ---------- */
-
-.ai-note {
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(0, 0, 0, 0.18);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
-}
-
-.ai-note-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0;
-}
-
-.ai-note-avatar {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  color: #9fb8c8;
-  background: #1b2730;
-}
-
-.ai-note-avatar .icon {
-  width: 78%;
-  height: 78%;
-}
-
-.ai-note-move {
-  flex: 1;
-  font-size: 0.9rem;
-  font-weight: 600;
-}
 
 /* ---------- Dialogs ---------- */
 

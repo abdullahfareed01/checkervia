@@ -5,39 +5,52 @@
      same order at every width: fixed to the bottom of the screen when the
      page is one column, the bottom of the side panel when it is two.
    - Phones: squares of at least 44px at 375px wide (coordinates in the
-     squares, a 3px frame), and the title, both cards, the bubble, the board,
-     the status line and the bar all on screen at 375x650. */
+     squares, a 3px frame), and the title, both cards, the board, the status
+     line and the bar all on screen at 375x650 (the AI and its bubble come
+     under the status line, D64). */
 
 :root {
-  --bar-h: 52px; /* the action bar's buttons */
-  --bar-pad: 4px;
+  --bar-h: 56px; /* the action bar's buttons */
+  --bar-pad: 6px;
+  --bar-float: 0px; /* the gap under the bar where it floats (phones, D67) */
 }
 
-/* ---------- The action bar ---------- */
+/* ---------- The action bar (D67, after the owner's mockup "Polished
+   Brown and Gold Game Navigation Bar") ----------
+   A dark pill with a gold rim; each button a dark leather tile with an
+   icon over its label; New game in gold. Responsive without squeezing:
+   - each column is at least as wide as its label (min-content), so a label
+     never wraps or is cut; the space left is shared, New game a little
+     wider;
+   - the label's size follows the bar's own width (a container query), from
+     11px on a 320px phone, about 13px in the 340px side panel, up to 15px. */
 
 .action-bar {
   z-index: 20;
 }
 
 .action-bar-inner {
+  container-type: inline-size;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 4px;
+  grid-template-columns: repeat(4, minmax(min-content, 1fr)) minmax(min-content, 1.3fr);
+  gap: var(--bar-gap, 6px);
   padding: var(--bar-pad);
-  border-radius: 16px;
-  background: #1e150e; /* opaque: the page scrolls under it on phones */
+  border: 1.5px solid #c9953f;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #24170d 0%, #170e07 100%); /* opaque: the page scrolls under it on phones */
   box-shadow:
-    inset 0 0 0 1px var(--gold-soft),
-    0 -6px 18px rgba(0, 0, 0, 0.35);
+    inset 0 1px 0 rgba(255, 222, 160, 0.16),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.45),
+    0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
 /* The Menu wrapper is one of the five cells. */
 .action-bar .menu {
   display: grid;
+  min-width: 0;
 }
 
-/* Every button the same size: an icon over a short label. At least 44px
-   each way, so thumbs hit them easily. */
+/* Every button: an icon over a short label, at least 44px each way. */
 .bar-button {
   min-width: 44px;
   min-height: 44px;
@@ -46,32 +59,38 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  padding: 2px 4px;
-  border: 0;
-  border-radius: 12px;
+  gap: 3px;
+  padding: 3px 6px;
+  border: 1px solid rgba(201, 146, 76, 0.26);
+  border-radius: 14px;
   font: inherit;
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.05);
+  color: #f6e7cb;
+  background: linear-gradient(180deg, #3b2717 0%, #2a1a0e 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 224, 170, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.35);
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .bar-button .icon {
   flex: none;
-  width: 22px;
-  height: 22px;
+  width: var(--bar-icon, 24px);
+  height: var(--bar-icon, 24px);
 }
 
 .bar-label {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.15;
+  font-size: clamp(11px, 3.8cqi, 15px);
+  font-weight: 800;
+  line-height: 1.1;
   white-space: nowrap;
 }
 
 .bar-button:hover:not(:disabled) {
-  background: rgba(217, 164, 65, 0.14);
+  border-color: rgba(230, 172, 70, 0.55);
+  background: linear-gradient(180deg, #46301c 0%, #321f10 100%);
 }
 
 .bar-button:focus-visible {
@@ -79,25 +98,43 @@
   outline-offset: 2px;
 }
 
-/* Disabled (no earlier or later move): stays in place, looks switched off. */
+/* Disabled (no earlier or later move): the tile stays, its icon and label
+   dim, as in the mockup. */
 .bar-button:disabled {
   cursor: default;
-  opacity: 0.35;
+  color: rgba(246, 231, 203, 0.38);
+  background: linear-gradient(180deg, #2c1d11 0%, #22160b 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 224, 170, 0.05);
 }
 
+/* New game: gold, with the mockup's warm light. */
 .bar-button-primary {
-  color: #2a1a0b;
-  background: linear-gradient(180deg, #f6c968 0%, #dc9c38 100%);
+  border: 1.5px solid #ffe08a;
+  color: #2e1904;
+  background: linear-gradient(180deg, #ffd668 0%, #f6b733 55%, #e89a1c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 0 14px rgba(255, 176, 50, 0.45);
 }
 
 .bar-button-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #f8d27e 0%, #e2a646 100%);
+  border-color: #fff0b8;
+  background: linear-gradient(180deg, #ffde80 0%, #f8c046 55%, #eca428 100%);
 }
 
-/* The resign hint: a gold outline, no glow (beats .bar-button's background
-   shorthand only in the shadow). */
+/* The resign hint: a gold outline (beats .bar-button's shadow). */
 .bar-button.button-resign-hint {
-  box-shadow: inset 0 0 0 2px var(--gold);
+  border-color: var(--gold);
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+
+/* Wide screens have room to spare beside the board (its size comes from the
+   height there): a wider side panel gives the five buttons equal tiles at a
+   readable size, as in the mockup. */
+@media (min-width: 1200px) and (min-height: 600px) {
+  :root {
+    --sidebar-w: 380px;
+  }
 }
 
 /* The Menu sheet opens above the bar on wide screens (sheet.css makes it a
@@ -121,7 +158,7 @@
   bottom: 0;
   display: flex;
   justify-content: center;
-  padding: 0 8px env(safe-area-inset-bottom);
+  padding: 0 8px max(var(--bar-float), env(safe-area-inset-bottom));
   pointer-events: none; /* only the bar itself takes taps, not the gutters */
 }
 
@@ -133,7 +170,7 @@
 
 /* (Learn has no action bar, so no room is kept for one.) */
 .app:not(.learn) {
-  padding-bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 8px + env(safe-area-inset-bottom));
+  padding-bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 3px + 8px + max(var(--bar-float), env(safe-area-inset-bottom)));
 }
 
 /* Two columns (desktop, and phones held sideways): the bar is the bottom of
@@ -201,11 +238,10 @@
   }
 
   :root {
-    --bar-h: 48px;
-  }
-
-  .bar-label {
-    font-size: 11px;
+    --bar-h: 50px;
+    --bar-pad: 4px;
+    --bar-gap: 4px;
+    --bar-icon: 20px;
   }
 
   /* Short, narrow cards: the pieces left stay, "Took" goes (the card's
@@ -365,20 +401,20 @@
   align-items: center;
 }
 
-.speech-why,
-.why-button {
+.speech-why {
   min-width: 44px;
   min-height: 44px;
 }
 
 /* ---------- Tablets and narrow windows (one column, 600px and wider) ----------
    The board also shrinks with the height, so the status line stays above
-   the fixed bar: the title block (about 141px), two cards, the bubble slot,
-   the status line, the bar and the gaps take about 454px plus the slot. */
+   the fixed bar: the title block (about 141px), two cards, the chance to
+   win bar (D65), the status line, the bar (D67) and the gaps take about 488px,
+   plus the AI card's extra height (--slot-space, D64). */
 
 @media (min-width: 600px) and (not ((min-width: 900px) and (min-height: 600px))) and (not ((orientation: landscape) and (max-height: 599px))) {
   .app {
-    --board-size: min(calc(100vw - 32px), 560px, max(320px, calc(100dvh - 454px - var(--slot-space, 0px))));
+    --board-size: min(calc(100vw - 32px), 560px, max(320px, calc(100dvh - 488px - var(--slot-space, 0px))));
   }
 }
 
@@ -388,8 +424,11 @@
 
 @media (max-width: 599px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
   :root {
-    --bar-h: 44px;
-    --bar-pad: 2px;
+    --bar-h: 48px;
+    --bar-pad: 4px;
+    --bar-gap: 4px;
+    --bar-icon: 21px;
+    --bar-float: 6px;
   }
 
   .app {
@@ -398,9 +437,11 @@
     padding-left: 8px;
     padding-right: 8px;
     /* 8px gutters and a 3px frame: 44px squares at 375px wide. On short
-       wide screens the height decides instead: the title, two cards, the
-       status line, the bar and the gaps take 214px, plus the bubble slot. */
-    --board-size: min(calc(100vw - 16px), 560px, max(240px, calc(100dvh - 214px - var(--slot-space, 0px))));
+       wide screens the height decides instead: the title (as on the splash
+       screen, D65), two cards, the chance to win bar, the status line, the
+       action bar (floating, D67) and the gaps take 278px, plus the AI
+       card's extra height (--slot-space, D64). */
+    --board-size: min(calc(100vw - 16px), 560px, max(240px, calc(100dvh - 278px - var(--slot-space, 0px))));
   }
 
   .app .topbar {
@@ -446,7 +487,7 @@
   }
 
   .app .speech {
-    padding: 5px 6px 5px 10px;
+    padding: 9px 10px 9px 13px;
   }
 
   .app .status-main {
@@ -463,21 +504,17 @@
   }
 
   .action-bar {
-    padding: 0 4px env(safe-area-inset-bottom);
+    padding-left: 6px;
+    padding-right: 6px;
   }
 
   .action-bar-inner {
-    gap: 2px;
-    border-radius: 14px 14px 0 0;
+    border-radius: 18px;
   }
 
-  .bar-label {
-    font-size: 11px;
-  }
-
-  .bar-button .icon {
-    width: 20px;
-    height: 20px;
+  .bar-button {
+    padding: 2px 4px;
+    border-radius: 12px;
   }
 }
 
@@ -485,4 +522,182 @@
   .bar-button {
     transition: none;
   }
+}
+
+/* ---------- The title, as on the splash screen (D65) ----------
+   Fraunces Black in cream with the splash's shadow, over a gold rule with
+   a crown in the middle. (The home screen keeps its large title.) */
+
+.game-title-splash {
+  gap: 3px;
+}
+
+.app .game-title-splash h1 {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  font-size: 2.6rem;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  color: #f8ead0;
+  background: none;
+  -webkit-text-fill-color: currentColor;
+  text-shadow:
+    0 2px 0 rgba(120, 74, 30, 0.55),
+    0 6px 16px rgba(0, 0, 0, 0.45);
+}
+
+.game-title-rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: min(240px, 70%);
+  color: #e6ac3a;
+}
+
+.game-title-rule > span {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgba(230, 172, 58, 0), #e6ac3a);
+}
+
+.game-title-rule > span:last-child {
+  background: linear-gradient(90deg, #e6ac3a, rgba(230, 172, 58, 0));
+}
+
+.game-title-rule .icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+
+@media (max-width: 599px) {
+  .app .game-title-splash h1 {
+    font-size: 2rem;
+  }
+
+  .game-title-rule .icon {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 599px) {
+  .app .game-title-splash h1 {
+    font-size: 1.6rem;
+  }
+}
+
+/* ---------- The chance to win (D65) ----------
+   Phones and one column: a thin bar across the board's width, above your
+   card ("You 62%" on the left, "38% AI" on the right). Two columns: a bar
+   standing to the left of the board, White's part at the top as on the
+   board, with the numbers at its ends. */
+
+.board-area {
+  position: relative;
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--gap);
+}
+
+.winbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--text-soft);
+}
+
+.winbar-label {
+  flex: none;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.winbar-number {
+  color: var(--text);
+}
+
+.winbar-track {
+  flex: 1;
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e8dcc8;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14);
+}
+
+.winbar-part {
+  flex-grow: 0;
+  flex-shrink: 0;
+  transition: flex-basis 0.5s ease;
+}
+
+.winbar-black {
+  background: linear-gradient(180deg, #3d352e, #1b1714);
+}
+
+.winbar-white {
+  background: linear-gradient(180deg, #fbf5ea, #e2d5bf);
+}
+
+@media (min-width: 900px) and (min-height: 600px), (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {
+  .app {
+    --winbar-space: 40px;
+  }
+
+  .winbar {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: calc(100% + 10px);
+    width: 30px;
+    flex-direction: column-reverse;
+    gap: 6px;
+  }
+
+  .winbar-track {
+    flex-direction: column-reverse;
+    width: 12px;
+    height: auto;
+  }
+
+  .winbar-name {
+    display: none;
+  }
+
+  .winbar-label {
+    font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .winbar-part {
+    transition: none;
+  }
+}
+
+html[data-anim="off"] .winbar-part {
+  transition: none;
+}
+
+/* ---------- The player's chosen avatar on their card (D65) ---------- */
+
+.app .avatar-portrait {
+  overflow: hidden;
+  background: #4a3324;
+}
+
+.app .avatar-portrait img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }

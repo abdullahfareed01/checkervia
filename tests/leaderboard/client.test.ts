@@ -12,7 +12,7 @@ import type { GameState, HistoryEntry } from "../../src/state/gameReducer";
 import { leaderboardApi, setLeaderboardTransport } from "../../src/ui/leaderboard/api";
 import { Flag } from "../../src/ui/leaderboard/Flag";
 import { flagUrl } from "../../src/ui/leaderboard/flags";
-import { LeaderboardScreen, Row, TopRankedPlayerCard } from "../../src/ui/leaderboard/LeaderboardScreen";
+import { LeaderboardScreen, Row, SecondRankedPlayerCard, ThirdRankedPlayerCard, TopRankedPlayerCard } from "../../src/ui/leaderboard/LeaderboardScreen";
 import { DEVICE_KEY, PROFILE_KEY, QUEUE_KEY, leaderboardStore } from "../../src/ui/leaderboard/profile";
 import { ProfileStats } from "../../src/ui/leaderboard/ProfileSheet";
 import { OFFLINE_TEXT, ProblemPanel, SERVER_TEXT, problemOf, tooManyText } from "../../src/ui/leaderboard/Problem";
@@ -259,13 +259,31 @@ describe("the screens' markup", () => {
     expect(html).not.toContain("/avatars/");
   });
 
-  it("the top ranked player card says so, under the crown, with the wins as a big number", () => {
+  it("the top ranked player card wears the crown, says its tier only to screen readers, and shows the wins", () => {
     const html = renderToStaticMarkup(createElement(TopRankedPlayerCard, { row: row(1, { wins: 31 }), mine: false, onOpen: noop }));
     expect(html).toContain('class="lb-place lb-place-1 top-ranked-player-card"');
     expect(html).toContain('aria-label="Top ranked player. Rank 1, Player1, United Kingdom, 31 wins. Open profile."');
-    expect(html).toContain('<span class="lb-big-number lb-num">31</span><span class="lb-wins-label">wins</span>');
+    expect(html).toContain('<span class="lb-count">31</span><span class="lb-wins-label">wins</span>');
     expect(html).toContain("lb-place-crown");
-    expect(html).toContain('<span class="lb-place-label" aria-hidden="true">Top ranked player</span>');
+    // D63: the medal says the rank, so the tier's words are not shown on the card.
+    expect(html).not.toContain("lb-place-label");
+    expect(html.replace(/aria-label="[^"]*"/g, "")).not.toContain("Top ranked player");
+  });
+
+  it("the same medal on all three podium cards, the crown only on the first", () => {
+    const cards = [TopRankedPlayerCard, SecondRankedPlayerCard, ThirdRankedPlayerCard].map((card, index) =>
+      renderToStaticMarkup(createElement(card, { row: row(index + 1), mine: false, onOpen: noop })),
+    );
+    expect(cards.map((html) => html.match(/class="lb-medal lb-medal-(\w+)"/)?.[1])).toEqual(["gold", "silver", "bronze"]);
+    expect(cards.map((html) => html.includes("lb-place-crown"))).toEqual([true, false, false]);
+  });
+
+  it("the flag sits on the avatar, the same way on the podium and in the rows; no country, no flag", () => {
+    const podium = renderToStaticMarkup(createElement(SecondRankedPlayerCard, { row: row(2, { country: "PK" }), mine: false, onOpen: noop }));
+    const listRow = renderToStaticMarkup(createElement(Row, { row: row(8, { country: "PK" }), mine: false, onOpen: noop }));
+    for (const html of [podium, listRow]) expect(html).toMatch(/<span class="lb-pic [^"]*"[^>]*><span class="avatar[^"]*"[^>]*>.*?<\/span><span class="lb-pic-flag"><img class="lb-flag"/);
+    const noFlag = renderToStaticMarkup(createElement(Row, { row: row(9, { country: null }), mine: false, onOpen: noop }));
+    expect(noFlag).not.toContain("lb-pic-flag");
   });
 
   it("the profile shows the stats cards and wins by level, Strongest first", () => {

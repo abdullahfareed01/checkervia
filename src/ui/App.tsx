@@ -2,13 +2,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { AiLevel } from "../ai";
 import { useGame } from "../state/useGame";
-import { isCaptureMandatory, isGameInProgress, pieceCounts } from "../state/selectors";
+import { isGameInProgress, pieceCounts } from "../state/selectors";
 import { canGoBack, canGoForward, displayedPosition, moveList } from "../state/history";
 import type { MoveListItem } from "../state/history";
 import { AI_PLAYER, gameReducer } from "../state/gameReducer";
 import type { GameMode, GameOptions } from "../state/gameReducer";
+import { opponentOf } from "../engine";
 import type { Move, Position } from "../engine";
-import { AiMoveNote } from "./AiMoveNote";
+import { winChance } from "../ai/winChance";
+import { AiCoach, coachMessage } from "./AiCoach";
+import { aiMood } from "./aiMood";
 import { useStrongestGate } from "./ConsentDialog";
 import { Board } from "./Board";
 import { boardViewOf, cardFor, nameOf, winReasonOf } from "./gameView";
@@ -18,11 +21,9 @@ import { MenuSetup } from "./MenuSetup";
 import { ModeSelector } from "./ModeSelector";
 import { ResultDialog } from "./ResultDialog";
 import { RulesDialog } from "./RulesDialog";
-import { ChatBubble } from "./ChatBubble";
 import { LanguageInfo } from "./LanguageInfo";
 import { usePersonality } from "./usePersonality";
 import { reactionBubble } from "./bubble";
-import { LANDSCAPE_PHONE, useMediaQuery } from "./useMediaQuery";
 import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
 import { TermsDialog } from "./TermsDialog";
@@ -31,6 +32,8 @@ import { TopBar } from "./TopBar";
 import { ActionBar } from "./ActionBar";
 import type { EndAction } from "./ActionBar";
 import { GameMenu } from "./GameMenu";
+import { DocumentIcon, GearIcon, HomeIcon } from "./icons";
+import { LbCrown, LbTrophy, PersonIcon } from "./leaderboard/lbIcons";
 import type { MenuRun } from "./GameMenu";
 import { useAiExplanation } from "./useAiExplanation";
 import { useGameDuration, useResultPopup } from "./useResultPopup";
@@ -47,6 +50,8 @@ import { useProfileGate } from "./leaderboard/ProfileGate";
 import { ProfileScreen } from "./leaderboard/ProfileScreen";
 import { useLeaderboardGame } from "./leaderboard/useLeaderboardGame";
 import { WinStatus } from "./leaderboard/WinStatus";
+import { useLeaderboardProfile } from "./leaderboard/profile";
+import { WinChanceBar } from "./WinChanceBar";
 
 interface AppProps {
   initial?: GameOptions | undefined; // the first game's setup
@@ -133,9 +138,19 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const result = useResultPopup(state.winner, state.lastMove);
   const shown = displayedPosition(state);
   const moveKey = useAnimationKey(shown.index);
+  // Each side's chance of winning in the position on screen (D65): the side
+  // to move there, and 100% once the game is won on the board shown.
+  const shownToMove = shown.live ? state.currentPlayer : shown.player ? opponentOf(shown.player) : "black";
+  const shownWinner = shown.live ? state.winner : null;
+  const chance = useMemo(
+    () => (shownWinner ? (shownWinner === "black" ? 1 : 0) : winChance(shown.board, shownToMove)),
+    [shown.board, shownToMove, shownWinner],
+  );
+  // The player's chosen avatar on their card in games against the AI (D65).
+  const { profile } = useLeaderboardProfile();
+  const portrait = state.mode === "vs-ai" ? (profile?.avatar ?? null) : null;
   shownKey.current = moveKey;
   const why = useAiExplanation(state.mode, shown);
-  const landscapePhone = useMediaQuery(LANDSCAPE_PHONE);
   const [askLevel, setAskLevel] = useState(false);
   // The move list only changes when the history does (DEV-010).
   const moves = useMemo(() => moveList(state), [state.history]);
@@ -172,12 +187,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // New game and Resign are on the action bar, not in the Menu (D50).
   const menuItems = useMemo(
     () => [
-      { label: "How to play", onSelect: openRules },
-      { label: "Leaderboard", onSelect: () => setLeaderboardOpen(true) },
-      { label: "Profile", onSelect: () => setProfileOpen(true) },
-      { label: "Settings", onSelect: () => setSettingsOpen(true) },
-      { label: "Terms and notices", onSelect: openTerms },
-      ...(onMenu ? [{ label: "Main menu", onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
+      // The same symbols as the home menu where it has one.
+      { label: "How to play", icon: <LbCrown jewel="#e9a92c" />, onSelect: openRules },
+      { label: "Leaderboard", icon: <LbTrophy />, onSelect: () => setLeaderboardOpen(true) },
+      { label: "Profile", icon: <PersonIcon />, onSelect: () => setProfileOpen(true) },
+      { label: "Settings", icon: <GearIcon />, onSelect: () => setSettingsOpen(true) },
+      { label: "Terms and notices", icon: <DocumentIcon />, onSelect: openTerms },
+      ...(onMenu ? [{ label: "Main menu", icon: <HomeIcon />, onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
     ],
     [inProgress, openRules, openTerms, onMenu],
   );
@@ -216,12 +232,8 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   );
 
   // The AI's chat bubble (Change 3): typing dots while it thinks, then its
-  // reaction, until the player picks up a piece for their next move.
-  const [dismissedAt, setDismissedAt] = useState(0);
+  // reaction, until the player's next move is played (D65).
   const startedMove = state.selected !== null || state.pendingRoutes.length > 0;
-  useEffect(() => {
-    if (startedMove) setDismissedAt(state.history.length);
-  }, [startedMove, state.history.length]);
   // Greeting, idle lines, the resign hint and the end of the game (Change 4).
   // Idle lines wait while anything covers the board or the player is busy.
   const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open || leaderboardOpen || profileOpen || gating;
@@ -243,7 +255,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     (animatedLevel === "standard" || animatedLevel === "cinematic");
   const bubble = aiLanding
     ? { key: `thinking-${state.aiRequestId}`, text: null, tone: "banter" as const, why: false }
-    : reactionBubble(state, dismissedAt, personality);
+    : reactionBubble(state, personality);
   // The action bar's fourth button: Resign during a game, Result after it.
   const endAction: EndAction =
     state.winner === null
@@ -260,44 +272,57 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     why.open && why.explanation ? [...why.explanation.facts.map((fact) => fact.text), why.explanation.reason ?? ""].join(" ") : null;
   useVoice({ bubble: result.open ? null : bubble, level: state.aiLevel, startedMove, endLine, why: whyText });
   const speakTips = useSpeakTips(state.aiLevel);
-  // Chat bubbles can be hidden (Settings); the AI says the same either way.
+  // The AI under the board (D64): its robot with its mood and its bubble.
+  // Chat lines can be hidden (Settings; the AI's voice says the same either
+  // way), and then only the robot shows.
   const showBubbles = settings.chat.bubbles;
-  const chat = state.mode === "vs-ai" && showBubbles && (
-    <ChatBubble
-      message={result.open ? null : bubble}
-      placement={landscapePhone ? "side" : "card"}
-      whyOpen={why.open}
-      onWhy={why.toggleWhy}
-    />
-  );
+  // The robot types its next ask with its thinking face, and laughs while
+  // the ask is on screen (D69, D70).
+  // Bored of waiting after the second idle line: it dozes off (D72).
+  const mood = aiLanding
+    ? "thinking"
+    : personality.pressure
+      ? personality.pressure.text
+        ? "laughing"
+        : "thinking"
+      : personality.idle && personality.idle.count >= 2
+        ? "sleepy"
+        : aiMood(state, 1 - chance);
+  // After the game, the AI's last words stay in its bubble (D71); not read
+  // out again (the result panel did).
+  const lastWords =
+    state.winner && state.viewIndex === null && personality.end
+      ? { key: `end-${state.history.length}`, text: personality.end.line.text, tone: personality.end.line.tone, why: false, announce: false }
+      : null;
+  const coachLine = coachMessage(bubble, showBubbles, lastWords);
 
   return (
-    <main className={`app${state.mode === "vs-ai" && showBubbles ? " app-ai" : ""}`}>
+    <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}`}>
       <header className="topbar">
         <TopBar title="Checkervia" />
         <ModeSelector mode={state.mode} needsConfirmation={inProgress} onChange={chooseMode} />
       </header>
 
       <section className="game" aria-label="Game">
-        {cardFor(state, shown.board, "white", "top", openLanguage)}
-        {!landscapePhone && chat}
-        <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} onMoveBeat={onMoveBeat} onMoveLock={onMoveLock} />
-        {cardFor(state, shown.board, "black", "bottom")}
+        {cardFor(state, shown.board, "white", "top", openLanguage, mood)}
+        <div className="board-area">
+          <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} onMoveBeat={onMoveBeat} onMoveLock={onMoveLock} />
+          <WinChanceBar chance={chance} black={nameOf(state.mode, "black")} white={nameOf(state.mode, "white")} />
+        </div>
+        {cardFor(state, shown.board, "black", "bottom", undefined, undefined, portrait)}
       </section>
 
       <aside className="sidebar">
-        {landscapePhone && chat}
         <StatusBar
           currentPlayer={state.currentPlayer}
           winner={state.winner}
           winReason={winReasonOf(state)}
-          captureMandatory={isCaptureMandatory(state)}
           choosingRoute={state.pendingRoutes.length > 0}
           aiPhase={state.aiPhase}
           aiFailureReasons={state.aiFailureReasons}
           onRetryAi={retryAi}
         />
-        <AiMoveNote explanation={why.explanation} open={why.open} onToggle={why.toggleWhy} />
+        {state.mode === "vs-ai" && <AiCoach message={coachLine} mood={mood} whyOpen={why.open} onWhy={why.toggleWhy} />}
         <HistoryControls index={shown.index} total={shown.total} live={shown.live} moves={moves} nameOf={moveNameOf} onGo={goHistory} />
         <ActionBar
           menu={<GameMenu items={menuItems} setup={setup} onOpenChange={setMenuOpen} />}

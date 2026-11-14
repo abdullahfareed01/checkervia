@@ -181,11 +181,11 @@ describe("the chat bubble shows the reaction, in the colour of the engine's verd
   it("roast after a blunder, banter after an ordinary move", async () => {
     const blunder = [click(5, 4), click(4, 3)].reduce(gameReducer, createGameState({ mode: "vs-ai", board: trap }));
     const { after } = await aiTurn(blunder, '{"move": 1, "reason": "x", "reaction": "Thanks for the gift."}');
-    expect(reactionBubble(after, 0)).toEqual({ key: `move-${after.history.length - 1}`, text: "Thanks for the gift.", tone: "roast", why: true });
+    expect(reactionBubble(after)).toEqual({ key: `move-${after.history.length - 1}`, text: "Thanks for the gift.", tone: "roast", why: true });
 
     const calm = [click(5, 4), click(4, 5)].reduce(gameReducer, createGameState({ mode: "vs-ai", board: trap }));
     const ordinary = await aiTurn(calm, '{"move": 1, "reason": "x", "reaction": "Bold."}');
-    expect(reactionBubble(ordinary.after, 0)?.tone).toBe("banter");
+    expect(reactionBubble(ordinary.after)?.tone).toBe("banter");
   });
 });
 

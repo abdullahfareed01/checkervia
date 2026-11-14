@@ -1,5 +1,5 @@
-// Render checks for the AI's move note and what "Why?" shows (Change 2; the
-// look is checked by eye in the browser).
+// Render checks for the AI's move line in its bubble under the board (D64)
+// and what "Why?" shows (Change 2; the look is checked by eye in the browser).
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import { createGameState, gameReducer } from "../src/state/gameReducer";
 import type { GameAction, GameState } from "../src/state/gameReducer";
 import { displayedPosition } from "../src/state/history";
-import { AiMoveNote } from "../src/ui/AiMoveNote";
+import { AiCoach } from "../src/ui/AiCoach";
 import { WhyContent, WhySheet, hasWhy } from "../src/ui/WhyContent";
 import { explainShown } from "../src/ui/useAiExplanation";
 
@@ -24,14 +24,14 @@ function afterAiMove(reason: string | null): GameState {
   });
 }
 
-const note = (state: GameState, open = false) =>
-  renderToStaticMarkup(
-    createElement(AiMoveNote, {
-      explanation: explainShown(state.mode, displayedPosition(state)),
-      open,
-      onToggle: () => {},
-    }),
-  );
+// The AI row under the board with a reaction to the AI move on screen, and
+// Why? when that move has something to explain (D64, D65).
+const note = (state: GameState, open = false) => {
+  const explanation = explainShown(state.mode, displayedPosition(state));
+  if (!hasWhy(explanation)) return "";
+  const message = { key: "move", text: "Nice try.", tone: "banter" as const, why: true };
+  return renderToStaticMarkup(createElement(AiCoach, { message, mood: "neutral", whyOpen: open, onWhy: () => {} }));
+};
 
 describe("explainShown", () => {
   it("explains an AI move: label, the model's reason and engine facts", () => {
@@ -47,17 +47,19 @@ describe("explainShown", () => {
   });
 });
 
-describe("AiMoveNote", () => {
-  it("shows only the compact line and a collapsed Why? after an AI move", () => {
+describe("Why? in the bubble (D64, D65)", () => {
+  it("shows only the line and a collapsed Why? after an AI move, beside the robot", () => {
     const html = note(afterAiMove("Keeps the centre."));
-    expect(html).toContain("AI played");
-    expect(html).toMatch(/<button type="button" class="why-button" aria-expanded="false"[^>]*>Why\?<\/button>/);
+    expect(html).toContain("Nice try.");
+    expect(html).not.toContain("I played");
+    expect(html).toContain("coach-avatar");
+    expect(html).toMatch(/<button type="button" class="speech-why" aria-expanded="false"[^>]*>Why\?<\/button>/);
     expect(html).not.toContain("Keeps the centre.");
     expect(html).not.toContain("Checked by the game engine");
     expect(html).not.toContain("No reason");
   });
 
-  it("when open, says so with aria-expanded but adds nothing to the side panel (the answer floats)", () => {
+  it("when open, says so with aria-expanded but adds nothing under the board (the answer floats)", () => {
     const html = note(afterAiMove("Keeps the centre."), true);
     expect(html).toContain('aria-expanded="true"');
     expect(html).toContain('aria-controls="why-panel"');

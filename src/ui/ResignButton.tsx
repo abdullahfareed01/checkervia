@@ -23,6 +23,7 @@ export function ResignButton({ question, highlight, onResign }: ResignButtonProp
         <ConfirmDialog
           question={question}
           confirmLabel="Yes, resign"
+          icon={<FlagIcon />}
           onConfirm={() => {
             setAsking(false);
             onResign();

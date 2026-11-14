@@ -319,6 +319,7 @@ export function SettingsSheet({ onClose, onProfile }: { onClose: () => void; onP
           <ConfirmDialog
             question="Reset every setting to its default?"
             confirmLabel="Yes, reset"
+            cancelLabel="Cancel"
             onConfirm={() => {
               store.reset();
               setConfirmReset(false);

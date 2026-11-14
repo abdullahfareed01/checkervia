@@ -8,7 +8,6 @@ interface StatusBarProps {
   winner: Player | null;
   // Why the game ended, e.g. "White has no legal moves."
   winReason: string | null;
-  captureMandatory: boolean;
   choosingRoute: boolean;
   aiPhase: AiPhase;
   aiFailureReasons: readonly string[];
@@ -24,7 +23,8 @@ export function PlayerName({ player }: { player: Player }) {
   );
 }
 
-// Shown while the AI is working: the board is locked.
+// Shown while the AI is working: the board is locked. No hint line under
+// it (D65): a line that comes and goes moved the AI's bubble below it.
 function AiThinking() {
   return (
     <section className="status" aria-live="polite">
@@ -34,7 +34,6 @@ function AiThinking() {
           AI is thinking…
         </span>
       </p>
-      <p className="status-hint">White is choosing a move. The board is locked.</p>
     </section>
   );
 }
@@ -66,12 +65,14 @@ function AiFailed({ reasons, onRetry }: { reasons: readonly string[]; onRetry: (
   );
 }
 
-// Shows whose turn it is, or the winner, plus any hint for the current turn.
+// Shows whose turn it is, or the winner. The only hint during a turn is for
+// choosing between two routes (rare, and needed to finish the move). The
+// mandatory capture line is gone (D65): the red rings say it, and its coming
+// and going moved the AI's bubble.
 export const StatusBar = memo(function StatusBar({
   currentPlayer,
   winner,
   winReason,
-  captureMandatory,
   choosingRoute,
   aiPhase,
   aiFailureReasons,
@@ -100,15 +101,11 @@ export const StatusBar = memo(function StatusBar({
           <PlayerName player={currentPlayer} /> to move
         </span>
       </p>
-      {choosingRoute ? (
+      {choosingRoute && (
         <p className="status-hint">
           Two routes reach that square. Click the next square the piece should land on.
         </p>
-      ) : captureMandatory ? (
-        <p className="status-hint status-hint-capture">
-          Capture is mandatory. Pieces that must capture have a red ring.
-        </p>
-      ) : null}
+      )}
     </section>
   );
 });

@@ -22,6 +22,7 @@ export function NewGameButton({ needsConfirmation, onNewGame }: NewGameButtonPro
         <ConfirmDialog
           question="Start a new game? The current game will be lost."
           confirmLabel="Yes, new game"
+          icon={<RestartIcon />}
           onConfirm={() => {
             setAsking(false);
             onNewGame();

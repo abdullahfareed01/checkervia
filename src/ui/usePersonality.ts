@@ -7,12 +7,12 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { analyze } from "../ai/analyzer";
 import { gameTips } from "../ai/endgame";
 import type { GameTip, PlayedPosition } from "../ai/endgame";
-import { fillLine, pickLine, rememberLine } from "../ai/lines";
+import { fillLine, pickLine, rememberLine, withWinLaugh } from "../ai/lines";
 import type { LineContext } from "../ai/lines";
 import { AI_PLAYER } from "../state/gameReducer";
 import type { GameState } from "../state/gameReducer";
 import type { BubbleTone } from "./ChatBubble";
-import { IDLE_EVERY_MS, createIdleTimer } from "./idleTimer";
+import { IDLE_EVERY_MS, createIdleTimer, createPressureTimer } from "./idleTimer";
 import { nextRound, readSession, withResult, writeSession } from "./session";
 
 export interface EndLine {
@@ -24,6 +24,8 @@ export interface EndLine {
 export function endContext(state: GameState): LineContext {
   if (state.resignedBy) return "resigned";
   if (state.winner !== AI_PLAYER) return "playerWon";
+  // The engine proved it lost and the player played on anyway (D69).
+  if (state.history.some((entry) => entry.provenLoss)) return "aiWonStubborn";
   const blundered = state.history.some((entry) => entry.judgement?.verdict === "blunder");
   return blundered ? "aiWonBlunder" : "aiWon";
 }
@@ -56,6 +58,16 @@ function idleEvery(): number {
 }
 
 const TONES: Partial<Record<LineContext, BubbleTone>> = { aiWonBlunder: "roast", playerWon: "respect" };
+
+/** What the resign pressure shows now: nothing during the AI's own line. */
+function pressurePart(now: { count: number; showing: boolean; text: string | null } | null, turn: number) {
+  if (!now || (now.count === 0 && now.showing)) return null;
+  const count = now.showing ? now.count : now.count + 1;
+  return { key: `push-${turn}-${count}`, text: now.showing ? now.text : null, count };
+}
+
+// The AI's wins, whose last line ends with a random laugh (D69).
+const AI_WINS: readonly LineContext[] = ["aiWon", "aiWonBlunder", "aiWonStubborn"];
 
 // True while the page is on screen (the idle timer pauses otherwise).
 function usePageVisible(): boolean {
@@ -108,8 +120,6 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
     idleEvery(),
   );
   const pageVisible = usePageVisible();
-  const idleActive = ai && idleAllowed && pageVisible;
-  useEffect(() => timer.current!.update(idleActive, turn), [idleActive, turn]);
   useEffect(() => () => timer.current!.stop(), []);
   // An idle line belongs to its turn, and goes when the player starts moving.
   useEffect(() => {
@@ -123,6 +133,32 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
   useEffect(() => {
     if (ai && !hint && last.provenLoss && !state.winner) setHint({ index: state.history.length - 1, text: say("resignHint") });
   }, [last]);
+  const hintActive = hint !== null && !state.winner;
+
+  // B: the idle timer runs on the player's turn, except while the resign
+  // pressure speaks instead.
+  const idleActive = ai && idleAllowed && pageVisible && !hintActive;
+  useEffect(() => timer.current!.update(idleActive, turn), [idleActive, turn]);
+
+  // F: the resign pressure (D69, D70). Once the position is proven lost, on
+  // each of the player's turns: the AI's line for its move stays 10 seconds,
+  // then the AI types (the dots wave) for 5, then a new ask to resign for 10,
+  // typing again, and so on until the player plays (picking up a piece
+  // pauses it).
+  const [pressure, setPressure] = useState<{ turn: number; count: number; showing: boolean; text: string | null }>({ turn, count: 0, showing: true, text: null });
+  const pressureTimer = useRef<ReturnType<typeof createPressureTimer> | null>(null);
+  pressureTimer.current ??= createPressureTimer((next) =>
+    setPressure({
+      turn: turnRef.current,
+      count: next.count,
+      showing: next.showing,
+      text: next.showing && next.count > 0 ? sayRef.current("resignPush") : null,
+    }),
+  );
+  const pressureActive = ai && hintActive && idleAllowed && pageVisible;
+  useEffect(() => pressureTimer.current!.update(pressureActive, turn), [pressureActive, turn]);
+  useEffect(() => () => pressureTimer.current!.stop(), []);
+  const pressureNow = hintActive && pressure.turn === turn ? pressure : null;
 
   // E: the end of the game, recorded once per game in this tab.
   const [end, setEnd] = useState<{ line: EndLine; tips: GameTip[] | null } | null>(null);
@@ -134,7 +170,8 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
       writeSession(withResult(readSession(), state.winner !== AI_PLAYER));
     }
     const context = endContext(state);
-    setEnd({ line: { text: say(context), tone: TONES[context] ?? "banter" }, tips: null });
+    const text = AI_WINS.includes(context) ? withWinLaugh(say(context), state.aiLevel) : say(context);
+    setEnd({ line: { text, tone: TONES[context] ?? "banter" }, tips: null });
     if (state.winner !== AI_PLAYER) return undefined;
     let cancelled = false;
     void gameTips(playedPositions(state), { player: state.stats.black.kingsMade, ai: state.stats.white.kingsMade }, analyze).then((tips) => {
@@ -149,7 +186,11 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
     greeting,
     idle: idle && idle.turn === turn ? idle : null,
     hint,
-    hintActive: hint !== null && !state.winner,
+    hintActive,
+    // An ask to resign on screen, or the dots while the AI types the next
+    // one (D70: `text` null). The dots and the ask they become share a key,
+    // so the bubble turns from one into the other without popping twice.
+    pressure: pressurePart(pressureNow, turn),
     end,
   };
 }

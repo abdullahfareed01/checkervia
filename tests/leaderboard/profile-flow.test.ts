@@ -14,6 +14,7 @@ import { AVATAR_CATEGORIES, avatarsIn } from "../../src/ui/leaderboard/Avatar";
 import avatarList from "../../src/ui/leaderboard/avatarList.json";
 import { CountryPicker, NO_FLAG_LABEL, choiceLabel, matchCountries, opensOnKey, searchKeyAction } from "../../src/ui/leaderboard/CountryPicker";
 import { gateStep } from "../../src/ui/leaderboard/ProfileGate";
+import { InfoDialog, ProfileRules, RankingRules } from "../../src/ui/leaderboard/InfoDialog";
 import { BROWSER_NOTICE, PUBLIC_NOTICE, ProfileScreen, renameDateText, saveProblemText } from "../../src/ui/leaderboard/ProfileScreen";
 import { QUEUE_KEY, QUEUE_MAX_AGE_MS, leaderboardStore } from "../../src/ui/leaderboard/profile";
 import { OFFLINE_TEXT } from "../../src/ui/leaderboard/Problem";
@@ -39,6 +40,8 @@ afterEach(() => setLeaderboardTransport(null));
 const TOKEN = "B".repeat(43);
 const PROFILE = { username: "Fan_One", country: "PK", avatar: "a07", token: TOKEN };
 const noop = () => {};
+// Hyphens and dashes never appear in what players read.
+const DASH = /[-‐-―−]/;
 const source = (path: string) => readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
 const gameId = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 
@@ -101,16 +104,44 @@ describe("the first game against the AI", () => {
     expect(PUBLIC_NOTICE).toBe("Your username, flag and wins are public on the leaderboard.");
   });
 
-  it("with a profile the same screen edits it: username, avatar and flag, with the rename rules", () => {
+  // D64: the own profile opens as a view; a pencil on the avatar opens the form.
+  it("with a profile the screen opens as a view, with a pencil on the avatar and no form", () => {
     leaderboardStore.setProfile(PROFILE);
     const html = renderToStaticMarkup(createElement(ProfileScreen, { onClose: noop, onTerms: noop }));
-    expect(html).toContain("Edit your profile");
-    expect(html).toContain('value="Fan_One"');
-    expect(html).toContain("once every 7 days");
-    expect(html).toContain("reserved for you for 30 days");
-    expect(html).toContain('role="radiogroup"');
+    expect(html).toContain("Your profile");
+    expect(html).toMatch(/<button type="button" class="lb-hero-edit pf-id-edit" aria-label="Edit your profile">/);
+    expect(html).toContain(">Fan_One<");
     expect(html).toContain(">Pakistan<");
-    expect(html).toMatch(/disabled=""[^>]*>Save changes<\/button>/);
+    // No edit container until the pencil is tapped.
+    expect(html).not.toContain("Save changes");
+    expect(html).not.toContain('role="radiogroup"');
+    expect(html).not.toContain("<input");
+    // The screen header holds the only close button; the profile has no form or notice panel.
+    expect(html).not.toContain("pf-notice");
+  });
+
+  it("the rules behind the (i): the username, flag and avatar, readable and complete", () => {
+    const text = renderToStaticMarkup(createElement(ProfileRules, { onTerms: noop }));
+    for (const phrase of ["public on the leaderboard", "3 to 16 letters", "do not use your real name", "once every 7 days", "reserved for you for 30 days", "never guessed from your connection", "Prefer not to show a flag", "never sent or stored", "Clearing your browser data loses it", "Read the full Terms and notices"]) {
+      expect(text).toContain(phrase);
+    }
+    expect(text.replace(/<[^>]+>/g, " ")).not.toMatch(DASH);
+  });
+
+  it("the ranking rules behind the (i) on the leaderboard, with the tie rules and an example", () => {
+    const text = renderToStaticMarkup(createElement(RankingRules));
+    for (const phrase of ["Most wins first", "Same wins? The quicker best win ranks higher", "fewest moves of your own", "reached that number of wins first", "Example:", "every Monday at 00:00 UTC", "on the 1st at 00:00 UTC"]) {
+      expect(text).toContain(phrase);
+    }
+    expect(text.replace(/<[^>]+>/g, " ")).not.toMatch(DASH);
+    const dialog = renderToStaticMarkup(createElement(InfoDialog, { title: "How the ranking works", onClose: noop, children: createElement(RankingRules) }));
+    expect(dialog).toMatch(/role="dialog" aria-modal="true" aria-labelledby="[^"]+-title"/);
+    expect(dialog).toContain('aria-label="Close"');
+    expect(dialog).toContain(">Got it<");
+    // The screen offers it from an (i) button; the old one line tie note is gone.
+    const board = source("src/ui/leaderboard/LeaderboardScreen.tsx");
+    expect(board).toContain('<InfoButton label="How the ranking works"');
+    expect(board).not.toContain("lb-tie-note");
   });
 
   it("says when the next rename is allowed, and uses the three shared messages for problems", () => {

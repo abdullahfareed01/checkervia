@@ -39,7 +39,8 @@
 }
 
 :root {
-  --s: clamp(0.72px, calc(100vw / 600), 1px);
+  /* One mockup pixel, from the width and (for short windows) the height. */
+  --s: clamp(0.72px, min(calc(100vw / 600), calc(100vh / 1000)), 1px);
   --lb-sans: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
   --lb-serif: "Fraunces", Georgia, "Times New Roman", serif;
   --lb-numbers: "Checkervia Numerals", "Fraunces", Georgia, serif;
@@ -90,9 +91,7 @@
 
 /* Every count and rank: lining tabular figures, never wrapped. */
 .lb-num,
-.lb-big-number,
 .lb-rank,
-.lb-row-wins,
 .lb-stat-number,
 .lb-levels td {
   font-family: var(--lb-numbers);
@@ -104,7 +103,6 @@
 .lb-backdrop :focus-visible,
 .lb-sheet-backdrop :focus-visible,
 .lb-win-status :focus-visible,
-.home-profile:focus-visible,
 .cp-panel :focus-visible {
   outline: 3px solid var(--lb-focus);
   outline-offset: 2px;
@@ -386,9 +384,9 @@
 .lb-tabs {
   display: flex;
   gap: calc(var(--s) * 4);
-  padding: calc(var(--s) * 6);
+  padding: 4px;
   border: 1.5px solid #5e3d22;
-  border-radius: calc(var(--s) * 18);
+  border-radius: calc(var(--s) * 16);
   background: linear-gradient(180deg, #24150b, #2e1b0e);
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(255, 210, 150, 0.08);
 }
@@ -400,14 +398,14 @@
   gap: calc(var(--s) * 8);
   flex: 1 1 auto;
   min-width: 0;
-  min-height: max(48px, calc(var(--s) * 56));
+  min-height: 44px;
   padding: 0 calc(var(--s) * 8);
   border: 0;
-  border-radius: calc(var(--s) * 13);
+  border-radius: calc(var(--s) * 12);
   background: transparent;
   color: var(--lb-text);
   font-family: var(--lb-sans);
-  font-size: max(12.5px, calc(var(--s) * 19));
+  font-size: max(13px, calc(var(--s) * 17));
   font-weight: 700;
   cursor: pointer;
 }
@@ -427,8 +425,8 @@
 }
 .lb-tab-icon {
   flex: none;
-  width: max(16px, calc(var(--s) * 26));
-  height: max(16px, calc(var(--s) * 24));
+  width: max(16px, calc(var(--s) * 22));
+  height: max(16px, calc(var(--s) * 20));
 }
 .lb-tab-name {
   min-width: 0;
@@ -436,24 +434,26 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+/* A flat gold fill, no glow: the strongest glow belongs to the champion (D63). */
 .lb-tab[aria-selected="true"] {
   z-index: 1;
-  margin-block: calc(var(--s) * -3);
-  background: var(--lb-gold-fill);
+  background: linear-gradient(180deg, #fbd06b, #eab145);
   color: var(--lb-gold-text);
   font-weight: 800;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65), 0 0 0 1.5px #ffe7a0, 0 0 calc(var(--s) * 20) rgba(255, 190, 70, 0.75);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
 }
 .lb-tab[aria-selected="true"] .lb-tab-icon {
   filter: brightness(0.35) sepia(1) saturate(3) hue-rotate(-10deg);
 }
 
-/* Periods: pills; the chosen one is gold. Real radio buttons inside. */
+/* Periods: small outlined pills under the level tabs; the chosen one is
+   outlined in gold, quieter than the chosen level. Real radio buttons
+   inside. The pill is 36px, its label 44px, so the target stays 44px. */
 .lb-periods {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: calc(var(--s) * 10);
-  margin: calc(var(--s) * 22) 0 0;
+  gap: calc(var(--s) * 8);
+  margin: calc(var(--s) * 6) 0 0;
   padding: 0;
   border: 0;
   min-width: 0;
@@ -461,6 +461,7 @@
 .lb-period {
   position: relative;
   min-width: 0;
+  padding-block: 4px;
 }
 .lb-period input {
   position: absolute;
@@ -475,32 +476,28 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: calc(var(--s) * 10);
-  min-height: max(48px, calc(var(--s) * 52));
+  gap: calc(var(--s) * 8);
+  min-height: 36px;
   padding: 0 calc(var(--s) * 10);
-  border: 1.5px solid #7a5638;
+  border: 1px solid #6a4a30;
   border-radius: 999px;
-  background: linear-gradient(180deg, #45291a, #34200f);
+  background: rgba(0, 0, 0, 0.18);
   color: var(--lb-text);
-  font-size: max(12.5px, calc(var(--s) * 19));
+  font-size: max(13px, calc(var(--s) * 16));
   font-weight: 700;
   white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.1);
   pointer-events: none;
 }
 .lb-period-icon {
   flex: none;
-  width: calc(var(--s) * 26);
-  height: calc(var(--s) * 26);
+  width: calc(var(--s) * 20);
+  height: calc(var(--s) * 20);
 }
 .lb-period input:checked + .lb-period-face {
-  border-color: #ffd977;
-  background: var(--lb-gold-fill);
-  color: var(--lb-gold-text);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6), 0 0 calc(var(--s) * 14) rgba(255, 190, 70, 0.55);
-}
-.lb-period input:checked + .lb-period-face .lb-period-icon {
-  filter: brightness(0.35) sepia(1) saturate(3) hue-rotate(-10deg);
+  border-color: #e8b24e;
+  background: rgba(244, 197, 92, 0.16);
+  color: #ffe3a3;
+  font-weight: 800;
 }
 .lb-period input:focus-visible + .lb-period-face {
   outline: 3px solid var(--lb-focus);
@@ -513,19 +510,22 @@
   justify-content: center;
   gap: calc(var(--s) * 10);
   min-height: 1.5em;
-  margin: calc(var(--s) * 16) 0 calc(var(--s) * 8);
+  margin: calc(var(--s) * 4) 0 0;
   color: var(--lb-soft);
-  font-size: max(13px, calc(var(--s) * 18));
+  font-size: 13px;
   font-weight: 700;
   text-align: center;
 }
 .lb-resets-laurel {
   flex: none;
-  width: calc(var(--s) * 16);
-  height: calc(var(--s) * 26);
+  width: 11px;
+  height: 18px;
 }
 
-/* ---------- The podium ---------- */
+/* ---------- The podium (D63) ----------
+   The same medal for all three places; the crown only for the first, whose
+   card stands 16px higher. The strongest glow is the champion's alone: the
+   second and third cards keep their metal rims without a glow. */
 
 .lb-panel {
   min-height: 200px;
@@ -533,8 +533,8 @@
 
 .lb-podium-stage {
   position: relative;
-  margin: calc(var(--s) * 12) 0 calc(var(--s) * 18);
-  padding-bottom: calc(var(--s) * 40);
+  margin: 0 0 calc(var(--s) * 10);
+  padding-bottom: calc(var(--s) * 28);
 }
 .lb-podium {
   position: relative;
@@ -545,19 +545,19 @@
   align-items: end;
   gap: calc(var(--s) * 10);
   margin: 0;
-  padding: calc(var(--s) * 86) 0 0;
+  padding: calc(var(--s) * 80) 0 0;
   list-style: none;
 }
 /* Warm light behind the champion. */
 .lb-podium::before {
   content: "";
   position: absolute;
-  left: 18%;
-  right: 18%;
+  left: 22%;
+  right: 22%;
   top: 0;
   bottom: 10%;
   z-index: -1;
-  background: radial-gradient(closest-side, rgba(255, 176, 60, 0.6), rgba(255, 150, 40, 0.18) 60%, transparent);
+  background: radial-gradient(closest-side, rgba(255, 176, 60, 0.5), rgba(255, 150, 40, 0.14) 60%, transparent);
   pointer-events: none;
 }
 .lb-place {
@@ -577,75 +577,78 @@
 .lb-place-button {
   --tier: #f6c64f;
   --tier-deep: #b9771c;
-  --tier-glow: rgba(255, 186, 64, 0.7);
   position: relative;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   align-items: center;
   width: 100%;
-  min-height: calc(var(--s) * 238);
-  padding: calc(var(--s) * 34) calc(var(--s) * 6) calc(var(--s) * 14);
-  border: calc(var(--s) * 3.5) solid var(--tier);
-  border-radius: calc(var(--s) * 24);
+  min-height: calc(var(--s) * 192);
+  padding: calc(var(--s) * 32) calc(var(--s) * 6) calc(var(--s) * 12);
+  border: calc(var(--s) * 3) solid var(--tier);
+  border-radius: calc(var(--s) * 22);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.07), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), transparent 40%),
     linear-gradient(180deg, #3f2716, #24150b);
   box-shadow:
     inset 0 0 0 calc(var(--s) * 2) rgba(0, 0, 0, 0.35),
     inset 0 0 calc(var(--s) * 18) rgba(0, 0, 0, 0.5),
-    inset 0 calc(var(--s) * 2) 0 rgba(255, 255, 255, 0.18),
-    0 0 calc(var(--s) * 12) var(--tier-glow),
-    0 0 calc(var(--s) * 34) var(--tier-glow),
+    inset 0 calc(var(--s) * 2) 0 rgba(255, 255, 255, 0.16),
     0 8px 18px rgba(0, 0, 0, 0.45);
   color: var(--lb-cream);
   font: inherit;
   text-align: center;
   cursor: pointer;
 }
+/* The champion: 16px taller with the bottoms in line, so it stands higher. */
 .lb-place-1 .lb-place-button {
-  --tier-glow: rgba(255, 186, 56, 1);
-  min-height: calc(var(--s) * 290);
-  padding-top: calc(var(--s) * 36);
+  min-height: calc(var(--s) * 192 + 16px);
   background:
     linear-gradient(180deg, rgba(255, 210, 120, 0.16), transparent 45%),
     linear-gradient(180deg, #4a2d14, #2a170a);
+  box-shadow:
+    inset 0 0 0 calc(var(--s) * 2) rgba(0, 0, 0, 0.35),
+    inset 0 0 calc(var(--s) * 18) rgba(0, 0, 0, 0.5),
+    inset 0 calc(var(--s) * 2) 0 rgba(255, 255, 255, 0.18),
+    0 0 calc(var(--s) * 12) rgba(255, 186, 56, 0.9),
+    0 0 calc(var(--s) * 32) rgba(255, 186, 56, 0.55),
+    0 8px 18px rgba(0, 0, 0, 0.45);
 }
 .second-ranked-player-card .lb-place-button {
-  --tier: #e3e9f0;
+  --tier: #d5dce5;
   --tier-deep: #8a95a6;
-  --tier-glow: rgba(230, 238, 248, 0.55);
 }
 .third-ranked-player-card .lb-place-button {
-  --tier: #e8935a;
+  --tier: #d9864f;
   --tier-deep: #9a4a20;
-  --tier-glow: rgba(240, 140, 80, 0.62);
 }
 .lb-place-button:hover {
   filter: brightness(1.08);
 }
 
+/* The crown sits on the champion's medal. */
 .lb-place-crown {
   position: absolute;
   z-index: 2;
   left: 50%;
-  top: calc(var(--s) * -84);
-  width: calc(var(--s) * 100);
-  height: calc(var(--s) * 68);
+  top: calc(var(--s) * -78);
+  width: calc(var(--s) * 92);
+  height: calc(var(--s) * 62);
   transform: translateX(-50%);
-  filter: drop-shadow(0 0 calc(var(--s) * 10) rgba(255, 180, 60, 0.7));
+  filter: drop-shadow(0 0 calc(var(--s) * 8) rgba(255, 180, 60, 0.6));
   pointer-events: none;
 }
 
-/* The medal: a metal coin with the rank, on the card's top edge. */
+/* The medal: a metal coin with the rank on the card's top edge, ribbon
+   tails under it, the same size and place on all three cards. */
 .lb-medal {
   position: absolute;
   left: 50%;
   top: 0;
   display: grid;
   place-items: center;
-  width: calc(var(--s) * 48);
-  height: calc(var(--s) * 48);
+  width: calc(var(--s) * 44);
+  height: calc(var(--s) * 44);
   min-width: 30px;
   min-height: 30px;
   border-radius: 50%;
@@ -654,7 +657,7 @@
   border: 2px solid #fff0b8;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   color: #4a2a06;
-  font-size: max(17px, calc(var(--s) * 28));
+  font-size: max(16px, calc(var(--s) * 25));
   line-height: 1;
 }
 .lb-medal-silver {
@@ -670,7 +673,6 @@
 .lb-medal .lb-num {
   transform: translateY(-0.04em);
 }
-/* Two ribbon tails hanging under the coin, as in the mockup. */
 .lb-medal::before,
 .lb-medal::after {
   content: "";
@@ -698,91 +700,82 @@
   --tail: #e48b4f;
   --tail-deep: #8e431a;
 }
-/* The champion's coin sits under the crown; its tails stay hidden behind it. */
-.lb-place-1 .lb-medal::before,
-.lb-place-1 .lb-medal::after {
-  --tail: #f2b543;
+
+/* The avatar with its flag on the lower right edge, on the podium and in
+   the rows alike: one flag size (20px) and one place. */
+.lb-pic {
+  position: relative;
+  flex: none;
 }
-.lb-place-1 .lb-medal {
-  width: calc(var(--s) * 54);
-  height: calc(var(--s) * 54);
-  top: calc(var(--s) * -4);
+.lb-pic-flag {
+  position: absolute;
+  right: -3px;
+  bottom: -1px;
+  display: flex;
+  line-height: 0;
+}
+.lb-pic-flag .lb-flag {
+  width: 18px;
+  min-width: 18px;
+  height: 18px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  object-fit: cover;
+  outline: none;
+  box-shadow: 0 0 0 1.5px rgba(255, 244, 220, 0.9), 0 1px 3px rgba(0, 0, 0, 0.45);
 }
 
-.lb-place-avatar {
-  margin-bottom: calc(var(--s) * 8);
-}
 .lb-place-avatar .avatar {
-  width: calc(var(--s) * 66) !important;
-  height: calc(var(--s) * 66) !important;
+  width: calc(var(--s) * 54) !important;
+  height: calc(var(--s) * 54) !important;
   min-width: 40px;
   min-height: 40px;
 }
 .lb-place-1 .lb-place-avatar .avatar {
-  width: calc(var(--s) * 82) !important;
-  height: calc(var(--s) * 82) !important;
+  width: calc(var(--s) * 66) !important;
+  height: calc(var(--s) * 66) !important;
+  min-width: 48px;
+  min-height: 48px;
 }
 
-.lb-place-flag .lb-flag {
-  width: calc(var(--s) * 30);
-}
 .lb-place-name {
   display: block;
   max-width: 100%;
-  margin-top: calc(var(--s) * 4);
-  font-size: max(15px, calc(var(--s) * 23));
+  margin-top: calc(var(--s) * 8);
+  font-size: max(14px, calc(var(--s) * 20));
   font-weight: 800;
-  line-height: 1.2;
+  line-height: 1.25;
   color: #fff3dc;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
 }
-/* "Top ranked player" (a pill in gold, like the mockup's "Champion") and
-   the others' words in their metal, two lines at most on narrow phones. */
-.lb-place-label {
-  max-width: 100%;
-  margin-top: calc(var(--s) * 6);
-  padding: 2px calc(var(--s) * 10) 3px;
-  border-radius: 999px;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--tier) 92%, white), var(--tier-deep));
-  color: #2c1704;
-  font-size: 12px;
-  font-weight: 800;
-  line-height: 1.2;
-  text-wrap: balance;
+.lb-place-1 .lb-place-name {
+  font-size: max(15px, calc(var(--s) * 22));
 }
-.lb-place-1 .lb-place-label {
-  font-size: max(12px, calc(var(--s) * 15));
-}
-.lb-place-2 .lb-place-label,
-.lb-place-3 .lb-place-label {
-  padding-inline: 0;
-  background: none;
-  color: color-mix(in srgb, var(--tier) 80%, white);
-  letter-spacing: 0;
-}
+/* The wins on one line ("24 wins"), in Nunito like every other word (D63). */
 .lb-place-wins {
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
   margin-top: auto;
-  padding-top: calc(var(--s) * 6);
+  padding-top: calc(var(--s) * 4);
+  white-space: nowrap;
 }
-.lb-big-number {
-  font-size: max(26px, calc(var(--s) * 40));
+.lb-count {
+  font-size: max(20px, calc(var(--s) * 28));
+  font-weight: 800;
   line-height: 1;
   color: #fff3dc;
-  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.5);
 }
-.lb-place-1 .lb-big-number {
-  font-size: max(30px, calc(var(--s) * 46));
+.lb-place-1 .lb-count {
+  font-size: max(23px, calc(var(--s) * 34));
 }
 .lb-wins-label {
-  margin-top: 2px;
-  font-size: max(12px, calc(var(--s) * 16));
-  font-weight: 900;
+  font-size: 12px;
+  font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #fff3dc;
+  color: var(--lb-soft);
 }
 
 .lb-place-open .lb-place-button {
@@ -798,28 +791,26 @@
   font-weight: 800;
 }
 
-/* The pedestal under the podium: a gold rimmed stage. */
+/* The pedestal under the podium: a stage with a plain gold rim, no glow. */
 .lb-stage {
   position: absolute;
   left: 1%;
   right: 1%;
   bottom: 0;
-  height: calc(var(--s) * 78);
+  height: calc(var(--s) * 60);
   border-radius: 50%;
   background:
-    radial-gradient(55% 60% at 50% 35%, rgba(255, 210, 130, 0.6), transparent 70%),
-    linear-gradient(180deg, #c07c36 0%, #8a5427 28%, #5e3718 62%, #3c2210 100%);
-  border-top: calc(var(--s) * 4) solid #ffd27a;
+    radial-gradient(55% 60% at 50% 35%, rgba(255, 210, 130, 0.4), transparent 70%),
+    linear-gradient(180deg, #a86b2f 0%, #7a4a22 28%, #553216 62%, #3c2210 100%);
+  border-top: calc(var(--s) * 3) solid #d9a24f;
   box-shadow:
     inset 0 calc(var(--s) * -10) calc(var(--s) * 14) rgba(0, 0, 0, 0.4),
-    /* the front face of the stage, with a gold edge at its foot */
-    0 calc(var(--s) * 14) 0 calc(var(--s) * -3) #4a2810,
-    0 calc(var(--s) * 17) 0 calc(var(--s) * -3) #e9a945,
-    0 0 calc(var(--s) * 30) rgba(255, 170, 60, 0.55),
-    0 0 calc(var(--s) * 60) rgba(255, 150, 40, 0.25),
+    /* the front face of the stage, with a darker gold edge at its foot */
+    0 calc(var(--s) * 12) 0 calc(var(--s) * -3) #4a2810,
+    0 calc(var(--s) * 14) 0 calc(var(--s) * -3) #9c6b2e,
     0 12px 22px rgba(0, 0, 0, 0.55);
 }
-/* The polished top: a soft white sheen, brightest in the middle. */
+/* The polished top: a soft sheen, brightest in the middle. */
 .lb-stage::before {
   content: "";
   position: absolute;
@@ -828,52 +819,37 @@
   top: 4%;
   height: 46%;
   border-radius: 50%;
-  background: radial-gradient(50% 60% at 50% 40%, rgba(255, 246, 220, 0.5), rgba(255, 230, 170, 0.12) 60%, transparent 75%);
-}
-/* A bright reflection running along the rim. */
-.lb-stage::after {
-  content: "";
-  position: absolute;
-  left: 4%;
-  right: 4%;
-  top: calc(var(--s) * -4);
-  height: calc(var(--s) * 4);
-  border-radius: 50%;
-  background: linear-gradient(90deg, transparent, rgba(255, 250, 230, 0.95) 30%, #fffbe8 50%, rgba(255, 250, 230, 0.95) 70%, transparent);
-  filter: blur(0.5px);
+  background: radial-gradient(50% 60% at 50% 40%, rgba(255, 246, 220, 0.35), rgba(255, 230, 170, 0.08) 60%, transparent 75%);
 }
 
-/* ---------- The list ---------- */
+
+/* ---------- The list (D63: slim rows, soft borders) ---------- */
 
 .lb-own-place {
-  margin: 0 0 calc(var(--s) * 14);
+  margin: 0 0 calc(var(--s) * 10);
 }
 .lb-own-place-label {
-  margin: 0 0 6px;
+  margin: 0 0 4px;
   color: var(--lb-soft);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .lb-list-head,
 .lb-row {
   display: grid;
-  grid-template-columns: max(44px, calc(var(--s) * 56)) minmax(0, 1fr) auto;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
   align-items: center;
-  gap: calc(var(--s) * 12);
+  gap: 10px;
 }
+/* The column names: small capitals over the rows, no box. */
 .lb-list-head {
-  min-height: calc(var(--s) * 52);
-  padding: 0 calc(var(--s) * 24) 0 calc(var(--s) * 20);
-  margin-bottom: calc(var(--s) * 10);
-  border: 1.5px solid #8a5d30;
-  border-radius: calc(var(--s) * 18);
-  background: linear-gradient(180deg, #3d2413, #2a170b);
-  box-shadow: inset 0 1px 0 rgba(255, 210, 150, 0.12);
-  color: #f6dfb3;
-  font-size: max(13px, calc(var(--s) * 19));
+  min-height: 26px;
+  padding: 0 17px 0 7px;
+  color: var(--lb-dim);
+  font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 .lb-list-head span:first-child {
@@ -881,7 +857,7 @@
 }
 .lb-list {
   display: grid;
-  gap: calc(var(--s) * 9);
+  gap: 6px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -889,12 +865,12 @@
 .lb-row {
   box-sizing: border-box;
   width: 100%;
-  min-height: max(52px, calc(var(--s) * 56));
-  padding: calc(var(--s) * 6) calc(var(--s) * 24) calc(var(--s) * 6) calc(var(--s) * 8);
-  border: 1.5px solid #573822;
-  border-radius: calc(var(--s) * 15);
-  background: linear-gradient(180deg, #33200f, #261609);
-  box-shadow: inset 0 1px 0 rgba(255, 210, 150, 0.07), 0 2px 5px rgba(0, 0, 0, 0.35);
+  min-height: 52px;
+  padding: 4px 16px 4px 6px;
+  border: 1px solid rgba(201, 146, 76, 0.24);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #301d0e, #261609);
+  box-shadow: inset 0 1px 0 rgba(255, 210, 150, 0.05);
   color: var(--lb-cream);
   font: inherit;
   text-align: left;
@@ -907,43 +883,43 @@
   justify-self: center;
   display: grid;
   place-items: center;
-  width: max(36px, calc(var(--s) * 42));
-  height: max(36px, calc(var(--s) * 42));
-  border: 1.5px solid #8a5d30;
-  border-radius: calc(var(--s) * 11);
-  background: #20120a;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(201, 146, 76, 0.4);
+  border-radius: 9px;
+  background: rgba(0, 0, 0, 0.25);
   color: var(--lb-cream);
-  font-size: max(18px, calc(var(--s) * 26));
+  font-size: 16px;
   line-height: 1;
 }
 .lb-row-who {
   display: flex;
   align-items: center;
-  gap: calc(var(--s) * 12);
+  gap: 10px;
   min-width: 0;
-  font-size: max(16px, calc(var(--s) * 24));
+  font-size: 16px;
   font-weight: 700;
 }
-.lb-row-avatar {
-  width: max(30px, calc(var(--s) * 38)) !important;
-  height: max(30px, calc(var(--s) * 38)) !important;
-  box-shadow: 0 0 0 2px #8a5d30;
+.lb-row-pic .avatar {
+  box-shadow: 0 0 0 1.5px #8a5d30;
 }
 .lb-row-wins {
   min-width: 2ch;
-  font-size: max(18px, calc(var(--s) * 26));
-  text-align: right;
   color: #fff3dc;
+  font-size: 17px;
+  font-weight: 800;
+  text-align: right;
+  white-space: nowrap;
 }
 .lb-row.lb-mine {
-  border: 2.5px solid #ffd36b;
+  border: 1.5px solid #e8b24e;
   background:
-    linear-gradient(90deg, rgba(255, 196, 80, 0.32), rgba(255, 196, 80, 0.12) 60%, rgba(255, 196, 80, 0.25)),
-    linear-gradient(180deg, #5a3812, #3b230b);
-  box-shadow: 0 0 calc(var(--s) * 16) rgba(255, 190, 70, 0.45), inset 0 1px 0 rgba(255, 240, 200, 0.25);
+    linear-gradient(90deg, rgba(255, 196, 80, 0.22), rgba(255, 196, 80, 0.08) 60%, rgba(255, 196, 80, 0.16)),
+    linear-gradient(180deg, #4a2f12, #35200b);
+  box-shadow: inset 0 1px 0 rgba(255, 240, 200, 0.15);
 }
 .lb-row.lb-mine .lb-rank {
-  border-color: #ffd36b;
+  border-color: #e8b24e;
 }
 
 .lb-more {
@@ -1671,12 +1647,12 @@
   place-items: center;
   aspect-ratio: 1;
   min-width: 56px;
-  padding: 4px;
-  border: 2px solid #5e3d22;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  background: var(--lb-well);
+  background: none;
   cursor: pointer;
-  transition: transform 0.15s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .pf-avatar .avatar {
   width: 100% !important;
@@ -1686,8 +1662,11 @@
   transform: scale(1.05);
 }
 .pf-avatar[aria-checked="true"] {
-  border: 3px solid #ffd36b;
-  box-shadow: 0 0 14px rgba(255, 190, 70, 0.7);
+  box-shadow: 0 0 0 3px #2a170b, 0 0 0 6px #ffd36b, 0 0 16px rgba(255, 190, 70, 0.7);
+}
+.pf-avatar:focus-visible {
+  outline: 3px solid var(--lb-focus);
+  outline-offset: 4px;
 }
 
 .pf-notice {
@@ -2100,38 +2079,7 @@
   }
 }
 
-/* ---------- The home screen's profile icon and Settings ---------- */
-
-.home {
-  position: relative;
-}
-.menu-card-leaderboard .menu-icon {
-  color: var(--gold);
-}
-
-.home-profile {
-  position: absolute;
-  top: max(12px, env(safe-area-inset-top));
-  right: max(12px, env(safe-area-inset-right));
-  z-index: 3;
-  display: grid;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-  padding: 3px;
-  border: 0;
-  border-radius: 50%;
-  background: linear-gradient(180deg, #fff2b3, #f6c64f 45%, #b9771c);
-  box-shadow: 0 0 14px rgba(255, 186, 64, 0.45), 0 3px 8px rgba(0, 0, 0, 0.45);
-  cursor: pointer;
-}
-.home-profile .avatar {
-  width: 50px !important;
-  height: 50px !important;
-}
-.home-profile:hover {
-  filter: brightness(1.08);
-}
+/* ---------- Settings: the profile line ---------- */
 
 .settings-profile {
   display: flex;
@@ -2162,13 +2110,12 @@
     gap: 5px;
   }
   .lb-place-button {
-    padding-inline: 2px;
+    padding-inline: 4px;
     border-width: 2px;
   }
-  .lb-place-2 .lb-place-label,
-  .lb-place-3 .lb-place-label {
-    font-weight: 700;
-    letter-spacing: -0.015em;
+  /* Room for a ten letter name on a 93px card. */
+  .lb-place-name {
+    font-size: 13px;
   }
 }
 
@@ -2247,6 +2194,522 @@
   }
 }
 
+/* ---------- The leaderboard screen's frame (D63, D64) ----------
+   The screen fills the window and never scrolls as a whole: the title,
+   filters, podium and "Your place" stay put, and only the rows (4, 5, 6 and
+   on, with Load more) scroll, in their own box with a gold scroll bar. On a
+   screen too short for about three rows everything under the title scrolls
+   in one box inside the frame, so the page itself still never scrolls. */
+
+.lb-board {
+  padding-bottom: max(calc(var(--s) * 18), env(safe-area-inset-bottom));
+}
+.lb-board .lb-head {
+  margin-bottom: calc(var(--s) * 14);
+}
+.lb-board .lb-title {
+  font-size: clamp(23px, calc(var(--s) * 34), 34px);
+}
+.lb-board .lb-title-trophy {
+  width: calc(var(--s) * 40);
+  height: calc(var(--s) * 40);
+}
+
+.lb-backdrop:has(> .lb-board) {
+  overflow: hidden;
+}
+.lb-board {
+  display: flex;
+  flex-direction: column;
+  height: calc(100% - 12px);
+  min-height: 0;
+}
+.lb-board > * {
+  flex: none;
+}
+.lb-board > .lb-panel {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.lb-board .lb-panel > * {
+  flex: none;
+}
+/* A little room on the sides, so focus rings and the own row's rim show. */
+.lb-board .lb-scroll,
+.lb-board .lb-skeleton {
+  flex: 1 1 0;
+  min-height: 0;
+}
+.lb-board .lb-scroll {
+  margin: 0 -6px;
+  padding: 2px 10px 6px 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.lb-board .lb-skeleton {
+  overflow: hidden;
+}
+/* The scroll bar: slim, gold on a dark rail, rounded, always the same. */
+.lb-board .lb-scroll,
+.lb-board .lb-panel {
+  scrollbar-width: thin;
+  scrollbar-color: #c9924c rgba(0, 0, 0, 0.35);
+}
+.lb-board .lb-scroll::-webkit-scrollbar,
+.lb-board .lb-panel::-webkit-scrollbar {
+  width: 8px;
+}
+.lb-board .lb-scroll::-webkit-scrollbar-track,
+.lb-board .lb-panel::-webkit-scrollbar-track {
+  margin: 4px 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+}
+.lb-board .lb-scroll::-webkit-scrollbar-thumb,
+.lb-board .lb-panel::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f2c25a, #b8782a);
+}
+.lb-board .lb-scroll::-webkit-scrollbar-thumb:hover,
+.lb-board .lb-panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #ffd977, #d08f34);
+}
+/* Not enough height for about three rows (a short laptop window, a small
+   phone, a phone held sideways): the screen measures this and adds
+   .lb-board-stacked, and then everything under the fixed title (filters,
+   podium and rows) shares one scroll box inside the frame. Nothing is ever
+   cut off, and the page itself still never scrolls. */
+.lb-board.lb-board-stacked {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #c9924c rgba(0, 0, 0, 0.35);
+}
+.lb-board-stacked .lb-head {
+  position: sticky;
+  top: calc(max(calc(var(--s) * 26), env(safe-area-inset-top)) * -1);
+  z-index: 3;
+  margin-inline: calc(var(--s) * -22);
+  padding: 6px calc(var(--s) * 22);
+  background: linear-gradient(180deg, #3a2213 80%, rgba(58, 34, 19, 0));
+}
+.lb-board-stacked > .lb-panel {
+  display: block;
+  flex: none;
+}
+.lb-board-stacked .lb-scroll {
+  overflow: visible;
+  margin: 0;
+  padding: 0;
+}
+.lb-board-stacked::-webkit-scrollbar {
+  width: 8px;
+}
+.lb-board-stacked::-webkit-scrollbar-track {
+  margin: 24px 0;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+}
+.lb-board-stacked::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f2c25a, #b8782a);
+}
+
+/* ---------- The (i) buttons and their popup (D64) ---------- */
+
+.lb-info-button {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  margin: -10px -8px -10px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--lb-gold);
+  cursor: pointer;
+}
+.lb-info-button .lb-svg {
+  width: 22px;
+  height: 22px;
+}
+.lb-info-button:hover {
+  color: #ffe08a;
+}
+.lb-info-button:focus-visible {
+  outline: 3px solid var(--lb-focus);
+  outline-offset: -4px;
+}
+
+.lb-info-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 55;
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  background: rgba(12, 7, 3, 0.82);
+  animation: fade-in 0.18s ease-out both;
+}
+.lb-info {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 520px);
+  max-height: 100%;
+  border: 2px solid #c9924c;
+  border-radius: 22px;
+  background: linear-gradient(180deg, #43291a, #2a170b);
+  box-shadow: 0 0 24px rgba(222, 140, 50, 0.25), 0 12px 30px rgba(0, 0, 0, 0.55);
+  color: var(--lb-text);
+  font-family: var(--lb-sans);
+}
+.lb-info-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px 10px 18px;
+  border-bottom: 1px solid rgba(201, 146, 76, 0.3);
+}
+.lb-info-mark {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  color: var(--lb-gold);
+}
+.lb-info-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-family: var(--lb-serif);
+  font-weight: 900;
+  font-size: 22px;
+  line-height: 1.2;
+  color: #fde3a6;
+}
+.lb-info-close {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+/* The text scrolls inside the popup when it is longer than the screen. */
+.lb-info-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px 20px 6px;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.55;
+  scrollbar-width: thin;
+  scrollbar-color: #c9924c rgba(0, 0, 0, 0.35);
+}
+.lb-info-lead {
+  margin: 0 0 6px;
+  color: var(--lb-cream);
+  font-size: 17px;
+}
+.lb-info-sub {
+  margin: 16px 0 6px;
+  color: #f6dba6;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.lb-info-list,
+.lb-info-steps {
+  margin: 0;
+  padding-left: 22px;
+  color: var(--lb-soft);
+}
+.lb-info-list li,
+.lb-info-steps li {
+  margin: 4px 0;
+}
+.lb-info-steps li::marker {
+  color: var(--lb-gold);
+  font-weight: 900;
+}
+.lb-info-steps strong,
+.lb-info-example strong {
+  color: var(--lb-cream);
+}
+.lb-info-example {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--lb-gold);
+  border-radius: 8px;
+  background: rgba(255, 210, 140, 0.08);
+  color: var(--lb-soft);
+}
+.lb-info-body .lb-terms {
+  margin-top: 10px;
+}
+.lb-info-done {
+  margin: 12px 20px 18px;
+}
+
+/* ---------- The own Profile screen: view first, a pencil to edit (D64) ---------- */
+
+.lb-hero-edit {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 3px solid #2a170b;
+  border-radius: 50%;
+  background: var(--lb-gold-fill);
+  color: var(--lb-gold-text);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 190, 70, 0.45);
+  cursor: pointer;
+}
+.lb-hero-edit .lb-svg {
+  width: 20px;
+  height: 20px;
+}
+.lb-hero-edit:hover {
+  filter: brightness(1.08);
+}
+.lb-hero-edit:focus-visible {
+  outline: 3px solid var(--lb-focus);
+  outline-offset: 2px;
+}
+.pf-saved-note {
+  margin: 0 0 10px;
+}
+
+/* ---------- The compact own profile (after "Compact Profile Editor Mockup", D64) ----------
+   Made to fit a 390 by 844 phone without scrolling: a short identity card,
+   then the stats, or the edit card with three lean panels. */
+
+.pf-title-icon {
+  flex: none;
+  width: calc(var(--s) * 34);
+  height: calc(var(--s) * 34);
+  min-width: 24px;
+  min-height: 24px;
+}
+
+.pf-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  border: 2px solid #c9924c;
+  border-radius: 22px;
+  background:
+    radial-gradient(80% 90% at 30% 50%, rgba(255, 190, 90, 0.12), transparent 70%),
+    linear-gradient(180deg, #4a2c19, #2c180c);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.15), 0 0 16px rgba(222, 140, 50, 0.2), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.pf-id-laurel {
+  flex: none;
+  width: 18px;
+  height: 34px;
+}
+.pf-id-avatar {
+  position: relative;
+  flex: none;
+}
+.pf-id-ring {
+  padding: 3px;
+}
+.pf-id-ring .avatar {
+  width: 66px !important;
+  height: 66px !important;
+}
+.pf-id-flag {
+  right: -2px;
+  bottom: 0;
+}
+.pf-id-flag .lb-flag {
+  width: 22px;
+  min-width: 22px;
+  height: 22px;
+}
+.pf-id-edit {
+  right: auto;
+  left: -12px;
+  bottom: -10px;
+  border-width: 2px;
+}
+.pf-id-edit .lb-svg {
+  width: 18px;
+  height: 18px;
+}
+.pf-id-divider {
+  flex: none;
+  align-self: stretch;
+  width: 1.5px;
+  margin: 6px 2px;
+  background: linear-gradient(180deg, transparent, rgba(242, 194, 90, 0.6), transparent);
+}
+.pf-id-who {
+  flex: 1;
+  min-width: 0;
+}
+.pf-id-name {
+  display: block;
+  margin: 0;
+  font-family: var(--lb-serif);
+  font-weight: 900;
+  font-size: clamp(22px, 7vw, 32px);
+  line-height: 1.15;
+  color: #fff4dc;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.pf-id-place {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  margin: 4px 0 0;
+  color: var(--lb-soft);
+  font-size: 15px;
+  font-weight: 700;
+}
+.pf-id-pin {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--lb-soft);
+}
+.pf-stats-card {
+  padding-top: 18px;
+}
+
+/* The edit card: a pencil, the title and the (i) on one line. */
+.pf-edit-card {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1.5px solid rgba(201, 146, 76, 0.55);
+  border-radius: 22px;
+  background: linear-gradient(180deg, #3e2516, #2a170b);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.12), 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+.pf-edit-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 0 0 4px;
+}
+.pf-edit-pencil {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--lb-gold);
+}
+.pf-edit-head .pf-section-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(20px, 6vw, 26px);
+  text-align: left;
+}
+.pf-edit-head .pf-section-title:focus {
+  outline: none;
+}
+.pf-edit-head .lb-info-button {
+  margin: 0;
+}
+.pf-sub {
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  border: 1px solid rgba(201, 146, 76, 0.3);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.16);
+}
+.pf-sub .pf-field {
+  gap: 6px;
+}
+.pf-sub .lb-field-label {
+  font-size: 14px;
+}
+.pf-sub .lb-input,
+.pf-sub .cp-button {
+  min-height: 48px;
+}
+.pf-sub .lb-field-help {
+  gap: 6px;
+}
+/* An empty availability line takes no room. */
+.pf-sub .lb-availability:empty {
+  display: none;
+}
+.pf-label-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pf-label-icon .lb-svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.pf-callout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid rgba(201, 146, 76, 0.35);
+  border-radius: 12px;
+  background: rgba(255, 210, 140, 0.06);
+  color: var(--lb-soft);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.pf-callout-locked {
+  border-color: #ffd36b;
+  background: rgba(255, 196, 80, 0.14);
+  color: #ffe9b3;
+}
+.pf-callout-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.pf-edit-card .pf-categories {
+  padding: 4px;
+}
+/* A category's ten avatars in two rows of five. */
+.pf-edit-card .pf-avatars,
+.pf-panel .pf-avatars {
+  grid-template-columns: repeat(5, minmax(0, 64px));
+  justify-content: space-between;
+  gap: 8px;
+}
+.pf-edit-card .pf-avatar,
+.pf-panel .pf-avatar {
+  min-width: 44px;
+}
+.pf-edit-card .pf-actions .lb-button {
+  min-height: 48px;
+  white-space: nowrap;
+  padding-inline: 12px;
+}
+/* Phones: the identity card's laurels make room for the name. */
+@media (max-width: 480px) {
+  .pf-id-laurel {
+    display: none;
+  }
+}
+
 /* ---------- Motion ---------- */
 
 @media (prefers-reduced-motion: reduce) {
@@ -2266,4 +2729,15 @@ html[data-anim="off"] .lb-bone,
 html[data-anim="off"] .lb-backdrop,
 html[data-anim="off"] .cp-panel {
   animation: none;
+}
+
+/* Under 360px wide five avatars would be smaller than a 44px target: four. */
+@media (max-width: 359px) {
+  .pf-edit-card .pf-avatars,
+  .pf-panel .pf-avatars {
+    grid-template-columns: repeat(4, minmax(0, 64px));
+  }
+  .pf-id-laurel {
+    display: none;
+  }
 }

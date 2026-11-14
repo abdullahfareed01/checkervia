@@ -9,14 +9,17 @@
 // for the player), the public notice with its required "I understand", then
 // Save. There is no Skip: Back leaves.
 //
-// Editing: the avatar, flag and stats at the top, then the same fields.
+// The own profile (D64) opens as a view: the avatar, flag and stats. A
+// pencil on the avatar turns the same screen into the form, with an (i)
+// that shows the rules for the username, flag and avatar; Cancel or Save
+// returns to the view.
 // The username can change once every 7 days (the screen says when the next
 // change is allowed); the old name stays reserved for 30 days. The avatar
 // and the flag can change any time. Saving, saved and the three problem
 // messages (D59) are shown under Save.
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
-import { NAME_RESERVED_DAYS, NO_COUNTRY, RENAME_WAIT_DAYS } from "../../leaderboard/protocol";
+import { NO_COUNTRY, RENAME_WAIT_DAYS } from "../../leaderboard/protocol";
 import type { ProfileResponse } from "../../leaderboard/protocol";
 import { USERNAME_MAX, USERNAME_MESSAGES } from "../../leaderboard/username";
 import { leaderboardApi } from "./api";
@@ -25,12 +28,13 @@ import { AVATAR_CATEGORIES, Avatar, avatarsIn, categoryOf } from "./Avatar";
 import type { AvatarCategory } from "./Avatar";
 import { CountryPicker } from "./CountryPicker";
 import { Flag, countryName } from "./Flag";
-import { CloseIcon, LbGradients, LbLaurel } from "./lbIcons";
+import { CloseIcon, LbCalendar, LbGradients, LbLaurel, PencilIcon, PersonIcon, PictureIcon, PinIcon } from "./lbIcons";
 import { useLeaderboardProfile } from "./profile";
 import type { Profile } from "./profile";
 import { ProblemPanel, problemOf, problemText } from "./Problem";
 import type { Problem } from "./Problem";
-import { ProfileHeader, ProfileStats } from "./ProfileSheet";
+import { InfoButton, InfoDialog, ProfileRules } from "./InfoDialog";
+import { ProfileStats } from "./ProfileSheet";
 import { useUsernameCheck } from "./useUsernameCheck";
 import type { UsernameCheck } from "./useUsernameCheck";
 
@@ -99,13 +103,10 @@ export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: 
         <header className="lb-head">
           <span className="lb-head-spacer" aria-hidden="true" />
           <h2 id={`${ids}-title`} className="lb-title pf-title">
-            <span className="lb-title-laurel" aria-hidden="true">
-              <LbLaurel />
+            <span className="pf-title-icon" aria-hidden="true">
+              <PersonIcon />
             </span>
             <span className="lb-title-text">{title}</span>
-            <span className="lb-title-laurel" aria-hidden="true">
-              <LbLaurel flip />
-            </span>
           </h2>
           <button
             ref={closeRef}
@@ -145,6 +146,7 @@ function UsernameField({
   disabled,
   takenName,
   note,
+  hint = "3 to 16 letters, numbers or underscores, starting with a letter. Please do not use your real name.",
 }: {
   id: string;
   name: string;
@@ -154,6 +156,7 @@ function UsernameField({
   disabled: boolean;
   takenName: string | null;
   note?: ReactNode;
+  hint?: string;
 }) {
   const unchanged = current !== null && name === current;
   const taken = (takenName !== null && takenName === name) || (!unchanged && check.availability === "taken");
@@ -196,7 +199,7 @@ function UsernameField({
             ))}
           </ul>
         ) : (
-          <p className="lb-hint">3 to 16 letters, numbers or underscores, starting with a letter. Please do not use your real name.</p>
+          hint && <p className="lb-hint">{hint}</p>
         )}
         <p className={`lb-availability lb-availability-${availability}`} aria-live="polite">
           {status[availability]}
@@ -236,7 +239,8 @@ function AvatarPicker({ value, onChange, disabled }: { value: string | null; onC
   const focusable = avatars.includes(value ?? "") ? value : avatars[0];
   return (
     <div className="pf-field">
-      <span className="lb-field-label" id={`${ids}-label`}>
+      <span className="lb-field-label pf-label-icon" id={`${ids}-label`}>
+        <PictureIcon />
         Avatar
       </span>
       <div className="pf-categories" role="group" aria-label="Show avatars for">
@@ -409,18 +413,65 @@ function Saved({ profile, firstGame, onDone }: { profile: Profile; firstGame: bo
 
 // ---------- Editing ----------
 
+/** The compact card at the top of the own profile: avatar with its flag, name, country (D64). */
+function IdentityCard({ profile, onEdit, titleId }: { profile: Profile; onEdit: (() => void) | undefined; titleId: string }) {
+  return (
+    <section className="pf-id" aria-labelledby={titleId}>
+      <span className="pf-id-laurel" aria-hidden="true">
+        <LbLaurel />
+      </span>
+      <div className="pf-id-avatar">
+        <span className="lb-ring-gold pf-id-ring">
+          <Avatar id={profile.avatar} size={76} />
+        </span>
+        {profile.country !== null && (
+          <span className="lb-pic-flag pf-id-flag" aria-hidden="true">
+            <Flag code={profile.country} decorative />
+          </span>
+        )}
+        {onEdit && (
+          <button type="button" className="lb-hero-edit pf-id-edit" aria-label="Edit your profile" onClick={onEdit}>
+            <PencilIcon />
+          </button>
+        )}
+      </div>
+      <span className="pf-id-divider" aria-hidden="true" />
+      <div className="pf-id-who">
+        <h2 id={titleId} className="pf-id-name lb-name">
+          {profile.username}
+        </h2>
+        <p className="pf-id-place">
+          <span className="pf-id-pin" aria-hidden="true">
+            <PinIcon />
+          </span>
+          <span className="lb-name">{countryName(profile.country)}</span>
+          <span className="lb-you">You</span>
+        </p>
+      </div>
+      <span className="pf-id-laurel" aria-hidden="true">
+        <LbLaurel flip />
+      </span>
+    </section>
+  );
+}
+
 type Stats = { kind: "loading" } | { kind: "problem"; problem: Problem } | { kind: "ready"; profile: ProfileResponse };
 
 function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => void }) {
   const [stats, setStats] = useState<Stats>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [nextRename, setNextRename] = useState<string | null>(null);
+  // D64: the profile opens as a view; the pencil on the avatar opens the form here.
+  const [editing, setEditing] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
   const [name, setName] = useState(profile.username);
   const [avatar, setAvatar] = useState<string | null>(profile.avatar);
   const [country, setCountry] = useState<string>(profile.country ?? NO_COUNTRY);
   const [takenName, setTakenName] = useState<string | null>(null);
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const ids = useId();
+  const formRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -438,6 +489,11 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
     // The stats follow the saved name, not the one being typed.
   }, [profile.username, attempt]);
 
+  // The form takes the focus when it opens.
+  useEffect(() => {
+    if (editing) formRef.current?.focus({ preventScroll: false });
+  }, [editing]);
+
   const { check, ready: nameReady } = useNameCheck(name, profile.username, takenName);
   const renameLocked = nextRename !== null && new Date(nextRename).getTime() > Date.now();
   const changes = {
@@ -449,13 +505,25 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
   const saving = save.kind === "saving";
   const canSave = changed && nameReady && !saving;
 
+  const startEditing = () => {
+    setName(profile.username);
+    setAvatar(profile.avatar);
+    setCountry(profile.country ?? NO_COUNTRY);
+    setTakenName(null);
+    setSave({ kind: "idle" });
+    setJustSaved(false);
+    setEditing(true);
+  };
+
   const submit = async () => {
     if (!canSave) return;
     setSave({ kind: "saving" });
     const result = await leaderboardApi.updateProfile(changes);
     if (result.kind === "ok") {
       setNextRename(result.value.nextRenameAt);
-      setSave({ kind: "saved" });
+      setSave({ kind: "idle" });
+      setEditing(false);
+      setJustSaved(true);
       return;
     }
     if (result.kind === "failed" && result.code === "taken") setTakenName(name);
@@ -463,89 +531,113 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
     setSave({ kind: "error", text: saveProblemText(result) });
   };
 
-  const renameNote = renameLocked ? (
-    <p className="pf-rename-limit" role="note">
-      You changed your username recently. You can change it again on {renameDateText(nextRename!)}.
-    </p>
-  ) : (
-    <p className="lb-hint">
-      You can change your username once every {RENAME_WAIT_DAYS} days. Your old username stays reserved for you for {NAME_RESERVED_DAYS} days. Your wins and
-      stats stay with you.
+  const renameNote = (
+    <p className={`pf-callout${renameLocked ? " pf-callout-locked" : ""}`} role={renameLocked ? "note" : undefined}>
+      <span className="pf-callout-icon" aria-hidden="true">
+        <LbCalendar tone="cream" />
+      </span>
+      {renameLocked
+        ? `You changed your username recently. You can change it again on ${renameDateText(nextRename!)}.`
+        : `You can change it once every ${RENAME_WAIT_DAYS} days.`}
     </p>
   );
 
   return (
     <div className="pf-edit">
-      <div className="lb-hero lb-hero-plain pf-hero">
-        <div className="lb-hero-card">
-          <ProfileHeader username={profile.username} country={profile.country} avatar={profile.avatar} tone="gold" mine titleId={`${ids}-who`} />
-          {stats.kind === "loading" && (
-            <div className="lb-stats-skeleton" aria-hidden="true">
-              {Array.from({ length: 4 }, (_, index) => (
-                <span key={index} className="lb-bone lb-bone-card" />
-              ))}
-            </div>
-          )}
-          {stats.kind === "problem" && <ProblemPanel problem={stats.problem} compact onRetry={() => setAttempt((count) => count + 1)} />}
-          {stats.kind === "ready" && <ProfileStats profile={stats.profile} />}
-        </div>
-      </div>
+      <IdentityCard profile={profile} onEdit={editing ? undefined : startEditing} titleId={`${ids}-who`} />
+      {justSaved && (
+        <p className="pf-save-line pf-save-saved pf-saved-note" role="status">
+          Saved. Your profile is up to date.
+        </p>
+      )}
 
-      <form
-        className="pf-form"
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-      >
-        <h3 className="pf-section-title">Edit your profile</h3>
-        <section className="pf-panel">
-          <UsernameField
-            id={`${ids}-name`}
-            name={name}
-            onName={(next) => {
-              setName(next);
-              if (save.kind !== "saving") setSave({ kind: "idle" });
-            }}
-            current={profile.username}
-            check={check}
-            disabled={saving || renameLocked}
-            takenName={takenName}
-            note={renameNote}
-          />
-          <AvatarPicker
-            value={avatar}
-            onChange={(next) => {
-              setAvatar(next);
-              setSave({ kind: "idle" });
-            }}
-            disabled={saving}
-          />
-          <CountryPicker
-            value={country}
-            onChange={(next) => {
-              setCountry(next);
-              setSave({ kind: "idle" });
-            }}
-            disabled={saving}
-          />
-          <p className="lb-hint">Your flag shows {country === NO_COUNTRY ? "nothing" : countryName(country)} on the leaderboard. You can change it and your avatar any time.</p>
-        </section>
-        <SaveLine state={save} />
-        <div className="pf-actions">
-          <button type="submit" className="lb-button lb-button-gold" disabled={!canSave} aria-busy={saving}>
-            {saving ? "Saving…" : "Save changes"}
-          </button>
+      {!editing && (
+        <div className="lb-hero lb-hero-plain pf-hero">
+          <div className="lb-hero-card pf-stats-card">
+            {stats.kind === "loading" && (
+              <div className="lb-stats-skeleton" aria-hidden="true">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <span key={index} className="lb-bone lb-bone-card" />
+                ))}
+              </div>
+            )}
+            {stats.kind === "problem" && <ProblemPanel problem={stats.problem} compact onRetry={() => setAttempt((count) => count + 1)} />}
+            {stats.kind === "ready" && <ProfileStats profile={stats.profile} />}
+          </div>
         </div>
-        <section className="pf-panel pf-notice">
-          <p className="pf-public">{PUBLIC_NOTICE}</p>
-          <p className="lb-note">{BROWSER_NOTICE}</p>
-          <button type="button" className="link-button lb-terms" onClick={onTerms}>
-            Read the Terms and notices
-          </button>
-        </section>
-      </form>
+      )}
+
+      {editing && (
+        <form
+          className="pf-edit-card"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void submit();
+          }}
+        >
+          <div className="pf-edit-head">
+            <span className="pf-edit-pencil" aria-hidden="true">
+              <PencilIcon />
+            </span>
+            <h3 ref={formRef} tabIndex={-1} className="pf-section-title">
+              Edit your profile
+            </h3>
+            <InfoButton label="Rules for your username, flag and avatar" onClick={() => setRulesOpen(true)} />
+          </div>
+          <section className="pf-sub">
+            <UsernameField
+              id={`${ids}-name`}
+              name={name}
+              onName={(next) => {
+                setName(next);
+                if (save.kind !== "saving") setSave({ kind: "idle" });
+              }}
+              current={profile.username}
+              check={check}
+              disabled={saving || renameLocked}
+              takenName={takenName}
+              note={renameNote}
+              hint=""
+            />
+          </section>
+          <section className="pf-sub">
+            <AvatarPicker
+              value={avatar}
+              onChange={(next) => {
+                setAvatar(next);
+                setSave({ kind: "idle" });
+              }}
+              disabled={saving}
+            />
+          </section>
+          <section className="pf-sub">
+            <CountryPicker
+              value={country}
+              onChange={(next) => {
+                setCountry(next);
+                setSave({ kind: "idle" });
+              }}
+              disabled={saving}
+            />
+          </section>
+          <SaveLine state={save} />
+          <div className="pf-actions">
+            <button type="button" className="lb-button" disabled={saving} onClick={() => setEditing(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="lb-button lb-button-gold" disabled={!canSave} aria-busy={saving}>
+              {saving ? "Saving…" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {rulesOpen && (
+        <InfoDialog title="Your username, flag and avatar" onClose={() => setRulesOpen(false)}>
+          <ProfileRules onTerms={onTerms} />
+        </InfoDialog>
+      )}
     </div>
   );
 }

@@ -18,7 +18,6 @@ function status(overrides: Partial<ComponentProps<typeof StatusBar>> = {}): stri
       currentPlayer: "white",
       winner: null,
       winReason: null,
-      captureMandatory: false,
       choosingRoute: false,
       aiPhase: "idle",
       aiFailureReasons: [],

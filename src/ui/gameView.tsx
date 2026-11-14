@@ -13,6 +13,7 @@ import {
   routeChoiceSquares,
   selectablePieces,
 } from "../state/selectors";
+import type { AiMood } from "./aiMood";
 import type { BoardView } from "./Board";
 import { PlayerCard } from "./PlayerCard";
 
@@ -61,6 +62,8 @@ export function cardFor(
   player: Player,
   placement: "top" | "bottom",
   onAdultInfo?: () => void, // opens the language rules (Strongest's 18+ badge)
+  mood: AiMood = "neutral", // the AI's face (D64)
+  portrait: string | null = null, // the player's chosen avatar id (D65)
 ) {
   const counts = pieceCounts(board);
   const isAi = state.mode === "vs-ai" && player === AI_PLAYER;
@@ -84,6 +87,8 @@ export function cardFor(
       captured={PIECES_PER_SIDE - counts[opponentOf(player)]}
       toMove={toMove}
       thinking={isAi && state.aiPhase === "thinking"}
+      mood={isAi ? mood : undefined}
+      portrait={isAi ? null : portrait}
       winner={state.winner === player}
       placement={placement}
     />

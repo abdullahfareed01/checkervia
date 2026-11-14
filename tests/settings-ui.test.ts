@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { coachMessage } from "../src/ui/AiCoach";
 
 vi.mock("../src/ui/haptics", async (importOriginal) => {
   const real = await importOriginal<typeof import("../src/ui/haptics")>();
@@ -158,22 +159,27 @@ describe("Settings: where it opens, and the chat bubble switch", () => {
 
   it("from the home screen", () => {
     const html = renderToStaticMarkup(createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop, onSettings: noop }));
-    expect(html).toMatch(/<footer class="home-foot"><button type="button" class="link-button">Settings<\/button>/);
+    expect(html).toMatch(/<footer class="home-foot"><button type="button" class="home-link"><svg[^]*?<span>Settings<\/span><\/button>/);
   });
 
   it("from the game's Menu", () => {
     const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
-    expect(source).toMatch(/\{ label: "Settings", onSelect: \(\) => setSettingsOpen\(true\) \}/);
+    expect(source).toMatch(/\{ label: "Settings", icon: <GearIcon \/>, onSelect: \(\) => setSettingsOpen\(true\) \}/);
   });
 
-  it("chat bubbles off: no bubble and no slot kept for it; on: both", () => {
+  it("chat bubbles off: the AI keeps its robot under the board but says no chat lines (D64)", () => {
+    const chat = { key: "move-2", text: "Oops, my piece now.", tone: "roast" as const, why: true };
+    const lastWords = { key: "end-9", text: "Game over. Hahaha!", tone: "banter" as const, why: false, announce: false };
+    expect(coachMessage(chat, true, null)).toBe(chat);
+    expect(coachMessage(chat, false, lastWords)).toBeNull(); // only the robot (no I played line, D65)
+    expect(coachMessage(null, true, lastWords)).toBe(lastWords); // after the game, the AI's last words stay (D71)
     const on = renderToStaticMarkup(createElement(App, { initial: { mode: "vs-ai", aiLevel: 4 } }));
-    expect(on).toContain("speech-slot");
-    expect(on).toContain('class="app app-ai"');
     settingsStore().update((s) => ({ ...s, chat: { bubbles: false } }));
     const off = renderToStaticMarkup(createElement(App, { initial: { mode: "vs-ai", aiLevel: 4 } }));
-    expect(off).not.toContain("speech-slot");
-    expect(off).not.toContain("app-ai");
+    for (const html of [on, off]) {
+      expect(html).toContain('class="coach"');
+      expect(html).toContain('class="app app-ai"');
+    }
     // The 18+ badge and the AI card stay exactly as they are.
     expect(off).toContain('<span class="chip-adult-age">18+</span>');
     expect(on.match(/<section class="card card-top[\s\S]*?<\/section>/)![0]).toBe(off.match(/<section class="card card-top[\s\S]*?<\/section>/)![0]);

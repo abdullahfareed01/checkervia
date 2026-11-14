@@ -291,3 +291,62 @@ export function BulbIcon() {
     </svg>
   );
 }
+
+// ---------- The home menu's icons (D66, after the owner's menu mockup) ----------
+
+// A graduation cap, for Learn.
+export function GradCapIcon() {
+  return (
+    <svg className="icon icon-gradcap" viewBox="0 0 48 40" aria-hidden="true">
+      <path d="M11 19v9c0 3.5 6 7 13 7s13-3.5 13-7v-9l-13 6z" fill="currentColor" opacity="0.8" />
+      <path d="M24 4L2 14l22 10 22-10z" fill="currentColor" />
+      <path d="M40 16.5v11" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M38 27.5h4l1 6h-6z" fill="currentColor" />
+    </svg>
+  );
+}
+
+// A cog wheel, for Settings.
+export function GearIcon() {
+  return (
+    <svg className="icon icon-gear" viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M10.3 2h3.4l.5 2.6 1.8.8 2.2-1.5 2.4 2.4-1.5 2.2.8 1.8 2.6.5v3.4l-2.6.5-.8 1.8 1.5 2.2-2.4 2.4-2.2-1.5-1.8.8-.5 2.6h-3.4l-.5-2.6-1.8-.8-2.2 1.5-2.4-2.4 1.5-2.2-.8-1.8L2 13.7v-3.4l2.6-.5.8-1.8-1.5-2.2 2.4-2.4 2.2 1.5 1.8-.8zM12 8.2a3.8 3.8 0 1 0 0 7.6 3.8 3.8 0 0 0 0-7.6z"
+        fill="currentColor"
+        fillRule="evenodd"
+      />
+    </svg>
+  );
+}
+
+// A page with lines, for the Terms.
+export function DocumentIcon() {
+  return (
+    <svg className="icon icon-document" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="4.5" y="2.5" width="15" height="19" rx="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M8.5 8h7M8.5 12h7M8.5 16h4.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// ---------- The game Menu and its dialogs ----------
+
+// A house with a door, for Main menu.
+export function HomeIcon() {
+  return (
+    <svg className="icon icon-home" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3.2L2.5 11.2l1.3 1.5L5 11.7V21h5.5v-6h3v6H19v-9.3l1.2 1 1.3-1.5z" fill="currentColor" />
+    </svg>
+  );
+}
+
+// An exclamation mark in a ring, for questions that would lose something.
+export function AlertIcon() {
+  return (
+    <svg className="icon icon-alert" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <rect x="10.8" y="6.4" width="2.4" height="7.6" rx="1.2" fill="currentColor" />
+      <circle cx="12" cy="17.2" r="1.45" fill="currentColor" />
+    </svg>
+  );
+}

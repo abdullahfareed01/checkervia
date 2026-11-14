@@ -273,3 +273,54 @@
 - The leaderboard, the podium cards and the profile cards rebuilt after the mockups (with the medal ribbon tails, the glossy stage and the mockups' glows), one scroll, 40 original avatars, a profile icon on the home screen, Nunito and tabular numerals self hosted.
 - Tests: 1231 passing in 68 files. Typecheck and production build clean.
 - Browser check (headless Edge, my own Vite on 5180, `?lb=` previews, one width per batch with a fresh browser): every state at 320, 360, 390, 430, 768, 1024, 1280, 1440, 1920, 2560 and phone landscape (844 by 390), with the overflow, inner scroll, clipped number, tap target, small text and console error checks; wheel, touch and Load more scrolling; side by side with the mockups at their own width. Not run against the owner's real Supabase project.
+
+## 15 Nov 2026: Leaderboard UI review (D63)
+- Same medal on all three podium cards, crown on the first only, first card 16px higher; tier words spoken only; wins on one line; smaller avatars; flags on the avatar edge everywhere; a tie line under the podium; flatter gold for filters; smaller filters; slim rows; the list scrolls on its own from 700px tall.
+- Tests: 1233 passing in 68 files (`wrappers.test.ts` needs the shell's SUPABASE variables unset, since it checks the unconfigured answer). Typecheck clean.
+- Browser check (headless Edge, `?lb=` previews): 320 by 568, 375 by 667, 375 by 812, 390 by 844, 430 by 932 and 800 by 1000, populated, long names and few players; no sideways overflow; ranks 4 to 7 fully visible at 390 by 844.
+
+## 15 Nov 2026: Profile view first, rules behind (i), clean circles, the rows scroll (D64)
+- The own Profile opens as a view with a pencil on the avatar; the edit form opens on the same screen with an (i) for the username, flag and avatar rules. The ranking tie line is replaced by an (i) popup, "How the ranking works", with the full order and an example. Avatars are clean circles; leaderboard flags are round badges. Only the rows box scrolls; the screen never scrolls as a whole.
+- Tests: 1235 passing in 68 files. Typecheck clean.
+- Browser check (headless Edge): 320 by 568, 375 by 667, 375 by 812, 390 by 844, 1280 by 900 and 844 by 390; wheel, touch and Load more on the rows box.
+
+## 15 Nov 2026: The AI under the board, with a face (D64)
+- The bubble between the AI card and the board is gone; the robot and its bubble sit under the status line as on chess.com, replacing the "AI played ... Why?" note; the robot laughs, gets angry, smiles and thinks; the AI card is a little taller with a larger robot.
+- Tests: 1247 passing in 69 files (with the shell's SUPABASE variables unset). Typecheck clean.
+- Browser check (headless Edge, `?scenario=react`, playing the planted blunder against the real AI): 320 by 568, 375 by 667, 390 by 844, 1280 by 800 and 844 by 390; the face went neutral, thinking, laughing; no sideways overflow; the status line above the action bar on phones.
+
+## 15 Nov 2026: Bubble, chance to win, title, avatar (D65)
+- White chess.com style bubble with more padding and 16px text on phones; no "I played" lines; the line stays until your move is played; the status hint lines that made the bubble jump are gone; the splash style title; the chance to win bar (left of the board on wide screens, above your card on phones); your chosen avatar on your card.
+- Tests: 1259 passing in 70 files (with the shell's SUPABASE variables unset). Typecheck and production build clean.
+- Browser check (headless Edge, `?scenario=react&lb=populated`, playing the planted blunder against the real AI): 320 by 568, 375 by 667, 390 by 844, 1280 by 800 and 844 by 390; the robot row kept one position from the first tap to the AI's reply; the bar went from 50% to 3% for the player after the blunder; the avatar shows; no sideways overflow.
+
+## 15 Nov 2026: Home menu after the owner's mockup (D66)
+- The home menu copies the "Refined Checkervia Checkers Menu" mockup: gold rimmed frame with a checkered floor, gold title with crown and laurels, cards with icon wells, a gold line and chevrons, the green AI Online pill, Settings and Terms & Notices with gold icons; the avatar in a gold ring with a crown badge.
+- Tests: 1260 passing in 70 files (with the shell's SUPABASE variables unset).
+- Desktop: no frame, the menu centered, no scroll. Browser check (headless Edge, AI health answered ready): no scroll at 1920 by 920, 1366 by 657, 1280 by 720, 430 by 932 and 390 by 844; 375 by 667 scrolls 60px inside the frame only.
+
+## 15 Nov 2026: The action bar after the owner's mockup (D67)
+- Gold rimmed pill, leather tiles, gold New game; columns never narrower than their labels; labels sized by the bar's width; a floating pill on phones; a 380px side panel from 1200px wide.
+- Tests: 1262 passing in 70 files (with the shell's SUPABASE variables unset). Typecheck and production build clean.
+- Browser check (headless Edge, my own Vite on 5180 because the dev server on 8888 had stopped): 320 by 568, 360 by 740, 390 by 844, 700 by 1000, 1024 by 700, 1280 by 800, 1440 by 900 and 844 by 390; no label wraps or is cut at any size; the status line stays above the bar; no sideways overflow.
+
+## 15 Nov 2026: Menu sheet, Terms and the "are you sure?" popup (D68)
+- Gold scroll bar on the Terms with a fixed head and foot, a reading line and numbered sections; the Menu's actions as tiles with gold symbols; the popup with a symbol, a heading and gold and red buttons.
+- Tests: 1275 passing in 71 files (with the shell's SUPABASE variables unset). Typecheck clean apart from `tests/docs-no-dashes.test.ts`, which fails since `package.json` gained the `cli` and `netlify` packages during this session (not part of this change).
+- Browser check (headless Edge, my own Vite on 5180): the Menu at 1400 by 900 and 390 by 844 (no scroll), the Terms at the top and the end, opened from the game and from the home screen, New game after a move at 1400 by 900 and 390 by 844, Resign at 360 by 740; no console errors.
+
+## 15 Nov 2026: Resign pressure, a laugh at the end, a shocked face (D69)
+- After the resign hint, while the player stalls: the AI's line 15 seconds, 5 empty, then a new ask to resign, again and again; a random laugh after the AI's winning line; a stubborn ending bank; a shocked but confident face for double captures.
+- Tests: 1293 passing in 72 files (with the shell's SUPABASE variables unset). Typecheck clean apart from `tests/docs-no-dashes.test.ts` (another session's new file: `readFileSync` without an encoding).
+
+## 15 Nov 2026: Resign pressure timing and the dots wave (D70)
+- The AI's resign line 10 seconds, then 5 seconds of typing dots before each new ask (10 seconds each); the dots now move in a wave.
+- Tests: 1293 passing in 72 files (with the shell's SUPABASE variables unset).
+
+## 15 Nov 2026: The AI's last words stay, a livelier robot (D71)
+- The bubble keeps the AI's last line after the game; new smug, nervous and defeated faces; breathing, glancing and blinking between reactions.
+- Tests: 1294 passing in 72 files (with the shell's SUPABASE variables unset).
+
+## 15 Nov 2026: Five more robot reactions (D72)
+- Wink, starstruck, proud, annoyed and sleepy; fourteen faces in all, each checked side by side in the browser.
+- Tests: 1299 passing in 72 files (with the shell's SUPABASE variables unset).

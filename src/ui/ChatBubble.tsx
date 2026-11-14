@@ -23,24 +23,21 @@ const TONE_LABELS: Partial<Record<BubbleTone, string>> = { roast: "Your slip", r
 
 interface ChatBubbleProps {
   message: BubbleMessage | null;
-  // "card": under the AI card (every screen but landscape phones);
-  // "side": at the top of the side panel, next to the card.
-  placement: "card" | "side";
   whyOpen?: boolean;
   onWhy?: (() => void) | undefined;
 }
 
-// The AI's chat bubble in a slot of fixed height, tied to the AI card with a
-// tail pointing at its avatar. The slot is always there in a game against
-// the AI, so the board never moves when a line comes or goes. Long lines are
-// clipped to whole lines (3 on phones, 2 on larger screens) by CSS. A
-// separate screen reader live region announces each new line once.
-export function ChatBubble({ message, placement, whyOpen = false, onWhy }: ChatBubbleProps) {
+// The AI's chat bubble in a slot of fixed size beside its robot under the
+// board (D64), with a tail pointing at the robot. The slot is always there
+// in a game against the AI, so nothing moves when a line comes or goes.
+// Long lines are clipped to whole lines (3 on phones, 4 on larger screens)
+// by CSS. A separate screen reader live region announces each new line once.
+export function ChatBubble({ message, whyOpen = false, onWhy }: ChatBubbleProps) {
   const announcement = useAnnouncement(message);
   const label = message ? TONE_LABELS[message.tone] : undefined;
 
   return (
-    <div className={`speech-slot speech-slot-${placement}`}>
+    <div className="speech-slot">
       <p className="sr-only" aria-live="polite">
         {announcement}
       </p>

@@ -127,43 +127,41 @@ describe("the resign hint", () => {
   it("the bubble shows the hint for that move, with Why?", () => {
     const state = afterAi({ provenLoss: true });
     const index = state.history.length - 1;
-    expect(reactionBubble(state, 0, { hint: { index, text: "It is over." } })).toMatchObject({ text: "It is over.", why: true });
-    expect(reactionBubble(state, 0, { hint: { index: index - 2, text: "old" } })?.text).not.toBe("old");
+    expect(reactionBubble(state, { hint: { index, text: "It is over." } })).toMatchObject({ text: "It is over.", why: true });
+    expect(reactionBubble(state, { hint: { index: index - 2, text: "old" } })?.text).not.toBe("old");
   });
 });
 
 describe("what the bubble shows first", () => {
   it("the greeting at the start of a game, without Why?", () => {
     const start = createGameState({ mode: "vs-ai" });
-    expect(reactionBubble(start, 0, { greeting: "Hi there!" })).toEqual({ key: "greeting", text: "Hi there!", tone: "banter", why: false });
-    expect(reactionBubble(start, 1, { greeting: "Hi there!" })).toBeNull(); // cleared by the first piece picked up
+    expect(reactionBubble(start, { greeting: "Hi there!" })).toEqual({ key: "greeting", text: "Hi there!", tone: "banter", why: false });
   });
 
   it("an idle line beats the reaction, has no Why?, and shows even after a piece was put back", () => {
     const state = afterAi({ reaction: "Bold." });
     const idle = { key: "idle-1", text: "Tick tock.", count: 1 };
-    expect(reactionBubble(state, 0, { idle })).toMatchObject({ text: "Tick tock.", why: false });
-    expect(reactionBubble(state, state.history.length, { idle })?.text).toBe("Tick tock.");
+    expect(reactionBubble(state, { idle })).toMatchObject({ text: "Tick tock.", why: false });
   });
 
   // Owner's review: idle lines keep coming every 30 seconds, but a screen
   // reader hears only the first one of a turn.
   it("only the first idle line of a turn is read out by screen readers", () => {
     const state = afterAi({ reaction: "Bold." });
-    const first = reactionBubble(state, 0, { idle: { key: "idle-1", text: "Tick tock.", count: 1 } })!;
-    const later = reactionBubble(state, 0, { idle: { key: "idle-2", text: "Still there?", count: 2 } })!;
+    const first = reactionBubble(state, { idle: { key: "idle-1", text: "Tick tock.", count: 1 } })!;
+    const later = reactionBubble(state, { idle: { key: "idle-2", text: "Still there?", count: 2 } })!;
     expect(first.announce).toBe(true);
     expect(later.announce).toBe(false);
     const live = (message: typeof first) =>
-      renderToStaticMarkup(createElement(ChatBubble, { message, placement: "card" })).match(/aria-live="polite">([^<]*)</)![1];
+      renderToStaticMarkup(createElement(ChatBubble, { message })).match(/aria-live="polite">([^<]*)</)![1];
     expect(live(first)).toBe("Tick tock.");
     expect(live(later)).toBe("");
     // Still shown on screen.
-    expect(renderToStaticMarkup(createElement(ChatBubble, { message: later, placement: "card" }))).toContain("Still there?");
+    expect(renderToStaticMarkup(createElement(ChatBubble, { message: later }))).toContain("Still there?");
   });
 
   it("nothing once the game is over (the result panel speaks)", () => {
-    expect(reactionBubble(gameReducer(afterAi(), { type: "resign" }), 0, { greeting: "x" })).toBeNull();
+    expect(reactionBubble(gameReducer(afterAi(), { type: "resign" }), { greeting: "x" })).toBeNull();
   });
 });
 

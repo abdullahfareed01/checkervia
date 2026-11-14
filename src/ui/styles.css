@@ -112,12 +112,12 @@ h1 {
        after the sidebar. The smaller wins. */
     --board-size: min(
       calc(100vh - 2 * var(--card-h) - 2 * var(--gap) - 40px - var(--slot-space, 0px)),
-      calc(100vw - var(--sidebar-w) - 32px - 48px),
+      calc(100vw - var(--sidebar-w) - 32px - 48px - var(--winbar-space, 0px)),
       800px
     );
     --board-size: min(
       calc(100dvh - 2 * var(--card-h) - 2 * var(--gap) - 40px - var(--slot-space, 0px)),
-      calc(100vw - var(--sidebar-w) - 32px - 48px),
+      calc(100vw - var(--sidebar-w) - 32px - 48px - var(--winbar-space, 0px)),
       800px
     );
   }
@@ -552,10 +552,6 @@ h1 {
   margin-top: 4px;
   font-size: 0.95rem;
   color: var(--text-soft);
-}
-
-.status-hint-capture {
-  color: #ffb3b5;
 }
 
 .status-winner .status-main {

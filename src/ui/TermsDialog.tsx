@@ -1,4 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { DocumentIcon } from "./icons";
+import { CloseIcon } from "./leaderboard/lbIcons";
 
 // The contact for the notices and, once the leaderboard opens, removal requests.
 export const CONTACT_EMAIL = "checkvia.games@gmail.com";
@@ -71,43 +73,97 @@ export const TERMS_SECTIONS: readonly { title: string; points: readonly string[]
 ];
 
 // The Terms and notices sheet: from the Menu, the home screen and the
-// Strongest notice. Esc, a click outside or Close returns.
+// Strongest notice. The title and the Close button stay put; only the text
+// between them scrolls, with a slim gold scroll bar, a gold line at the top
+// that fills as you read, and soft fades where more text is hidden. The
+// text has the focus, so the arrow keys and Page Down scroll it at once.
+// Esc, a click outside or Close returns.
 export function TermsDialog({ onClose }: { onClose: () => void }) {
-  const closeRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => closeRef.current?.focus(), []);
+  const ids = useId();
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [read, setRead] = useState({ progress: 0, top: true, end: false });
+
+  const measure = () => {
+    const box = scrollRef.current;
+    if (!box) return;
+    const room = box.scrollHeight - box.clientHeight;
+    const progress = room > 0 ? Math.min(1, box.scrollTop / room) : 1;
+    setRead({ progress, top: box.scrollTop <= 2, end: room - box.scrollTop <= 2 });
+  };
+
+  useEffect(() => {
+    scrollRef.current?.focus({ preventScroll: true });
+    measure();
+    // A turned phone or a resized window changes how much is hidden.
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
 
   return (
     <div className="result-backdrop" onClick={onClose}>
       <div
-        className="dialog rules-dialog terms-dialog"
+        className="dialog terms-dialog"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="terms-title"
+        aria-labelledby={`${ids}-title`}
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           if (event.key === "Escape") onClose();
         }}
       >
-        <h2 id="terms-title" className="dialog-title">
-          Terms and notices
-        </h2>
-        {TERMS_SECTIONS.map((section) => (
-          <section key={section.title} className="rules-dialog-section">
-            <h3>
-              {section.title}
-            </h3>
-            <ul>
-              {section.points.map((point) => (
-                <li key={point}>{point}</li>
-              ))}
-            </ul>
-          </section>
-        ))}
-        <div className="dialog-actions">
-          <button ref={closeRef} type="button" className="button button-primary" onClick={onClose}>
+        <header className="terms-head">
+          <span className="terms-mark" aria-hidden="true">
+            <DocumentIcon />
+          </span>
+          <div className="terms-heading">
+            <h2 id={`${ids}-title`} className="terms-title">
+              Terms and notices
+            </h2>
+            <p className="terms-subtitle">Please read before you play.</p>
+          </div>
+          <button type="button" className="terms-close" aria-label="Close" onClick={onClose}>
+            <CloseIcon />
+          </button>
+        </header>
+        <div className="terms-progress" aria-hidden="true">
+          <span style={{ transform: `scaleX(${read.progress})` }} />
+        </div>
+        <div className="terms-body">
+          <div
+            ref={scrollRef}
+            className="terms-scroll gold-scroll"
+            tabIndex={0}
+            role="region"
+            aria-label="Terms text"
+            onScroll={measure}
+          >
+            {TERMS_SECTIONS.map((section, index) => (
+              <section key={section.title} className="terms-section">
+                <div className="terms-section-head">
+                  <span className="terms-number" aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <h3>{section.title}</h3>
+                </div>
+                <ul>
+                  {section.points.map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+          <span className={`terms-fade terms-fade-top${read.top ? "" : " terms-fade-on"}`} aria-hidden="true" />
+          <span className={`terms-fade terms-fade-end${read.end ? "" : " terms-fade-on"}`} aria-hidden="true" />
+        </div>
+        <footer className="terms-foot">
+          <p className="terms-more" aria-hidden="true">
+            {read.end ? "You have reached the end." : "Scroll to read more"}
+          </p>
+          <button type="button" className="confirm-button confirm-keep terms-done" onClick={onClose}>
             Close
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

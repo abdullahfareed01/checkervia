@@ -9,6 +9,7 @@ import type { LineContext, RecentLines } from "./lines";
 
 const CONTEXTS: LineContext[] = [
   "start", "startAfterLoss", "startAfterWin", "idle", "resigned", "aiWon", "aiWonBlunder", "playerWon", "resignHint",
+  "resignPush", "aiWonStubborn",
 ];
 const all = LEVELS.flatMap((level) => CONTEXTS.flatMap((context) => LINE_BANKS[level][context].map((line) => ({ level, context, line }))));
 

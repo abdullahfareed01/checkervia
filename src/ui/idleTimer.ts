@@ -68,6 +68,75 @@ export function createIdleTimer(
   };
 }
 
+// The resign pressure (D69, timing D70): once the engine has proved the
+// player's position lost, every message stays 10 seconds, then the AI types
+// (the dots wave) for 5 seconds, then it asks again for a resignation, for
+// as long as the player does not play. Message 0 is the AI's own line for
+// its move.
+export const PRESSURE_SHOW_MS = 10_000;
+export const PRESSURE_GAP_MS = 5_000;
+
+export interface PressureState {
+  readonly count: number; // 0: the AI's line for its move; 1, 2...: the asks to resign
+  readonly showing: boolean; // false while it types the next one (the 5 second gap)
+}
+
+export interface PressureTimer {
+  // `active`: the position is proven lost, it is the player's turn, they
+  // have not picked up a piece, nothing covers the board and the page is
+  // visible. `turn` identifies the turn: a new one starts again at 0.
+  update(active: boolean, turn: unknown): void;
+  stop(): void;
+}
+
+/**
+ * Calls `onChange` each time the bubble should change: typing after 10
+ * seconds, the next ask after 5 more. Becoming inactive pauses the clock;
+ * when active again, a message on screen gets its full 10 seconds and the
+ * typing its full 5 (nothing is cut short or skipped).
+ */
+export function createPressureTimer(
+  onChange: (state: PressureState) => void,
+  timers: Timers = PAGE_TIMERS,
+  showMs: number = PRESSURE_SHOW_MS,
+  gapMs: number = PRESSURE_GAP_MS,
+): PressureTimer {
+  let handle: unknown = null;
+  let turn: unknown = undefined;
+  let state: PressureState = { count: 0, showing: true };
+
+  const clear = () => {
+    if (handle !== null) timers.clearTimeout(handle);
+    handle = null;
+  };
+  const schedule = () => {
+    handle = timers.setTimeout(
+      () => {
+        state = state.showing ? { count: state.count, showing: false } : { count: state.count + 1, showing: true };
+        onChange(state);
+        schedule();
+      },
+      state.showing ? showMs : gapMs,
+    );
+  };
+
+  return {
+    update(active, nextTurn) {
+      if (nextTurn !== turn) {
+        turn = nextTurn;
+        clear();
+        if (state.count !== 0 || !state.showing) {
+          state = { count: 0, showing: true };
+          onChange(state);
+        }
+      }
+      if (!active) return clear();
+      if (handle === null) schedule();
+    },
+    stop: clear,
+  };
+}
+
 // How long the game over panel waits before showing the AI's tips.
 export const TIPS_DELAY_MS = 5_000;
 

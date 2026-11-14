@@ -1,6 +1,10 @@
 import { memo } from "react";
 import type { Player } from "../engine";
-import { CrownIcon, HumanIcon, InfoIcon, RobotAvatar } from "./icons";
+import type { AiMood } from "./aiMood";
+import { CrownIcon, HumanIcon, InfoIcon } from "./icons";
+import { RobotFace } from "./RobotFace";
+import { avatarUrl } from "./leaderboard/Avatar";
+import { isAvatarId } from "../leaderboard/avatars";
 
 // At most this many captured pieces are drawn in the stack; the number says
 // the rest.
@@ -18,6 +22,8 @@ interface PlayerCardProps {
   captured: number; // opponent pieces this side has taken
   toMove: boolean;
   thinking: boolean;
+  mood?: AiMood | undefined; // the robot's face (D64); thinking when unset and thinking
+  portrait?: string | null | undefined; // the player's chosen avatar id (D65); a person icon without one
   winner: boolean;
   placement: "top" | "bottom";
 }
@@ -65,6 +71,8 @@ export const PlayerCard = memo(function PlayerCard({
   captured,
   toMove,
   thinking,
+  mood,
+  portrait,
   winner,
   placement,
 }: PlayerCardProps) {
@@ -84,7 +92,15 @@ export const PlayerCard = memo(function PlayerCard({
 
   return (
     <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.`}>
-      <div className="avatar">{robot ? <RobotAvatar thinking={thinking} /> : <HumanIcon />}</div>
+      <div className={`avatar${!robot && isAvatarId(portrait) ? " avatar-portrait" : ""}`}>
+        {robot ? (
+          <RobotFace mood={mood ?? (thinking ? "thinking" : "neutral")} />
+        ) : isAvatarId(portrait) ? (
+          <img src={avatarUrl(portrait)} alt="" width={48} height={48} decoding="async" draggable={false} />
+        ) : (
+          <HumanIcon />
+        )}
+      </div>
 
       <div className="card-text">
         <p className="card-name">

@@ -1,6 +1,7 @@
 import { AI_LEVELS } from "../ai";
 import type { AiLevel } from "../ai";
 import type { GameMode } from "../state/gameReducer";
+import { RobotIcon, TwoPlayersIcon } from "./icons";
 import { LevelOptions } from "./LevelOptions";
 import type { MenuRun } from "./GameMenu";
 
@@ -36,6 +37,7 @@ export function MenuSetup({ mode, level, run, loseQuestion, onTwoPlayers, onPlay
           aria-pressed={mode === "two-player"}
           onClick={() => mode !== "two-player" && run(loseQuestion("Switch to Two Players?"), onTwoPlayers)}
         >
+          <TwoPlayersIcon />
           Two Players
         </button>
         <button
@@ -44,10 +46,15 @@ export function MenuSetup({ mode, level, run, loseQuestion, onTwoPlayers, onPlay
           aria-pressed={mode === "vs-ai"}
           onClick={() => mode !== "vs-ai" && run(loseQuestion("Play against the AI?"), () => onPlayAi(level))}
         >
+          <RobotIcon />
           Play vs AI
         </button>
       </div>
-      <p className="menu-section-title">AI level</p>
+      <p className="menu-section-title">
+        AI level
+        {/* In a two player game a level is a way into a game against the AI. */}
+        {mode === "two-player" && <span className="menu-section-note">Tap one to play the AI</span>}
+      </p>
       <LevelOptions value={level} onSelect={chooseLevel} compact />
     </div>
   );

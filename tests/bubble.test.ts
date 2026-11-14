@@ -1,7 +1,8 @@
-// The chat bubble's life (Change 3): typing dots while the AI thinks, the
-// reaction after its move, cleared when the player picks up a piece for
-// their next move, on New game and on a mode change; nothing while reviewing
-// or in two player games. Plus the 140 character cap on AI lines.
+// The chat bubble's life (Change 3, D65): typing dots while the AI thinks,
+// the reaction after its move, kept while the player picks up a piece and
+// cleared once their move is played, on New game and on a mode change;
+// nothing while reviewing or in two player games. Plus the 140 character cap
+// on AI lines.
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -28,36 +29,42 @@ function afterAi(reaction?: string): GameState {
 describe("reactionBubble", () => {
   it("shows typing dots while the AI thinks", () => {
     const thinking = [click(5, 2), click(4, 3)].reduce(gameReducer, createGameState({ mode: "vs-ai" }));
-    expect(reactionBubble(thinking, 0)).toMatchObject({ text: null, why: false });
+    expect(reactionBubble(thinking)).toMatchObject({ text: null, why: false });
   });
 
   it("then the AI's reaction, with Why?", () => {
-    expect(reactionBubble(afterAi("Bold start."), 0)).toMatchObject({ text: "Bold start.", tone: "banter", why: true });
+    expect(reactionBubble(afterAi("Bold start."))).toMatchObject({ text: "Bold start.", tone: "banter", why: true });
   });
 
-  it("without a reaction, the compact line of what it played", () => {
-    expect(reactionBubble(afterAi(), 0)?.text).toMatch(/^I played [A-H][1-8] → [A-H][1-8]\.$/);
+  it("without a reaction, nothing (no I played line, D65)", () => {
+    expect(reactionBubble(afterAi())).toBeNull();
   });
 
-  it("clears when the player picks up a piece for the next move", () => {
+  it("stays while the player picks up a piece, and clears once their move is played (D65)", () => {
     const state = afterAi("Bold start.");
-    expect(reactionBubble(state, state.history.length)).toBeNull();
+    const black = state.legalMoves[0]!;
+    const picked = gameReducer(state, click(black.from.row, black.from.col));
+    expect(picked.selected).not.toBeNull();
+    expect(reactionBubble(picked)?.text).toBe("Bold start.");
+    const played = gameReducer(picked, click(black.to.row, black.to.col));
+    expect(played.history.length).toBe(state.history.length + 1);
+    expect(reactionBubble({ ...played, aiPhase: "idle" })).toBeNull();
   });
 
   it("is cleared by New game and by a mode change", () => {
     const state = afterAi("Bold start.");
-    expect(reactionBubble(gameReducer(state, { type: "newGame" }), 0)).toBeNull();
-    expect(reactionBubble(gameReducer(state, { type: "newGame", mode: "vs-ai", level: 4 }), 0)).toBeNull();
-    expect(reactionBubble(gameReducer(state, { type: "setMode", mode: "two-player" }), 0)).toBeNull();
+    expect(reactionBubble(gameReducer(state, { type: "newGame" }))).toBeNull();
+    expect(reactionBubble(gameReducer(state, { type: "newGame", mode: "vs-ai", level: 4 }))).toBeNull();
+    expect(reactionBubble(gameReducer(state, { type: "setMode", mode: "two-player" }))).toBeNull();
   });
 
   it("shows nothing while reviewing an older position", () => {
-    expect(reactionBubble(gameReducer(afterAi("x"), { type: "history", to: "first" }), 0)).toBeNull();
+    expect(reactionBubble(gameReducer(afterAi("x"), { type: "history", to: "first" }))).toBeNull();
   });
 
   it("shows nothing in two player games", () => {
     const two = [click(5, 2), click(4, 3), click(2, 1), click(3, 0)].reduce(gameReducer, createGameState());
-    expect(reactionBubble(two, 0)).toBeNull();
+    expect(reactionBubble(two)).toBeNull();
   });
 });
 
@@ -101,7 +108,7 @@ describe("the 140 character cap on AI lines", () => {
 // shown in red text, and a blunder keeps its "Your slip" label instead.
 describe("bubble colours after the owner's review", () => {
   const html = (tone: "roast" | "respect" | "banter", text: string) =>
-    renderToStaticMarkup(createElement(ChatBubble, { message: { key: "k", text, tone, why: false }, placement: "card" }));
+    renderToStaticMarkup(createElement(ChatBubble, { message: { key: "k", text, tone, why: false } }));
 
   it("a clean roast keeps its label but not red text", () => {
     const out = html("roast", "That slip gave me a tasty capture, enjoy the lesson!");

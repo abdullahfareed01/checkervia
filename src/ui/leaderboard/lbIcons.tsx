@@ -188,6 +188,54 @@ export function CloseIcon() {
   );
 }
 
+export function PersonIcon({ tone = "gold" }: { tone?: Tone }) {
+  return (
+    <svg className="lb-svg" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="7.5" r="4.5" fill={fill(tone)} />
+      <path d="M3.5 21c0-5 3.8-8 8.5-8s8.5 3 8.5 8z" fill={fill(tone)} />
+    </svg>
+  );
+}
+
+export function PinIcon() {
+  return (
+    <svg className="lb-svg" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 22s7-6.3 7-12a7 7 0 0 0-14 0c0 5.7 7 12 7 12z" fill="currentColor" />
+      <circle cx="12" cy="10" r="2.6" fill="#2a170b" />
+    </svg>
+  );
+}
+
+export function PictureIcon() {
+  return (
+    <svg className="lb-svg" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="3" y="4.5" width="18" height="15" rx="2.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <circle cx="8.5" cy="9.5" r="1.8" fill="currentColor" />
+      <path d="M4 18l5.5-5.5 3.5 3.5 2.5-2.5L20 18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function PencilIcon() {
+  return (
+    <svg className="lb-svg" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 0l.5.5a2.1 2.1 0 0 1 0 3L8.5 19z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M13.5 7l3.5 3.5" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** The "i" in a circle: opens the rules that apply here. */
+export function InfoIcon() {
+  return (
+    <svg className="lb-svg" viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" strokeWidth="2" />
+      <path d="M12 10.5v6" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="12" cy="7.3" r="1.4" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function ChevronDownIcon() {
   return (
     <svg className="lb-svg" viewBox="0 0 24 24" aria-hidden="true">

@@ -20,6 +20,7 @@ import { RulesDialog } from "../src/ui/RulesDialog";
 import { WhyContent } from "../src/ui/WhyContent";
 import { describeLookahead } from "../src/state/moveFacts";
 import { TermsDialog } from "../src/ui/TermsDialog";
+import { ConfirmDialog } from "../src/ui/ConfirmDialog";
 import { SettingsSheet } from "../src/ui/SettingsSheet";
 import { StatusBar } from "../src/ui/StatusBar";
 import { Learn } from "../src/ui/Learn";
@@ -52,6 +53,7 @@ const screens: [string, ReactElement][] = [
   ["level dialog", createElement(LevelDialog, { initial: 2, onStart: noop, onCancel: noop })],
   ["rules dialog", createElement(RulesDialog, { onClose: noop })],
   ["terms", createElement(TermsDialog, { onClose: noop })],
+  ["are you sure", createElement(ConfirmDialog, { question: "Start a new game? The current game will be lost.", confirmLabel: "Yes, new game", onConfirm: noop, onCancel: noop })],
   ["settings", createElement(SettingsSheet, { onClose: noop })],
   ["home with the settings link", createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop, onSettings: noop })],
   [
@@ -117,7 +119,6 @@ const screens: [string, ReactElement][] = [
       currentPlayer: "white",
       winner: null,
       winReason: null,
-      captureMandatory: false,
       choosingRoute: false,
       aiPhase: "failed",
       aiFailureReasons: [
@@ -151,7 +152,7 @@ describe("no hyphens or dashes in text shown to players", () => {
   // Texts that only appear after a server answer, so no static render shows them.
   it("the leaderboard's username rules and its messages after an answer", () => {
     for (const message of Object.values(USERNAME_MESSAGES)) expect(message).not.toMatch(DASHES);
-    const sources = ["WinStatus.tsx", "winQueue.ts", "ProfileScreen.tsx", "ProfileGate.tsx", "CountryPicker.tsx", "LeaderboardScreen.tsx", "ProfileSheet.tsx", "Problem.tsx"].map((file) => readFileSync(new URL(`../src/ui/leaderboard/${file}`, import.meta.url), "utf8"));
+    const sources = ["InfoDialog.tsx", "WinStatus.tsx", "winQueue.ts", "ProfileScreen.tsx", "ProfileGate.tsx", "CountryPicker.tsx", "LeaderboardScreen.tsx", "ProfileSheet.tsx", "Problem.tsx"].map((file) => readFileSync(new URL(`../src/ui/leaderboard/${file}`, import.meta.url), "utf8"));
     // Every string literal in these files that reads as a sentence.
     const sentences = sources.flatMap((source) => [...source.matchAll(/"([A-Z][^"]*[a-z][^"]*[.!?])"/g)].map((match) => match[1]!));
     expect(sentences.length).toBeGreaterThan(10);

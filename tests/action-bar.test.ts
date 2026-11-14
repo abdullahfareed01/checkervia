@@ -119,7 +119,8 @@ describe("phone sizes (CSS)", () => {
 
   it("every bar button and Why? is at least 44 x 44", () => {
     expect(layout).toMatch(/\.bar-button \{[^}]*min-width: 44px;[^}]*min-height: 44px;/);
-    expect(layout).toMatch(/\.speech-why,\n\.why-button \{\n  min-width: 44px;\n  min-height: 44px;/);
+    // D64: Why? lives only in the bubble now (the separate note is gone).
+    expect(layout).toMatch(/\.speech-why \{\r?\n  min-width: 44px;\r?\n  min-height: 44px;/);
   });
 
   it("the chips' text is at least 11px", () => {
@@ -134,5 +135,21 @@ describe("the last move is not blue", () => {
     expect(lastMove).toContain("var(--gold)");
     expect(lastMove).not.toMatch(/rgba\(120, 196, 255|rgba\(80, 170, 255|0 0 12px/);
     expect(all).not.toMatch(/#5bb8f5|#7fb3d9/i);
+  });
+});
+
+// D67: the bar after the owner's mockup never squeezes a label: each column
+// is at least as wide as its label, labels never wrap, and their size follows
+// the bar's own width (11px at the narrowest, never below).
+describe("the action bar never squeezes its labels (D67)", () => {
+  const layout = css("layout.css");
+
+  it("columns no narrower than their labels, New game a little wider", () => {
+    expect(layout).toContain("grid-template-columns: repeat(4, minmax(min-content, 1fr)) minmax(min-content, 1.3fr);");
+  });
+
+  it("labels on one line, sized by the bar's width, at least 11px", () => {
+    expect(layout).toMatch(/\.bar-label \{[^}]*font-size: clamp\(11px, [\d.]+cqi, 15px\);[^}]*white-space: nowrap;/);
+    expect(layout).toMatch(/\.action-bar-inner \{[^}]*container-type: inline-size;/);
   });
 });

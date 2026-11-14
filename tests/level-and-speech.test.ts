@@ -65,7 +65,7 @@ describe("the chosen level is visible in the game", () => {
 describe("ChatBubble (Change 3)", () => {
   const message = (text: string | null, tone: BubbleMessage["tone"] = "banter", why = true): BubbleMessage => ({ key: "k", text, tone, why });
   const bubble = (value: BubbleMessage | null, onWhy: (() => void) | undefined = noop) =>
-    renderToStaticMarkup(createElement(ChatBubble, { message: value, placement: "card", onWhy }));
+    renderToStaticMarkup(createElement(ChatBubble, { message: value, onWhy }));
 
   it("shows the AI's line as plain text with a collapsed Why?", () => {
     const html = bubble(message("I take the centre."));
@@ -84,9 +84,9 @@ describe("ChatBubble (Change 3)", () => {
     expect(html).not.toContain("Why?");
   });
 
-  it("keeps its slot when there is nothing to say, so the board never moves", () => {
+  it("keeps its slot when there is nothing to say, so nothing under it moves", () => {
     const html = bubble(null);
-    expect(html).toContain('class="speech-slot speech-slot-card"');
+    expect(html).toContain('class="speech-slot"');
     expect(html).not.toContain('class="speech ');
   });
 

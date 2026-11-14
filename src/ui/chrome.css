@@ -513,40 +513,6 @@ body::before {
   text-align: center;
 }
 
-/* ---------- AI move card ---------- */
-
-/* .app .ai-note beats the sidebar note rules in aiReason.css. */
-.app .ai-note {
-  display: block;
-  padding: 10px;
-  border-radius: 18px;
-  background: var(--panel);
-  box-shadow: inset 0 0 0 1px var(--panel-line);
-}
-
-.ai-note-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  margin: 0;
-}
-
-.app .ai-note-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  color: #c9d4de;
-  background: rgba(255, 255, 255, 0.06);
-}
-
-.ai-note-move {
-  flex: 1;
-  min-width: 0;
-  font-size: 1rem;
-  font-weight: 500;
-}
-
 /* ---------- Dialogs ---------- */
 
 .confirm-question {
@@ -573,12 +539,6 @@ body::before {
 
 .rules-dialog .dialog-actions {
   margin-top: 18px;
-}
-
-/* ---------- Home ---------- */
-
-.home {
-  background: transparent;
 }
 
 /* ---------- Smaller screens ---------- */

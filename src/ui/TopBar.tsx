@@ -1,8 +1,22 @@
 import { memo } from "react";
 import { BackIcon, CrownIcon, LaurelIcon } from "./icons";
 
-// The title with a crown above it and a laurel branch on each side.
+// The title. Large (the home screen): a crown above it and a laurel branch
+// on each side. Otherwise (the game and Learn, D65): the splash screen's
+// look, a cream serif name over a gold rule with a crown in the middle.
 export const GameTitle = memo(function GameTitle({ text, large = false }: { text: string; large?: boolean }) {
+  if (!large) {
+    return (
+      <div className="game-title game-title-splash">
+        <h1>{text}</h1>
+        <span className="game-title-rule" aria-hidden="true">
+          <span />
+          <CrownIcon />
+          <span />
+        </span>
+      </div>
+    );
+  }
   return (
     <div className={`game-title${large ? " game-title-large" : ""}`}>
       <span className="game-title-crown">
