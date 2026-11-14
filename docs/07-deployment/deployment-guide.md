@@ -43,5 +43,8 @@ The functions: `check-username` (GET), `claim-username` (POST), `submit-win` (PO
 
 Moderation: in Table Editor set `hidden` to true on a row of `players` (the player disappears from every list and their profile is not found; the username stays taken) or of `wins` (that win stops counting). To remove a player on request (the Terms promise this by email), delete their row in `players`: their wins and results go with it.
 
+## Testing the leaderboard by hand (development only, D60)
+With `netlify dev` running and the three Supabase variables in `.env`, open `http://localhost:8888/?testwin=strongest` (or `easy`, `medium`, `hard`). The game opens already won; the result panel shows the leaderboard form, and Save goes through the real `submit-win` function and its replay check, into the real database. Each visit uses the next of 20 recorded games for that level; add `&game=5` to pick one. This works only in development: the production build does not contain it.
+
 ## Local run (for reference)
 `netlify dev` (port 8888). Vite must be on port 5173 (`strictPort`): if "Could not proxy request" appears, stop every `npm run dev` / `netlify dev` window and start `netlify dev` again (`DEV-008`).

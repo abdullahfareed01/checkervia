@@ -35,6 +35,14 @@ async function start() {
       return;
     }
   }
+  // Development only: ?testwin=easy|medium|hard|strongest opens a game the
+  // player has just won (a recorded game), with the real result panel and
+  // the real submit-win function. &game=1 to 20 picks the game (D60).
+  if (import.meta.env.DEV) {
+    const params = new URLSearchParams(window.location.search);
+    const level = params.get("testwin");
+    if (level) initial = (await import("./ui/testWin/startTestWin")).testWinOptions(level, params.get("game"));
+  }
   // Development only: ?lb=populated|long|few|empty|offline|error|limited|slow|new answers
   // the leaderboard in the browser with made up players (devServer.ts).
   if (import.meta.env.DEV) {

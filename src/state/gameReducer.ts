@@ -141,6 +141,9 @@ export interface GameOptions {
   mode?: GameMode;
   aiRequestId?: number;
   aiLevel?: AiLevel;
+  // Moves to play through the reducer before the game is shown (the
+  // development only ?testwin= helper, D60). See playRecord.ts.
+  record?: readonly Move[];
 }
 
 // The AI is "thinking" whenever it is the AI's turn in a game that is not over.

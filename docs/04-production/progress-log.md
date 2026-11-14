@@ -259,3 +259,7 @@
 ## 14 Nov 2026: Fix: offline versus a server problem (D59)
 - Offline only when the device is offline or the request failed on the network; a 5xx, an unreadable answer or a timeout shows "The leaderboard is having a problem. Please try again in a moment."; a 429 shows "Too many requests. Try again in N seconds." The screen, the profile, the flag change and the submit form share the three messages.
 - Browser check (headless Edge, my own Vite on 5180, `?lb=error`, `?lb=limited`, `?lb=offline`): the server problem panel, the 429 panel, the offline panel and the submit form with each message, at 320 and 390 wide; no overflow, no small targets, no console errors.
+
+## 14 Nov 2026: Development helper: ?testwin= (D60)
+- `/?testwin=easy|medium|hard|strongest` opens an already won game at that level, with the real result panel, form and `submit-win` call. 20 recorded games made by the engine (the AI side plays weak legal moves), checked by tests.
+- Browser check (headless Edge, my own Vite on 5180, with the `?lb=new` and `?lb=populated` preview standing in for the server, which runs the real `submit-win` handler and its replay): `?testwin=strongest` showed "You Win!" and the username form; Save claimed a name and the replay accepted the win ("You are number 43 this week on Strongest"); `?testwin=easy` with a profile showed the one tap form and was accepted; `?testwin=nope` opened the home screen. Not run against the owner's real Supabase project (that would read `.env` and write to the owner's database).

@@ -64,6 +64,18 @@ describe("production build", () => {
     expect(code).not.toContain("hit_rate_limit");
   });
 
+  // D60: the ?testwin= helper, its generator and its recorded games are
+  // development only.
+  it("has no ?testwin= helper and none of its recorded games", () => {
+    expect(files.some((file) => /testWin|startTestWin|testWinGames/i.test(file))).toBe(false);
+    expect(code).not.toMatch(literal("testwin"));
+    expect(code).not.toContain("checkervia.dev.testwin");
+    expect(code).not.toContain("recorded game");
+    // The first moves of the first recorded game, as the JSON would hold them.
+    const first = JSON.parse(readFileSync(join(process.cwd(), "src/ui/testWin/testWinGames.json"), "utf8"))[0].slice(0, 4);
+    expect(code).not.toContain(JSON.stringify(first).slice(1, -1));
+  });
+
   // D57: the ?lb= preview and its made up players are development only, and
   // the flags stay separate files, fetched only when shown.
   it("has no ?lb= leaderboard preview, and ships the flags as separate files", () => {
