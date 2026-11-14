@@ -8,10 +8,9 @@ import { settingsStore, useSettings } from "./settings";
 import type { AnimationLevel, BoardTheme, Coordinates, HapticIntensity, PieceStyle, Settings } from "./settings";
 import { voiceEngine } from "./voice/voiceEngine";
 import { TermsDialog } from "./TermsDialog";
+import { Avatar } from "./leaderboard/Avatar";
 import { Flag } from "./leaderboard/Flag";
-import { OwnFlag } from "./leaderboard/ProfileSheet";
 import { useLeaderboardProfile } from "./leaderboard/profile";
-import { SubmitWin } from "./leaderboard/SubmitWin";
 
 // ---------- Small controls (each at least 44px, keyboard friendly) ----------
 
@@ -146,7 +145,8 @@ function useVoices(): { available: boolean; voices: SpeechSynthesisVoice[] } {
  * applies at once and is saved (settings.ts). Phone first: one column,
  * sections that open and close, no sideways scrolling.
  */
-export function SettingsSheet({ onClose }: { onClose: () => void }) {
+// `onProfile` opens the Profile screen (D61); the sheet closes for it.
+export function SettingsSheet({ onClose, onProfile }: { onClose: () => void; onProfile?: (() => void) | undefined }) {
   const settings = useSettings();
   const store = settingsStore();
   const update = (change: (s: Settings) => Settings) => store.update(change);
@@ -159,9 +159,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const canVibrate = haptics().supported;
   const [confirmReset, setConfirmReset] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
-  const leaderboard = useLeaderboardProfile();
-  // A copy, so "Added" stays on screen after the stored win is cleared.
-  const [pendingShown, setPendingShown] = useState(leaderboard.pending);
+  const { profile } = useLeaderboardProfile();
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => closeRef.current?.focus(), []);
 
@@ -289,23 +287,24 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
           <p className="settings-note">This only hides the bubbles. What the AI may say, the 18+ badge and its consent stay the same.</p>
         </Section>
 
-        <Section title="Leaderboard">
-          {leaderboard.profile ? (
-            <>
-              <p className="settings-profile">
-                <span>Your username</span>
-                <span className="settings-profile-name">
-                  <Flag code={leaderboard.profile.country} decorative />
-                  <span className="lb-name">{leaderboard.profile.username}</span>
-                </span>
-              </p>
-              <OwnFlag current={leaderboard.profile.country} />
-            </>
+        <Section title="Profile">
+          {profile ? (
+            <p className="settings-profile">
+              <Avatar id={profile.avatar} size={40} />
+              <span className="settings-profile-name">
+                <Flag code={profile.country} decorative />
+                <span className="lb-name">{profile.username}</span>
+              </span>
+            </p>
           ) : (
-            <p className="settings-note">No leaderboard profile on this device yet. Win a game against the AI to make one.</p>
+            <p className="settings-note">No leaderboard profile on this device yet.</p>
           )}
-          {pendingShown && <SubmitWin win={pendingShown} placement="sheet" onTerms={() => setTermsOpen(true)} onClose={() => setPendingShown(null)} />}
-          <p className="settings-note">Your profile is kept in this browser. Clearing your browser data loses it.</p>
+          {onProfile && (
+            <button type="button" className="button settings-profile-open" onClick={onProfile}>
+              {profile ? "Open your profile" : "Create your profile"}
+            </button>
+          )}
+          <p className="settings-note">Wins against the AI are added to the leaderboard automatically. Your profile is kept in this browser; clearing your browser data loses it.</p>
         </Section>
 
         <button type="button" className="button settings-reset" onClick={() => setConfirmReset(true)}>

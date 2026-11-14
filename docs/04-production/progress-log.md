@@ -263,3 +263,8 @@
 ## 14 Nov 2026: Development helper: ?testwin= (D60)
 - `/?testwin=easy|medium|hard|strongest` opens an already won game at that level, with the real result panel, form and `submit-win` call. 20 recorded games made by the engine (the AI side plays weak legal moves), checked by tests.
 - Browser check (headless Edge, my own Vite on 5180, with the `?lb=new` and `?lb=populated` preview standing in for the server, which runs the real `submit-win` handler and its replay): `?testwin=strongest` showed "You Win!" and the username form; Save claimed a name and the replay accepted the win ("You are number 43 this week on Strongest"); `?testwin=easy` with a profile showed the one tap form and was accepted; `?testwin=nope` opened the home screen. Not run against the owner's real Supabase project (that would read `.env` and write to the owner's database).
+
+## 14 Nov 2026: Profile first and automatic wins (D61)
+- First AI game: consent, then the new Profile screen, then the board; offline notice without blocking; two players never asked. No automatic country: a custom country picker. Wins are submitted automatically from a queue with safe retries. Usernames can change once in 7 days, old names reserved for 30 days. Migration 2 in a new file (`leaderboard-migration-2.sql`).
+- Tests: handlers for renames and reserved names, PGlite tests for migration 2, the queue and its retries, the gate, the picker's keys and roles, no automatic country left.
+- `?testwin` (D60) checked with the new flow: without a profile the Profile screen comes first; with one the won game is added by itself ("Added. You are number 30 this week on Strongest.").

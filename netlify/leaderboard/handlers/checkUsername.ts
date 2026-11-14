@@ -1,8 +1,10 @@
 // GET ?username=...: which rules the name breaks, and whether it is free.
-// The browser shows the same rules while typing; this repeats them.
+// The browser shows the same rules while typing; this repeats them. A name
+// in use, or reserved after a rename (D61), is not free, except a name
+// reserved for the asking player (they may take their old name back).
 import type { CheckUsernameResponse } from "../../../src/leaderboard/protocol";
 import { USERNAME_MAX, usernameKey, usernameProblems } from "../../../src/leaderboard/username";
-import { checkRateLimits, fail, guarded, invalid, ok, validDevice } from "../http";
+import { checkRateLimits, fail, guarded, invalid, ok, playerFromToken, validDevice } from "../http";
 import type { LeaderboardHandler } from "../http";
 import { LIMITS } from "./limits";
 
@@ -18,7 +20,13 @@ export const handleCheckUsername: LeaderboardHandler = (request, deps) =>
     if (limited) return limited;
 
     const problems = usernameProblems(username);
-    const available = problems.length === 0 && (await deps.store.playerByKey(usernameKey(username))) === null;
+    let available = false;
+    if (problems.length === 0) {
+      const key = usernameKey(username);
+      const [user, holder] = await Promise.all([deps.store.playerByKey(key), deps.store.reservedFor(key)]);
+      const asker = user === null && holder !== null ? await playerFromToken(request, deps.store) : null;
+      available = user === null && (holder === null || holder === asker?.id);
+    }
     const body: CheckUsernameResponse = { available, problems };
     return ok(body);
   });

@@ -1,5 +1,5 @@
 // The three ways a leaderboard request can fail, in one place (D59), so the
-// screen, the profile and the submit form say the same thing:
+// screen, the profile and the Profile screen and the result panel line say the same thing:
 // - offline: the device is offline, or the request failed on the network;
 // - server: the server answered with an error (a 503 or any other 5xx, an
 //   unreadable answer, or no answer in time) while the device is online;

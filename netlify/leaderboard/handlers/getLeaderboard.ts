@@ -13,7 +13,7 @@ import type { RankedRow } from "../store";
 import { LIMITS } from "./limits";
 
 // Player ids stay on the server.
-const publicRow = ({ rank, username, country, wins, bestMoves }: RankedRow): LeaderboardRow => ({ rank, username, country, wins, bestMoves });
+const publicRow = ({ rank, username, country, avatar, wins, bestMoves }: RankedRow): LeaderboardRow => ({ rank, username, country, avatar, wins, bestMoves });
 
 export const handleGetLeaderboard: LeaderboardHandler = (request, deps) =>
   guarded("getLeaderboard", deps, async () => {

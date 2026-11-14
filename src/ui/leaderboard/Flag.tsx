@@ -4,9 +4,7 @@
 // image's text for screen readers; `decorative` hides it where the name is
 // already read next to it.
 import { useState } from "react";
-import type { ChangeEvent } from "react";
 import { COUNTRY_NAMES } from "../../leaderboard/countries";
-import type { CountryChoice } from "../../leaderboard/protocol";
 import { flagUrl } from "./flags";
 
 export function countryName(code: string | null): string {
@@ -33,53 +31,5 @@ export function Flag({ code, decorative = false }: { code: string | null; decora
       decoding="async"
       onError={() => setBroken(url)}
     />
-  );
-}
-
-// Countries sorted by their names, once.
-const SORTED = Object.entries(COUNTRY_NAMES).sort(([, a], [, b]) => a.localeCompare(b, "en"));
-
-/**
- * The flag choice: Automatic (the country the connection comes from, worked
- * out by the server), No flag, or a country.
- * A native select, so phones show their own picker and screen readers know it.
- */
-export function CountrySelect({
-  id,
-  value,
-  shown,
-  allowAuto,
-  disabled = false,
-  onChange,
-}: {
-  id: string;
-  value: CountryChoice;
-  shown: string | null; // the flag to show beside it (for "auto", unknown until saved)
-  allowAuto: boolean;
-  disabled?: boolean;
-  onChange: (choice: CountryChoice) => void;
-}) {
-  const select = (event: ChangeEvent<HTMLSelectElement>) => {
-    const next = event.target.value;
-    onChange(next === "auto" ? "auto" : next === "" ? null : next);
-  };
-  return (
-    <div className="lb-country">
-      <label htmlFor={id} className="lb-field-label">
-        Flag
-      </label>
-      <div className="lb-country-row">
-        <Flag code={shown} decorative />
-        <select id={id} className="lb-select" value={value ?? ""} disabled={disabled} onChange={select}>
-          {allowAuto && <option value="auto">Automatic</option>}
-          <option value="">No flag</option>
-          {SORTED.map(([code, name]) => (
-            <option key={code} value={code}>
-              {name}
-            </option>
-          ))}
-        </select>
-      </div>
-    </div>
   );
 }

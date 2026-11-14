@@ -43,13 +43,13 @@ async function start() {
     const level = params.get("testwin");
     if (level) initial = (await import("./ui/testWin/startTestWin")).testWinOptions(level, params.get("game"));
   }
-  // Development only: ?lb=populated|long|few|empty|offline|error|limited|slow|new answers
+  // Development only: ?lb=populated|long|few|empty|offline|error|limited|slow|new|renamed answers
   // the leaderboard in the browser with made up players (devServer.ts).
   if (import.meta.env.DEV) {
     const lb = new URLSearchParams(window.location.search).get("lb");
     if (lb) await (await import("./ui/leaderboard/devServer")).startDevLeaderboard(lb);
-    // ?lb=...&form=1: the result panel with the leaderboard form, for a real win.
-    if (lb && new URLSearchParams(window.location.search).has("form")) {
+    // ?lb=...&result=1: the result panel with the automatic leaderboard line, for a real win.
+    if (lb && new URLSearchParams(window.location.search).has("result")) {
       const { DevResultPreview } = await import("./ui/leaderboard/DevResultPreview");
       createRoot(document.getElementById("root")!).render(<DevResultPreview />);
       return;

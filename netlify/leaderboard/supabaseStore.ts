@@ -1,7 +1,8 @@
 // The Supabase adapter: Postgres through the server's secret key (a legacy
 // service_role JWT or a new sb_secret key, D58), used only in the Netlify
 // functions (never in the browser bundle). Tables and functions
-// come from docs/07-deployment/leaderboard-migration.sql. Row Level Security
+// come from docs/07-deployment/leaderboard-migration.sql and
+// leaderboard-migration-2.sql (avatars, renames and reserved names, D61, D62). Row Level Security
 // is on with no policies, so only this key can read or write.
 //
 // Every failure is thrown as an error carrying only its Postgres code;
@@ -13,7 +14,7 @@ import type { AiLevel } from "../../src/ai/difficulty";
 import type { LeaderboardStore, LevelCounts, PlayerRecord, RankedRow } from "./store";
 
 const UNIQUE_VIOLATION = "23505";
-const PLAYER_COLUMNS = "id, username, username_key, country, hidden";
+const PLAYER_COLUMNS = "id, username, username_key, country, avatar, hidden, username_changed_at";
 
 class StoreError extends Error {
   constructor(readonly code: string) {
@@ -35,14 +36,18 @@ interface PlayerRow {
   username: string;
   username_key: string;
   country: string | null;
+  avatar: string | null;
   hidden: boolean;
+  username_changed_at: string | null;
 }
 const toPlayer = (row: PlayerRow): PlayerRecord => ({
   id: row.id,
   username: row.username,
   usernameKey: row.username_key,
   country: row.country,
+  avatar: row.avatar,
   hidden: row.hidden,
+  usernameChangedAt: row.username_changed_at === null ? null : new Date(row.username_changed_at),
 });
 
 interface RankedDbRow {
@@ -50,6 +55,7 @@ interface RankedDbRow {
   player_id: string;
   username: string;
   country: string | null;
+  avatar: string | null;
   wins: number;
   best_moves: number;
 }
@@ -58,6 +64,7 @@ const toRanked = (row: RankedDbRow): RankedRow => ({
   playerId: row.player_id,
   username: row.username,
   country: row.country,
+  avatar: row.avatar,
   wins: Number(row.wins),
   bestMoves: Number(row.best_moves),
 });
@@ -113,6 +120,7 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
           username: player.username,
           username_key: player.usernameKey,
           country: player.country,
+          avatar: player.avatar,
           token_hash: player.tokenHash,
           device_hash: player.deviceHash,
           ip_hash: player.ipHash,
@@ -125,8 +133,34 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
       return toPlayer(row);
     },
 
-    async setCountry(playerId, country) {
-      check(await db.from("players").update({ country }).eq("id", playerId));
+    async reservedFor(usernameKey) {
+      const row = check(
+        await db
+          .from("username_reservations")
+          .select("player_id")
+          .eq("username_key", usernameKey)
+          .gt("reserved_until", new Date().toISOString())
+          .maybeSingle<{ player_id: string }>(),
+      );
+      return row?.player_id ?? null;
+    },
+
+    async updatePlayer(playerId, changes) {
+      const row = {
+        ...(changes.country !== undefined ? { country: changes.country } : {}),
+        ...(changes.avatar !== undefined ? { avatar: changes.avatar } : {}),
+      };
+      if (Object.keys(row).length > 0) check(await db.from("players").update(row).eq("id", playerId));
+    },
+
+    async renamePlayer(playerId, username, usernameKey, waitDays, reserveDays) {
+      const row = check(
+        await db
+          .rpc("rename_player", { p_player: playerId, p_username: username, p_username_key: usernameKey, p_wait_days: waitDays, p_reserve_days: reserveDays })
+          .single<{ outcome: string; next_change_at: string | null }>(),
+      );
+      if (!row || (row.outcome !== "renamed" && row.outcome !== "taken" && row.outcome !== "tooSoon")) throw new StoreError("noRow");
+      return { outcome: row.outcome, nextChangeAt: row.next_change_at === null ? null : new Date(row.next_change_at) };
     },
 
     async addWin(win) {

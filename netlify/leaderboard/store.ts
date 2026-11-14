@@ -9,13 +9,16 @@ export interface PlayerRecord {
   readonly username: string;
   readonly usernameKey: string;
   readonly country: string | null;
+  readonly avatar: string | null; // an id from src/leaderboard/avatars.ts; null for players from before avatars
   readonly hidden: boolean;
+  readonly usernameChangedAt: Date | null; // the last rename, null if never
 }
 
 export interface NewPlayer {
   readonly username: string;
   readonly usernameKey: string;
   readonly country: string | null;
+  readonly avatar: string | null; // the handlers always set one; null is a player from before avatars
   readonly tokenHash: string;
   readonly deviceHash: string;
   readonly ipHash: string;
@@ -51,6 +54,7 @@ export interface RankedRow {
   readonly playerId: string;
   readonly username: string;
   readonly country: string | null;
+  readonly avatar: string | null;
   readonly wins: number;
   readonly bestMoves: number;
 }
@@ -68,12 +72,27 @@ export interface RateLimitResult {
   readonly retryAfterSeconds: number;
 }
 
+export interface RenameResult {
+  readonly outcome: "renamed" | "taken" | "tooSoon";
+  // renamed: when the next change is allowed; tooSoon: when this one will be.
+  readonly nextChangeAt: Date | null;
+}
+
 export interface LeaderboardStore {
   playerByKey(usernameKey: string): Promise<PlayerRecord | null>;
   playerByTokenHash(tokenHash: string): Promise<PlayerRecord | null>;
-  /** "taken" when the username key is already used (hidden players included). */
+  /** The player an old username is reserved for (D61), or null when it is not reserved now. */
+  reservedFor(usernameKey: string): Promise<string | null>;
+  /** "taken" when the username key is used (hidden players included) or reserved. */
   createPlayer(player: NewPlayer): Promise<PlayerRecord | "taken">;
-  setCountry(playerId: string, country: string | null): Promise<void>;
+  /** Changes the flag and/or the avatar (undefined: unchanged). */
+  updatePlayer(playerId: string, changes: { readonly country?: string | null; readonly avatar?: string }): Promise<void>;
+  /**
+   * Renames in one step: refused when the last rename was less than
+   * `waitDays` ago, or when the name is used or reserved for someone else.
+   * The old name is then reserved for this player for `reserveDays`.
+   */
+  renamePlayer(playerId: string, username: string, usernameKey: string, waitDays: number, reserveDays: number): Promise<RenameResult>;
   /** "duplicate" for a game id seen before, or the same moves again by the same player on the same level. */
   addWin(win: NewWin): Promise<"added" | "duplicate">;
   /** `replace`: a verified win overwrites whatever was reported for that game. */

@@ -11,6 +11,10 @@
 //   ?lb=limited    every request gets a 429 with 42 seconds to wait
 //   ?lb=slow       requests never finish (the loading state)
 //   ?lb=new        45 players, no profile on this device
+//   ?lb=renamed    like populated, with a username changed today (the
+//                  rename limit shows on the Profile screen)
+// Seeded players get avatars, except every seventh (players from before
+// avatars, shown with the neutral person).
 import { handleCheckUsername } from "../../../netlify/leaderboard/handlers/checkUsername";
 import { handleClaimUsername } from "../../../netlify/leaderboard/handlers/claimUsername";
 import { handleGetLeaderboard } from "../../../netlify/leaderboard/handlers/getLeaderboard";
@@ -22,6 +26,8 @@ import type { LeaderboardHandler } from "../../../netlify/leaderboard/http";
 import { createMemoryStore } from "../../../netlify/leaderboard/memoryStore";
 import { newToken, sha256Hex } from "../../../netlify/leaderboard/security";
 import type { AiLevel } from "../../ai/difficulty";
+import { AVATAR_IDS } from "../../leaderboard/avatars";
+import { NAME_RESERVED_DAYS, RENAME_WAIT_DAYS } from "../../leaderboard/protocol";
 import { DEVICE_HEADER } from "../../leaderboard/protocol";
 import { setLeaderboardTransport } from "./api";
 import { leaderboardStore, randomId } from "./profile";
@@ -67,8 +73,11 @@ export async function startDevLeaderboard(mode: string): Promise<void> {
   const deps = { store, salt: "dev salt", now: () => new Date(time), newToken, log: (message: string) => console.info(message) };
   const week = 3 * 86_400_000;
 
-  async function seed(username: string, country: string | null, wins: number, level: AiLevel, token = newToken()) {
-    const player = await store.createPlayer({ username, usernameKey: username.toLowerCase(), country, tokenHash: await sha256Hex(token), deviceHash: "dev", ipHash: "dev" });
+  let seeded = 0;
+  async function seed(username: string, country: string | null, wins: number, level: AiLevel, token = newToken(), own = false) {
+    seeded += 1;
+    const avatar = own ? "a12" : seeded % 7 === 0 ? null : AVATAR_IDS[(seeded * 7) % AVATAR_IDS.length]!;
+    const player = await store.createPlayer({ username, usernameKey: username.toLowerCase(), country, avatar, tokenHash: await sha256Hex(token), deviceHash: "dev", ipHash: "dev" });
     if (player === "taken") return;
     for (let index = 0; index < wins; index += 1) {
       time = Date.now() - week + index * 3_600_000 + username.length * 60_000;
@@ -97,8 +106,12 @@ export async function startDevLeaderboard(mode: string): Promise<void> {
   if (mode !== "new" && mode !== "empty" && mode !== "few") {
     const token = newToken();
     const username = mode === "long" ? "YourVeryLongName" : "You_Player";
-    await seed(username, "PK", 8, 4, token);
-    leaderboardStore.setProfile({ username, country: "PK", token });
+    await seed(username, "PK", 8, 4, token, true);
+    time = Date.now();
+    const own = (await store.playerByKey(username.toLowerCase()))!;
+    if (mode === "renamed") await store.renamePlayer(own.id, "You_Renamed", "you_renamed", RENAME_WAIT_DAYS, NAME_RESERVED_DAYS);
+    const shown = (await store.playerByKey(mode === "renamed" ? "you_renamed" : username.toLowerCase()))!;
+    leaderboardStore.setProfile({ username: shown.username, country: "PK", avatar: shown.avatar, token });
   } else if (mode === "new") {
     leaderboardStore.setProfile(null);
   }
@@ -119,7 +132,6 @@ export async function startDevLeaderboard(mode: string): Promise<void> {
         authorization: headers.get("authorization"),
         deviceId: headers.get(DEVICE_HEADER),
         ip: "127.0.0.1",
-        geoCountry: "PK",
       },
       deps,
     );

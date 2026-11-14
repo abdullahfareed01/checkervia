@@ -31,12 +31,22 @@ export function encodeMove(move: Move): EncodedMove {
   return [squareNumber(move.from), ...move.path.map(squareNumber)];
 }
 
-/** "auto" asks the server to use the country it sees the request come from. */
-export type CountryChoice = "auto" | string | null;
+// Usernames can change once every 7 days; an old username stays reserved
+// for its player for 30 days, so nobody else can take it at once (D61).
+export const RENAME_WAIT_DAYS = 7;
+export const NAME_RESERVED_DAYS = 30;
+
+/**
+ * The flag a player chose: a country code, or "none" for "Prefer not to show
+ * a flag". There is no automatic choice: the server never guesses (D61).
+ */
+export type CountryChoice = string;
+export const NO_COUNTRY = "none";
 
 export interface ClaimRequest {
   readonly username: string;
   readonly country: CountryChoice;
+  readonly avatar: string;
 }
 
 export interface SubmitWinRequest {
@@ -52,8 +62,18 @@ export interface ReportGameRequest {
   readonly result: "win" | "loss";
 }
 
+/** Any of the three; the fields left out stay as they are. */
 export interface UpdateProfileRequest {
-  readonly country: CountryChoice;
+  readonly username?: string;
+  readonly country?: CountryChoice;
+  readonly avatar?: string;
+}
+
+export interface UpdateProfileResponse {
+  readonly username: string;
+  readonly country: string | null;
+  readonly avatar: string | null;
+  readonly nextRenameAt: string | null; // ISO time, null when a change is allowed now
 }
 
 export interface CheckUsernameResponse {
@@ -64,6 +84,7 @@ export interface CheckUsernameResponse {
 export interface ClaimResponse {
   readonly username: string;
   readonly country: string | null;
+  readonly avatar: string | null;
   // Returned once, here only. The server keeps a hash of it.
   readonly token: string;
 }
@@ -77,6 +98,7 @@ export interface LeaderboardRow {
   readonly rank: number;
   readonly username: string;
   readonly country: string | null;
+  readonly avatar: string | null; // null for players from before avatars
   readonly wins: number;
   readonly bestMoves: number;
 }
@@ -101,6 +123,7 @@ export interface LevelRecord {
 export interface ProfileResponse {
   readonly username: string;
   readonly country: string | null;
+  readonly avatar: string | null;
   readonly gamesPlayed: number;
   readonly wins: number;
   readonly losses: number;
@@ -108,10 +131,14 @@ export interface ProfileResponse {
   readonly byLevel: readonly LevelRecord[]; // Easy to Strongest
   readonly bestWin: { readonly moves: number; readonly level: AiLevel } | null;
   readonly weeklyStrongestRank: number | null;
+  // Only in the player's own profile (asked with their token): when the
+  // username may change again, null when it may change now.
+  readonly nextRenameAt?: string | null;
 }
 
 export interface ErrorResponse {
   readonly error: string;
   readonly code: string;
   readonly retryAfter?: number; // seconds, on 429
+  readonly nextRenameAt?: string; // ISO time, with the code "renameTooSoon"
 }

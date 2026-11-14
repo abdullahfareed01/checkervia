@@ -7,6 +7,7 @@ import { rankPlayers } from "../../src/leaderboard/ranking";
 import type { GameResult, LeaderboardStore, LevelCounts, NewPlayer, NewWin, PlayerRecord, RankedRow } from "./store";
 
 interface StoredPlayer extends PlayerRecord, NewPlayer {}
+const DAY_MS = 86_400_000;
 interface StoredWin extends NewWin {
   readonly createdAt: number;
   readonly hidden: boolean;
@@ -25,11 +26,17 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
   let wins: StoredWin[] = [];
   const results = new Map<string, GameResult>(); // key: player id and game id
   const windows = new Map<string, { hits: number; end: number }>(); // key and window start
+  const reservations = new Map<string, { playerId: string; until: number }>(); // key: username key
   let nextId = 1;
 
+  const reservedFor = (key: string): string | null => {
+    const reservation = reservations.get(key);
+    return reservation && reservation.until > now() ? reservation.playerId : null;
+  };
+
   const visiblePlayer = (id: string) => players.find((player) => player.id === id && !player.hidden);
-  const publicRecord = ({ id, username, usernameKey, country, hidden }: StoredPlayer): PlayerRecord => ({
-    id, username, usernameKey, country, hidden,
+  const publicRecord = ({ id, username, usernameKey, country, avatar, hidden, usernameChangedAt }: StoredPlayer): PlayerRecord => ({
+    id, username, usernameKey, country, avatar, hidden, usernameChangedAt,
   });
 
   function ranked(level: AiLevel, since: Date | null): RankedRow[] {
@@ -38,7 +45,9 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
     );
     return rankPlayers(counted).map((row) => {
       const player = visiblePlayer(row.playerId)!;
-      return { rank: row.rank, playerId: row.playerId, username: player.username, country: player.country, wins: row.wins, bestMoves: row.bestMoves };
+      return {
+        rank: row.rank, playerId: row.playerId, username: player.username, country: player.country, avatar: player.avatar, wins: row.wins, bestMoves: row.bestMoves,
+      };
     });
   }
 
@@ -61,15 +70,37 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
       const player = players.find((stored) => stored.tokenHash === tokenHash);
       return player ? publicRecord(player) : null;
     },
+    async reservedFor(usernameKey) {
+      return reservedFor(usernameKey);
+    },
     async createPlayer(input) {
-      if (players.some((player) => player.usernameKey === input.usernameKey)) return "taken";
+      if (players.some((player) => player.usernameKey === input.usernameKey) || reservedFor(input.usernameKey) !== null) return "taken";
       // Ids sort in the order they were made, like the time ordered tests expect.
-      const player: StoredPlayer = { ...input, id: `player-${String(nextId++).padStart(6, "0")}`, hidden: false };
+      const player: StoredPlayer = { ...input, id: `player-${String(nextId++).padStart(6, "0")}`, hidden: false, usernameChangedAt: null };
       players = [...players, player];
       return publicRecord(player);
     },
-    async setCountry(playerId, country) {
-      players = players.map((player) => (player.id === playerId ? { ...player, country } : player));
+    async updatePlayer(playerId, changes) {
+      players = players.map((player) =>
+        player.id === playerId
+          ? { ...player, ...(changes.country !== undefined ? { country: changes.country } : {}), ...(changes.avatar !== undefined ? { avatar: changes.avatar } : {}) }
+          : player,
+      );
+    },
+    async renamePlayer(playerId, username, usernameKey, waitDays, reserveDays) {
+      const player = players.find((stored) => stored.id === playerId);
+      if (!player) throw Object.assign(new Error("no player"), { code: "noRow" });
+      const time = now();
+      const allowedAt = player.usernameChangedAt ? player.usernameChangedAt.getTime() + waitDays * DAY_MS : 0;
+      if (allowedAt > time) return { outcome: "tooSoon", nextChangeAt: new Date(allowedAt) };
+      const holder = reservedFor(usernameKey);
+      if (players.some((other) => other.usernameKey === usernameKey && other.id !== playerId) || (holder !== null && holder !== playerId)) {
+        return { outcome: "taken", nextChangeAt: null };
+      }
+      reservations.delete(usernameKey);
+      if (player.usernameKey !== usernameKey) reservations.set(player.usernameKey, { playerId, until: time + reserveDays * DAY_MS });
+      players = players.map((stored) => (stored.id === playerId ? { ...stored, username, usernameKey, usernameChangedAt: new Date(time) } : stored));
+      return { outcome: "renamed", nextChangeAt: new Date(time + waitDays * DAY_MS) };
     },
     async addWin(win) {
       const duplicate = wins.some(

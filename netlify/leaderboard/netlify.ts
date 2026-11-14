@@ -15,7 +15,6 @@ import { createSupabaseStore } from "./supabaseStore";
 // Minimal declarations so we do not need @types/node or @netlify/functions.
 declare const process: { env: Record<string, string | undefined> };
 interface NetlifyContext {
-  readonly geo?: { readonly country?: { readonly code?: string } };
   readonly ip?: string;
 }
 
@@ -52,9 +51,9 @@ export async function serve(request: Request, context: NetlifyContext | undefine
       query: new URL(request.url).searchParams,
       authorization: request.headers.get("authorization"),
       deviceId: request.headers.get(DEVICE_HEADER),
-      // Set by Netlify itself, so a visitor cannot choose them.
+      // Set by Netlify itself, so a visitor cannot choose it. No country is
+      // taken from the request: the player always chooses their flag (D61).
       ip: context?.ip ?? request.headers.get("x-nf-client-connection-ip") ?? "unknown",
-      geoCountry: context?.geo?.country?.code?.toUpperCase() ?? null,
     },
     { store: configured, salt, now: () => new Date(), newToken, log: (message) => console.error(message) },
   );

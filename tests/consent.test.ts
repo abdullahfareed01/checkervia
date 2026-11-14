@@ -105,7 +105,10 @@ describe("Terms and notices", () => {
     expect(html).not.toContain("Coming soon");
     expect(html).not.toMatch(/will be|will apply|is not open yet|Nothing is stored on our server/);
     const leaderboard = TERMS_SECTIONS.find((section) => section.title === "Leaderboard")!.points.join(" ");
-    for (const phrase of ["public and unique", "there is no tag", "replaying all of its moves", "reported by the game in your browser", "never stores your raw IP address, your age or your email", "No flag", "Clearing your browser data loses the profile"]) {
+    for (const phrase of ["public and unique", "there is no tag", "replaying all of its moves", "reported by the game in your browser", "never stores your raw IP address, your age or your email", "Clearing your browser data loses the profile",
+      // D61, D62: automatic wins, the chosen flag, renames, avatars.
+      "submitted automatically", "Your username, avatar, flag and wins are public", "never guessed from your connection", "Prefer not to show a flag",
+      "change your username once every 7 days", "reserved for you for 30 days", "never sent or stored"]) {
       expect(leaderboard).toContain(phrase);
     }
     expect(leaderboard).toContain(`email ${CONTACT_EMAIL}`);

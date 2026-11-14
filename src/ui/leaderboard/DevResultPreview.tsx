@@ -1,38 +1,22 @@
-// Development only (?lb=<state>&form=1): the real result panel with the real
-// leaderboard form, for a real legal win made here (the engine's best move
-// 4 turns deep for Black against White's first listed move), so the
-// development server's replay accepts it. Never in a production build.
+// Development only (?lb=<state>&result=1): the real result panel with the
+// automatic leaderboard line, for a real legal win (the first recorded game
+// of the ?testwin= helper, D60), so the development server's replay accepts
+// it. With ?lb=offline, error, limited or slow the line shows that state.
+// Never in a production build.
 import { useState } from "react";
-import { analyzeMoves } from "../../ai/search";
-import { applyMove, getLegalMoves, getWinner, initialBoard, opponentOf } from "../../engine";
-import type { Board, Player } from "../../engine";
-import { encodeMove } from "../../leaderboard/protocol";
 import type { EncodedMove } from "../../leaderboard/protocol";
 import { ResultDialog } from "../ResultDialog";
-import { TermsDialog } from "../TermsDialog";
+import games from "../testWin/testWinGames.json";
 import { LeaderboardScreen } from "./LeaderboardScreen";
-import { randomId } from "./profile";
-import { SubmitWin } from "./SubmitWin";
-
-function legalWin(): EncodedMove[] {
-  let board: Board = initialBoard();
-  let toMove: Player = "black";
-  const moves: EncodedMove[] = [];
-  while (getWinner(board, toMove) === null && moves.length < 600) {
-    const move =
-      toMove === "black"
-        ? analyzeMoves(board, "black", 4).reduce((best, option) => (option.score > best.score ? option : best)).move
-        : getLegalMoves(board, toMove)[0]!;
-    moves.push(encodeMove(move));
-    board = applyMove(board, move);
-    toMove = opponentOf(toMove);
-  }
-  return moves;
-}
+import { leaderboardStore, randomId } from "./profile";
+import { WinStatus } from "./WinStatus";
 
 export function DevResultPreview() {
-  const [win] = useState(() => ({ gameId: randomId(), level: 4 as const, moves: legalWin() }));
-  const [terms, setTerms] = useState(false);
+  const [win] = useState(() => {
+    const made = { gameId: randomId(), level: 4 as const, moves: (games as EncodedMove[][])[0]! };
+    leaderboardStore.enqueue(made);
+    return made;
+  });
   const [board, setBoard] = useState(false);
   const side = { moves: Math.ceil(win.moves.length / 2), captured: 12, kingsMade: 2, bestChain: 2 };
   return (
@@ -48,10 +32,9 @@ export function DevResultPreview() {
         onPlayAgain={() => {}}
         onReview={() => {}}
         onClose={() => {}}
-        leaderboard={<SubmitWin win={win} placement="result" onTerms={() => setTerms(true)} onViewLeaderboard={() => setBoard(true)} />}
+        leaderboard={<WinStatus win={win} onViewLeaderboard={() => setBoard(true)} />}
       />
       {board && <LeaderboardScreen onClose={() => setBoard(false)} />}
-      {terms && <TermsDialog onClose={() => setTerms(false)} />}
     </>
   );
 }

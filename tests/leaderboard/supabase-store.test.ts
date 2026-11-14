@@ -36,7 +36,7 @@ describe("the key headers", () => {
   async function requestsWith(key: string): Promise<Headers[]> {
     const { seen, store } = fakeDb(() => ({ status: 200, body: { allowed: true, retry_after_seconds: 1 } }), key);
     await store.playerByKey("fan");
-    await store.setCountry("p1", "PK");
+    await store.updatePlayer("p1", { country: "PK" });
     await store.hitRateLimit("k", 60, 1);
     return seen.map((request) => request.headers);
   }
@@ -76,8 +76,10 @@ describe("the key headers", () => {
 
 describe("the Supabase adapter", () => {
   it("finds a player by username key with the service role key", async () => {
-    const { seen, store } = fakeDb(() => ({ status: 200, body: { id: "p1", username: "Fan", username_key: "fan", country: "PK", hidden: false } }));
-    expect(await store.playerByKey("fan")).toEqual({ id: "p1", username: "Fan", usernameKey: "fan", country: "PK", hidden: false });
+    const { seen, store } = fakeDb(() => ({ status: 200, body: { id: "p1", username: "Fan", username_key: "fan", country: "PK", avatar: "a07", hidden: false, username_changed_at: "2026-11-10T09:00:00Z" } }));
+    expect(await store.playerByKey("fan")).toEqual({
+      id: "p1", username: "Fan", usernameKey: "fan", country: "PK", avatar: "a07", hidden: false, usernameChangedAt: new Date("2026-11-10T09:00:00Z"),
+    });
     expect(seen[0]!.url.pathname).toBe("/rest/v1/players");
     expect(seen[0]!.url.searchParams.get("username_key")).toBe("eq.fan");
     expect(seen[0]!.headers.get("apikey")).toBe("service-key-for-tests");
@@ -86,7 +88,7 @@ describe("the Supabase adapter", () => {
   it("reads a unique violation as a taken username or a duplicate win", async () => {
     const { store } = fakeDb(() => ({ status: 409, body: { code: "23505", message: "duplicate key value" } }));
     expect(
-      await store.createPlayer({ username: "Fan", usernameKey: "fan", country: null, tokenHash: "t", deviceHash: "d", ipHash: "i" }),
+      await store.createPlayer({ username: "Fan", usernameKey: "fan", country: null, avatar: "a01", tokenHash: "t", deviceHash: "d", ipHash: "i" }),
     ).toBe("taken");
     expect(
       await store.addWin({ playerId: "p1", gameId: "g", level: 4, moves: [[40, 33]], movesHash: "h", moveCount: 1, stats: { totalMoves: 1, captured: 0, kingsMade: 0, bestChain: 0 } }),
@@ -104,11 +106,11 @@ describe("the Supabase adapter", () => {
   it("pages the ranking through its SQL function and reads the total", async () => {
     const { seen, store } = fakeDb(() => ({
       status: 200,
-      body: [{ rank: 21, player_id: "p1", username: "Fan", country: null, wins: "3", best_moves: 25, reached_at: "2026-11-18T00:00:00Z" }],
+      body: [{ rank: 21, player_id: "p1", username: "Fan", country: null, avatar: "a05", wins: "3", best_moves: 25, reached_at: "2026-11-18T00:00:00Z" }],
       headers: { "content-range": "20-20/21" },
     }));
     const page = await store.rankedPage(4, new Date("2026-11-16T00:00:00Z"), 20, 20);
-    expect(page).toEqual({ rows: [{ rank: 21, playerId: "p1", username: "Fan", country: null, wins: 3, bestMoves: 25 }], total: 21 });
+    expect(page).toEqual({ rows: [{ rank: 21, playerId: "p1", username: "Fan", country: null, avatar: "a05", wins: 3, bestMoves: 25 }], total: 21 });
     const request = seen[0]!;
     expect(request.method).toBe("POST");
     expect(request.url.pathname).toBe("/rest/v1/rpc/leaderboard_ranked");
@@ -141,5 +143,28 @@ describe("the Supabase adapter", () => {
     const counts = await store.levelCounts("p1");
     expect(counts.map((count) => count.level)).toEqual([1, 2, 3, 4]);
     expect(counts[3]).toEqual({ level: 4, wins: 4, bestMoves: 20, losses: 1, games: 5 });
+  });
+
+  it("renames through its SQL function and reads the outcome (D61)", async () => {
+    const { seen, store } = fakeDb(() => ({ status: 200, body: { outcome: "tooSoon", next_change_at: "2026-11-21T09:00:00Z" } }));
+    expect(await store.renamePlayer("p1", "New_Name", "new_name", 7, 30)).toEqual({ outcome: "tooSoon", nextChangeAt: new Date("2026-11-21T09:00:00Z") });
+    expect(seen[0]!.url.pathname).toBe("/rest/v1/rpc/rename_player");
+    expect(seen[0]!.body).toEqual({ p_player: "p1", p_username: "New_Name", p_username_key: "new_name", p_wait_days: 7, p_reserve_days: 30 });
+  });
+
+  it("asks only for a reservation that has not ended", async () => {
+    const { seen, store } = fakeDb(() => ({ status: 200, body: { player_id: "p4" } }));
+    expect(await store.reservedFor("old_name")).toBe("p4");
+    expect(seen[0]!.url.pathname).toBe("/rest/v1/username_reservations");
+    expect(seen[0]!.url.searchParams.get("username_key")).toBe("eq.old_name");
+    expect(seen[0]!.url.searchParams.get("reserved_until")).toMatch(/^gt\./);
+  });
+
+  it("updates only the fields that change, and nothing when none do", async () => {
+    const { seen, store } = fakeDb(() => ({ status: 200, body: [] }));
+    await store.updatePlayer("p1", { avatar: "a09" });
+    await store.updatePlayer("p1", {});
+    expect(seen).toHaveLength(1);
+    expect(seen[0]!.body).toEqual({ avatar: "a09" });
   });
 });

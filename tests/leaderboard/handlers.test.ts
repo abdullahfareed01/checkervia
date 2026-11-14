@@ -44,7 +44,7 @@ interface Call {
   token?: string | null;
   device?: string | null;
   ip?: string;
-  country?: string | null;
+  country?: string; // claim(): the flag the player chose ("none" by default)
 }
 
 async function call(handler: LeaderboardHandler, w: World, options: Call = {}) {
@@ -55,14 +55,13 @@ async function call(handler: LeaderboardHandler, w: World, options: Call = {}) {
     authorization: options.token ? `Bearer ${options.token}` : null,
     deviceId: options.device === undefined ? "device-aaaaaaaaaaaaaaaa" : options.device,
     ip: options.ip ?? "203.0.113.7",
-    geoCountry: options.country === undefined ? "PK" : options.country,
   };
   const response = await handler(request, w.deps);
   return { status: response.status, body: response.body as Record<string, unknown> };
 }
 
 async function claim(w: World, username: string, extra: Call = {}): Promise<string> {
-  const response = await call(handleClaimUsername, w, { body: { username, country: "auto" }, ...extra });
+  const response = await call(handleClaimUsername, w, { body: { username, country: extra.country ?? "none", avatar: "a07" }, ...extra });
   expect(response.status).toBe(201);
   return response.body["token"] as string;
 }
@@ -76,9 +75,9 @@ const board = (w: World, query: Record<string, string> = {}, token?: string) =>
 describe("claiming a username", () => {
   it("returns the token once and stores only its hash, the device and IP only hashed", async () => {
     const w = world();
-    const response = await call(handleClaimUsername, w, { body: { username: "Checkers_Fan", country: "auto" } });
+    const response = await call(handleClaimUsername, w, { body: { username: "Checkers_Fan", country: "PK", avatar: "a07" } });
     expect(response.status).toBe(201);
-    expect(response.body).toEqual({ username: "Checkers_Fan", country: "PK", token: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) });
+    expect(response.body).toEqual({ username: "Checkers_Fan", country: "PK", avatar: "a07", token: expect.stringMatching(/^[A-Za-z0-9_-]{43}$/) });
 
     const stored = w.store.players[0]!;
     const token = response.body["token"] as string;
@@ -92,7 +91,7 @@ describe("claiming a username", () => {
     const w = world();
     await claim(w, "Checkers_Fan");
     for (const username of ["Checkers_Fan", "checkers_fan", "CHECKERS_FAN"]) {
-      const again = await call(handleClaimUsername, w, { body: { username, country: null } });
+      const again = await call(handleClaimUsername, w, { body: { username, country: "none", avatar: "a01" } });
       expect(again.status).toBe(409);
       expect(again.body).not.toHaveProperty("token");
     }
@@ -116,31 +115,48 @@ describe("claiming a username", () => {
     const w = world();
     // One device each: a device may only try 5 claims an hour.
     for (const [index, username] of ["ab", "1abc", "bad name", "fuuuck", "admin", "x__y", "trail_"].entries()) {
-      const response = await call(handleClaimUsername, w, { body: { username, country: null }, device: `device-${String(index).padStart(16, "0")}` });
+      const response = await call(handleClaimUsername, w, { body: { username, country: "none", avatar: "a01" }, device: `device-${String(index).padStart(16, "0")}` });
       expect(response.status).toBe(422);
       expect(response.body["problems"]).not.toEqual([]);
     }
     expect(w.store.players).toEqual([]);
   });
 
-  it("takes the flag from Netlify's geo country, a choice, or none", async () => {
+  it("the flag is only ever the player's choice: a country or none, never a guess (D61)", async () => {
     const w = world();
-    const auto = await call(handleClaimUsername, w, { body: { username: "Auto", country: "auto" }, country: "DE" });
-    const chosen = await call(handleClaimUsername, w, { body: { username: "Chosen", country: "JP" }, country: "DE" });
-    const none = await call(handleClaimUsername, w, { body: { username: "Nobody", country: null }, country: "DE" });
-    const unknown = await call(handleClaimUsername, w, { body: { username: "Unknown", country: "auto" }, country: "ZZ" });
-    expect([auto, chosen, none, unknown].map((response) => response.body["country"])).toEqual(["DE", "JP", null, null]);
+    const chosen = await call(handleClaimUsername, w, { body: { username: "Chosen", country: "JP", avatar: "a01" } });
+    const none = await call(handleClaimUsername, w, { body: { username: "Nobody", country: "none", avatar: "a01" } });
+    expect([chosen, none].map((response) => response.body["country"])).toEqual(["JP", null]);
+    // No automatic country and no missing one: the old "auto" and null are refused.
+    for (const country of ["auto", null, undefined, "", "pk"]) {
+      const body = { username: "Guess", avatar: "a01", ...(country === undefined ? {} : { country }) };
+      expect((await call(handleClaimUsername, w, { body })).status).toBe(400);
+    }
+    expect(w.store.players.map((player) => player.username)).toEqual(["Chosen", "Nobody"]);
+  });
+
+  it("an avatar from the allowed list is required and stored; nothing else about it is", async () => {
+    const w = world();
+    for (const avatar of [undefined, null, "a00", "a41", "men-1", "A01", 7]) {
+      const body = { username: "Pic", country: "none", ...(avatar === undefined ? {} : { avatar }) };
+      expect((await call(handleClaimUsername, w, { body })).status).toBe(400);
+    }
+    const response = await call(handleClaimUsername, w, { body: { username: "Pic", country: "none", avatar: "a40" } });
+    expect(response.body["avatar"]).toBe("a40");
+    expect(Object.keys(w.store.players[0]!).sort()).toEqual(
+      ["avatar", "country", "deviceHash", "hidden", "id", "ipHash", "tokenHash", "username", "usernameChangedAt", "usernameKey"].sort(),
+    );
   });
 
   it("refuses bodies that are too big, have extra keys, bad countries or no device id", async () => {
     const w = world();
     const bad = [
-      await call(handleClaimUsername, w, { body: { username: "x".repeat(300), country: null } }),
+      await call(handleClaimUsername, w, { body: { username: "x".repeat(300), country: "none", avatar: "a01" } }),
       await call(handleClaimUsername, w, { body: { username: "Extra", country: null, admin: true } }),
-      await call(handleClaimUsername, w, { body: { username: "Flag", country: "XX" } }),
+      await call(handleClaimUsername, w, { body: { username: "Flag", country: "XX", avatar: "a01" } }),
       await call(handleClaimUsername, w, { body: "not json" }),
-      await call(handleClaimUsername, w, { body: { username: "Device", country: null }, device: null }),
-      await call(handleClaimUsername, w, { body: { username: "Device", country: null }, device: "short" }),
+      await call(handleClaimUsername, w, { body: { username: "Device", country: "none", avatar: "a01" }, device: null }),
+      await call(handleClaimUsername, w, { body: { username: "Device", country: "none", avatar: "a01" }, device: "short" }),
       await call(handleClaimUsername, w, { method: "GET" }),
     ];
     expect(bad.map((response) => response.status)).toEqual([400, 400, 400, 400, 400, 400, 405]);
@@ -337,6 +353,7 @@ describe("reports and the profile", () => {
     expect(profile.body).toEqual({
       username: "Stats",
       country: "GB",
+      avatar: "a07",
       gamesPlayed: 4,
       wins: 1,
       losses: 2,
@@ -366,14 +383,96 @@ describe("reports and the profile", () => {
     expect((await call(handleGetProfile, w, { query: { username: "fresh" } })).body).toMatchObject({ gamesPlayed: 0, winRate: null, bestWin: null, weeklyStrongestRank: null });
   });
 
-  it("the flag can be changed or removed with the token", async () => {
+  it("the flag and the avatar can be changed any time with the token", async () => {
     const w = world();
     const token = await claim(w, "Flags", { country: "PK" });
-    expect((await call(handleUpdateProfile, w, { token, body: { country: "CA" } })).body).toEqual({ username: "Flags", country: "CA" });
-    expect((await call(handleUpdateProfile, w, { token, body: { country: null } })).body).toEqual({ username: "Flags", country: null });
-    expect((await call(handleUpdateProfile, w, { token, body: { country: "auto" }, country: "FR" })).body).toEqual({ username: "Flags", country: "FR" });
+    const own = { username: "Flags", nextRenameAt: null };
+    expect((await call(handleUpdateProfile, w, { token, body: { country: "CA" } })).body).toEqual({ ...own, country: "CA", avatar: "a07" });
+    expect((await call(handleUpdateProfile, w, { token, body: { country: "none" } })).body).toEqual({ ...own, country: null, avatar: "a07" });
+    expect((await call(handleUpdateProfile, w, { token, body: { avatar: "a33" } })).body).toEqual({ ...own, country: null, avatar: "a33" });
+    expect((await call(handleUpdateProfile, w, { token, body: { avatar: "a12", country: "GB" } })).body).toEqual({ ...own, country: "GB", avatar: "a12" });
+    expect((await call(handleGetProfile, w, { query: { username: "flags" } })).body).toMatchObject({ country: "GB", avatar: "a12" });
     expect((await call(handleUpdateProfile, w, { body: { country: "CA" } })).status).toBe(401);
-    expect((await call(handleUpdateProfile, w, { token, body: { country: "Canada" } })).status).toBe(400);
+    for (const body of [{ country: "Canada" }, { country: "auto" }, { country: null }, { avatar: "a99" }, {}, { colour: "red" }]) {
+      expect((await call(handleUpdateProfile, w, { token, body })).status).toBe(400);
+    }
+  });
+});
+
+describe("changing the username (D61)", () => {
+  const DAY = 86_400_000;
+  const rename = (w: World, token: string, username: string, device = "device-aaaaaaaaaaaaaaaa") =>
+    call(handleUpdateProfile, w, { token, device, body: { username } });
+
+  it("renames once every 7 days, keeping the wins, and says when the next change is allowed", async () => {
+    const w = world();
+    const token = await claim(w, "First_Name");
+    await submit(w, token);
+    const renamed = await rename(w, token, "Second_Name");
+    expect(renamed.status).toBe(200);
+    expect(renamed.body).toMatchObject({ username: "Second_Name", nextRenameAt: new Date(START + 7 * DAY).toISOString() });
+    // Wins and stats belong to the player, so they follow the new name.
+    expect((await board(w)).body["rows"]).toMatchObject([{ rank: 1, username: "Second_Name", wins: 1 }]);
+    expect((await call(handleGetProfile, w, { query: { username: "second_name" } })).body).toMatchObject({ wins: 1 });
+
+    w.clock.time += 6 * DAY;
+    const tooSoon = await rename(w, token, "Third_Name");
+    expect(tooSoon.status).toBe(409);
+    expect(tooSoon.body).toMatchObject({ code: "renameTooSoon", nextRenameAt: new Date(START + 7 * DAY).toISOString() });
+    // The own profile says so too; nobody else's does.
+    expect((await call(handleGetProfile, w, { token, query: { username: "Second_Name" } })).body["nextRenameAt"]).toBe(new Date(START + 7 * DAY).toISOString());
+    expect((await call(handleGetProfile, w, { query: { username: "Second_Name" } })).body).not.toHaveProperty("nextRenameAt");
+
+    w.clock.time += DAY;
+    expect((await rename(w, token, "Third_Name")).status).toBe(200);
+  });
+
+  it("the old name stays reserved for its player for 30 days: nobody else can claim or take it", async () => {
+    const w = world();
+    const owner = await claim(w, "Famous");
+    const other = await claim(w, "Someone", { device: "device-bbbbbbbbbbbbbbbb" });
+    await rename(w, owner, "Renamed");
+
+    expect((await call(handleCheckUsername, w, { query: { username: "famous" } })).body).toEqual({ available: false, problems: [] });
+    expect((await call(handleCheckUsername, w, { token: owner, query: { username: "famous" } })).body).toEqual({ available: true, problems: [] });
+    expect((await call(handleClaimUsername, w, { device: "device-cccccccccccccccc", body: { username: "FAMOUS", country: "none", avatar: "a01" } })).status).toBe(409);
+    expect((await rename(w, other, "Famous", "device-bbbbbbbbbbbbbbbb")).status).toBe(409);
+    expect((await rename(w, other, "renamed", "device-bbbbbbbbbbbbbbbb")).body["code"]).toBe("taken");
+
+    w.clock.time += 30 * DAY + 1;
+    expect((await call(handleCheckUsername, w, { query: { username: "famous" } })).body).toEqual({ available: true, problems: [] });
+    expect((await call(handleClaimUsername, w, { device: "device-dddddddddddddddd", body: { username: "Famous", country: "none", avatar: "a01" } })).status).toBe(201);
+  });
+
+  it("its owner may take the old name back after the wait", async () => {
+    const w = world();
+    const token = await claim(w, "Boomerang");
+    await rename(w, token, "Away");
+    w.clock.time += 7 * DAY;
+    expect((await rename(w, token, "boomerang")).body).toMatchObject({ username: "boomerang" });
+  });
+
+  it("repeats every username rule, and the same name is no change at all", async () => {
+    const w = world();
+    const token = await claim(w, "Steady");
+    for (const [index, username] of ["ab", "1abc", "bad name", "admin"].entries()) {
+      const response = await rename(w, token, username, `device-${String(index).padStart(16, "0")}`);
+      expect(response.status).toBe(422);
+      expect(response.body["problems"]).not.toEqual([]);
+    }
+    const same = await rename(w, token, "Steady", "device-eeeeeeeeeeeeeeee");
+    expect(same.body).toMatchObject({ username: "Steady", nextRenameAt: null });
+    expect(w.store.players[0]!.usernameChangedAt).toBeNull();
+  });
+
+  it("is rate limited per device on top of the 7 days", async () => {
+    const w = world();
+    const token = await claim(w, "Tries");
+    const statuses: number[] = [];
+    for (let index = 0; index <= LIMITS.renameUsername.perDevice; index += 1) statuses.push((await rename(w, token, `Tries_${index}`)).status);
+    expect(statuses[0]).toBe(200);
+    expect(statuses.slice(1, -1).every((status) => status === 409)).toBe(true);
+    expect(statuses.at(-1)).toBe(429);
   });
 });
 
@@ -398,7 +497,7 @@ describe("rate limits", () => {
     const w = world();
     const statuses: number[] = [];
     for (let index = 0; index <= LIMITS.claimUsername.perIp; index += 1) {
-      const response = await call(handleClaimUsername, w, { body: { username: `Shared${index}`, country: null }, device: `device-${String(index).padStart(16, "0")}` });
+      const response = await call(handleClaimUsername, w, { body: { username: `Shared${index}`, country: "none", avatar: "a01" }, device: `device-${String(index).padStart(16, "0")}` });
       statuses.push(response.status);
     }
     expect(statuses.slice(0, -1).every((status) => status === 201)).toBe(true);
@@ -427,7 +526,7 @@ describe("failures and logs", () => {
       },
     };
     const response = await handleGetLeaderboard(
-      { method: "GET", body: "", query: new URLSearchParams(), authorization: `Bearer ${token}`, deviceId: null, ip: "203.0.113.7", geoCountry: null },
+      { method: "GET", body: "", query: new URLSearchParams(), authorization: `Bearer ${token}`, deviceId: null, ip: "203.0.113.7" },
       broken,
     );
     expect(response).toEqual({ status: 503, body: { error: "The leaderboard is not available right now.", code: "unavailable" } });

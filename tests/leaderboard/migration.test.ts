@@ -8,6 +8,8 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { rankPlayers } from "../../src/leaderboard/ranking";
 
 const migration = readFileSync(new URL("../../docs/07-deployment/leaderboard-migration.sql", import.meta.url), "utf8");
+// Migration 2 (D61, D62): avatars, renames and reserved names, run after 1 as in a live project.
+const migration2 = readFileSync(new URL("../../docs/07-deployment/leaderboard-migration-2.sql", import.meta.url), "utf8");
 
 // What a new Supabase project already has: three API roles, the service
 // role bypassing Row Level Security, and default grants on new tables and
@@ -27,6 +29,7 @@ beforeAll(async () => {
   db = new PGlite();
   await db.exec(SUPABASE_LIKE);
   await db.exec(migration);
+  await db.exec(migration2);
 }, 60_000);
 
 // Each test works in a transaction that is rolled back, so tests stay apart.
@@ -75,7 +78,7 @@ async function errorOf(sql: string, params: unknown[] = []): Promise<string> {
 }
 
 describe("the migration", () => {
-  it("creates the four tables with Row Level Security on", async () => {
+  it("creates the five tables with Row Level Security on", async () => {
     const tables = await db.query<{ relname: string; relrowsecurity: boolean }>(
       "select relname, relrowsecurity from pg_class where relnamespace = 'public'::regnamespace and relkind = 'r' order by relname",
     );
@@ -83,6 +86,7 @@ describe("the migration", () => {
       { relname: "game_results", relrowsecurity: true },
       { relname: "players", relrowsecurity: true },
       { relname: "rate_limits", relrowsecurity: true },
+      { relname: "username_reservations", relrowsecurity: true },
       { relname: "wins", relrowsecurity: true },
     ]);
   });
@@ -90,12 +94,13 @@ describe("the migration", () => {
   it.each(["anon", "authenticated"])("%s can read no table and call no function", (role) =>
     inTransaction(async () => {
       await db.exec(`set local role ${role}`);
-      for (const table of ["players", "wins", "game_results", "rate_limits"]) {
+      for (const table of ["players", "wins", "game_results", "rate_limits", "username_reservations"]) {
         expect(await errorOf(`select * from ${table}`)).toMatch(/permission denied/);
       }
       expect(await errorOf("select * from leaderboard_ranked(4, null)")).toMatch(/permission denied/);
       expect(await errorOf("select * from player_level_stats($1)", [uuid()])).toMatch(/permission denied/);
       expect(await errorOf("select * from hit_rate_limit('k', 60, 1)")).toMatch(/permission denied/);
+      expect(await errorOf("select * from rename_player($1, 'Abc', 'abc', 7, 30)", [uuid()])).toMatch(/permission denied/);
     }),
   );
 
@@ -105,6 +110,7 @@ describe("the migration", () => {
       expect(await errorOf("select * from players")).toBe("no error");
       expect(await errorOf("select * from leaderboard_ranked(4, null)")).toBe("no error");
       expect(await errorOf("select * from hit_rate_limit('k', 60, 1)")).toBe("no error");
+      expect(await errorOf("select * from username_reservations")).toBe("no error");
     }),
   );
 });
@@ -241,6 +247,109 @@ describe("hit_rate_limit", () => {
       expect(results[3]!.retry_after_seconds).toBeLessThanOrEqual(3600);
       // Another key has its own count.
       expect((await db.query<{ allowed: boolean }>("select * from hit_rate_limit('submitWin:ip:other', 3600, 3)")).rows[0]!.allowed).toBe(true);
+    }),
+  );
+});
+
+// ---------- Migration 2 (D61, D62) ----------
+
+const rename = async (id: string, username: string) =>
+  (await db.query<{ outcome: string; next_change_at: Date | null }>("select * from rename_player($1, $2::text, lower($2::text), 7, 30)", [id, username])).rows[0]!;
+const usernameOf = async (id: string) => (await db.query<{ username: string }>("select username from players where id = $1", [id])).rows[0]!.username;
+const daysUntil = async (time: unknown) =>
+  (await db.query<{ days: number }>("select round(extract(epoch from $1::timestamptz - now()) / 86400)::int as days", [time])).rows[0]!.days;
+
+describe("migration 2", () => {
+  it("cannot run twice: a second run stops at once", async () => {
+    const error = await db.exec(migration2).then(
+      () => "no error",
+      (caught: unknown) => String((caught as Error).message),
+    );
+    expect(error).toMatch(/already exists/);
+  });
+
+  it("an avatar is an id like a07, or none for players from before avatars; no category column", () =>
+    inTransaction(async () => {
+      const id = await player("Pictured");
+      expect(await errorOf("update players set avatar = 'a07' where id = $1", [id])).toBe("no error");
+      for (const bad of ["a7", "m01", "a07 ", "A07", "<svg>"]) {
+        expect(await errorOf("update players set avatar = $2 where id = $1", [id, bad])).toMatch(/check constraint/);
+      }
+      const columns = (await db.query<{ column_name: string }>("select column_name from information_schema.columns where table_name = 'players'")).rows.map((row) => row.column_name);
+      expect(columns).toContain("avatar");
+      expect(columns.filter((column) => /category|gender|age/.test(column))).toEqual([]);
+    }),
+  );
+
+  it("the ranking now carries the avatar", () =>
+    inTransaction(async () => {
+      const id = await player("Ranked");
+      await db.query("update players set avatar = 'a12' where id = $1", [id]);
+      await win(id, 4, 20, "2026-11-17T10:00:00Z");
+      expect((await ranked(4, null))[0]).toMatchObject({ player_id: id, avatar: "a12" });
+    }),
+  );
+
+  it("a rename keeps the player (and so their wins) and reserves the old name for them for 30 days", () =>
+    inTransaction(async () => {
+      const id = await player("Old_Name");
+      await win(id, 4, 20, "2026-11-17T10:00:00Z");
+      const result = await rename(id, "New_Name");
+      expect(result.outcome).toBe("renamed");
+      expect(await daysUntil(result.next_change_at)).toBe(7);
+      expect(await usernameOf(id)).toBe("New_Name");
+      expect((await ranked(4, null))[0]).toMatchObject({ player_id: id, username: "New_Name" });
+      const reserved = (await db.query<{ player_id: string; reserved_until: Date }>("select player_id, reserved_until from username_reservations where username_key = 'old_name'")).rows[0]!;
+      expect(reserved.player_id).toBe(id);
+      expect(await daysUntil(reserved.reserved_until)).toBe(30);
+    }),
+  );
+
+  it("only one rename every 7 days, saying when the next one is allowed", () =>
+    inTransaction(async () => {
+      const id = await player("Quick");
+      await db.query("update players set username_changed_at = now() - interval '3 days' where id = $1", [id]);
+      const refused = await rename(id, "Quicker");
+      expect(refused.outcome).toBe("tooSoon");
+      expect(await daysUntil(refused.next_change_at)).toBe(4);
+      expect(await usernameOf(id)).toBe("Quick");
+      await db.query("update players set username_changed_at = now() - interval '8 days' where id = $1", [id]);
+      expect((await rename(id, "Quicker")).outcome).toBe("renamed");
+    }),
+  );
+
+  it("a reserved name cannot be claimed or taken by anyone else; its owner may take it back", () =>
+    inTransaction(async () => {
+      const owner = await player("Famous");
+      await rename(owner, "Renamed");
+      const other = await player("Someone");
+      // A new player cannot claim it (a unique violation, read as "taken"), nor can another rename take it.
+      expect(await errorOf("insert into players (username, username_key, token_hash, device_hash, ip_hash) values ('famous', 'famous', 'tok', 'd', 'i')")).toMatch(/username reserved/);
+      expect((await rename(other, "FAMOUS")).outcome).toBe("taken");
+      // A name in use by someone else is taken too.
+      expect((await rename(other, "renamed")).outcome).toBe("taken");
+      // The owner takes it back (after the wait), and the reservation is used up.
+      await db.query("update players set username_changed_at = now() - interval '8 days' where id = $1", [owner]);
+      expect((await rename(owner, "Famous")).outcome).toBe("renamed");
+      expect((await db.query("select 1 from username_reservations where username_key = 'famous'")).rows).toEqual([]);
+    }),
+  );
+
+  it("after 30 days the old name is free again", () =>
+    inTransaction(async () => {
+      const owner = await player("Vintage");
+      await rename(owner, "Modern");
+      await db.query("update username_reservations set reserved_until = now() - interval '1 second' where username_key = 'vintage'");
+      expect(await errorOf("insert into players (username, username_key, token_hash, device_hash, ip_hash) values ('Vintage', 'vintage', 'tok2', 'd', 'i')")).toBe("no error");
+    }),
+  );
+
+  it("deleting a player removes their reservations too (removal on request)", () =>
+    inTransaction(async () => {
+      const owner = await player("Leaving");
+      await rename(owner, "Left");
+      await db.query("delete from players where id = $1", [owner]);
+      expect((await db.query("select 1 from username_reservations")).rows).toEqual([]);
     }),
   );
 });

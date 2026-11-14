@@ -19,6 +19,8 @@ import type {
   LeaderboardResponse,
   ProfileResponse,
   SubmitWinResponse,
+  UpdateProfileRequest,
+  UpdateProfileResponse,
 } from "../../leaderboard/protocol";
 import type { UsernameRule } from "../../leaderboard/username";
 import { deviceId, leaderboardStore } from "./profile";
@@ -33,6 +35,7 @@ export type ApiResult<T> =
       readonly code: string;
       readonly problems?: readonly UsernameRule[];
       readonly retryAfter?: number;
+      readonly nextRenameAt?: string;
     };
 
 const BASE = "/.netlify/functions/";
@@ -92,13 +95,14 @@ async function call<T>(name: string, options: { query?: Record<string, string>; 
   // The server no longer knows this token (the profile was removed): forget it.
   if (response.status === 401 && token) leaderboardStore.setProfile(null);
   if (response.ok) return { kind: "ok", value: data as T };
-  const body = (data ?? {}) as { code?: unknown; problems?: unknown; retryAfter?: unknown };
+  const body = (data ?? {}) as { code?: unknown; problems?: unknown; retryAfter?: unknown; nextRenameAt?: unknown };
   return {
     kind: "failed",
     status: response.status,
     code: typeof body.code === "string" ? body.code : "unknown",
     ...(Array.isArray(body.problems) ? { problems: body.problems as UsernameRule[] } : {}),
     ...(typeof body.retryAfter === "number" ? { retryAfter: body.retryAfter } : {}),
+    ...(typeof body.nextRenameAt === "string" ? { nextRenameAt: body.nextRenameAt } : {}),
   };
 }
 
@@ -107,8 +111,8 @@ export const leaderboardApi = {
     call<CheckUsernameResponse>("check-username", { query: { username }, ...(signal ? { signal } : {}) }),
 
   /** On success the profile (with its token) is saved on this device. */
-  async claimUsername(username: string, country: CountryChoice): Promise<ApiResult<ClaimResponse>> {
-    const result = await call<ClaimResponse>("claim-username", { body: { username, country } });
+  async claimUsername(username: string, country: CountryChoice, avatar: string): Promise<ApiResult<ClaimResponse>> {
+    const result = await call<ClaimResponse>("claim-username", { body: { username, country, avatar } });
     if (result.kind === "ok") leaderboardStore.setProfile(result.value);
     return result;
   },
@@ -125,9 +129,13 @@ export const leaderboardApi = {
   profile: (username: string, signal?: AbortSignal) =>
     call<ProfileResponse>("get-profile", { query: { username }, ...(signal ? { signal } : {}) }),
 
-  async updateCountry(country: CountryChoice): Promise<ApiResult<{ username: string; country: string | null }>> {
-    const result = await call<{ username: string; country: string | null }>("update-profile", { body: { country } });
-    if (result.kind === "ok") leaderboardStore.setCountry(result.value.country);
+  /** Changes the own profile (any of username, flag, avatar); on success this device's copy too. */
+  async updateProfile(changes: UpdateProfileRequest): Promise<ApiResult<UpdateProfileResponse>> {
+    const result = await call<UpdateProfileResponse>("update-profile", { body: changes });
+    if (result.kind === "ok") {
+      const { username, country, avatar } = result.value;
+      leaderboardStore.updateProfile({ username, country, avatar });
+    }
     return result;
   },
 };

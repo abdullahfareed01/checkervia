@@ -1,12 +1,14 @@
 // GET ?username=...: a player's public profile and stats. Hidden players
-// (moderation) are not found.
+// (moderation) are not found. Asked with the player's own token, it also
+// says when their username may change again (D61).
 import { periodStart } from "../../../src/leaderboard/periods";
 import type { ProfileResponse } from "../../../src/leaderboard/protocol";
 import { USERNAME_MAX, usernameKey } from "../../../src/leaderboard/username";
-import { checkRateLimits, fail, guarded, invalid, ok } from "../http";
+import { checkRateLimits, fail, guarded, invalid, ok, playerFromToken } from "../http";
 import type { LeaderboardHandler } from "../http";
 import type { LevelCounts } from "../store";
 import { LIMITS } from "./limits";
+import { nextRenameAt } from "./updateProfile";
 
 // The best win: fewest moves; on a tie, the one at the higher level.
 function bestWin(levels: readonly LevelCounts[]): ProfileResponse["bestWin"] {
@@ -37,6 +39,7 @@ export const handleGetProfile: LeaderboardHandler = (request, deps) =>
     const body: ProfileResponse = {
       username: player.username,
       country: player.country,
+      avatar: player.avatar,
       gamesPlayed,
       wins,
       losses: sum((level) => level.losses),
@@ -45,5 +48,7 @@ export const handleGetProfile: LeaderboardHandler = (request, deps) =>
       bestWin: bestWin(levels),
       weeklyStrongestRank: week?.rank ?? null,
     };
+    const asker = request.authorization ? await playerFromToken(request, deps.store) : null;
+    if (asker?.id === player.id) return ok({ ...body, nextRenameAt: nextRenameAt(player, deps.now()) });
     return ok(body);
   });

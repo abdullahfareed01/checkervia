@@ -43,10 +43,10 @@ import { useGameFeedback } from "./useFeedback";
 import { useSpeakTips, useVoice } from "./useVoice";
 import { voiceEngine } from "./voice/voiceEngine";
 import { LeaderboardScreen } from "./leaderboard/LeaderboardScreen";
-import { useLeaderboardProfile } from "./leaderboard/profile";
-import type { PendingWin } from "./leaderboard/profile";
-import { SubmitWin, SubmitWinDialog } from "./leaderboard/SubmitWin";
+import { useProfileGate } from "./leaderboard/ProfileGate";
+import { ProfileScreen } from "./leaderboard/ProfileScreen";
 import { useLeaderboardGame } from "./leaderboard/useLeaderboardGame";
+import { WinStatus } from "./leaderboard/WinStatus";
 
 interface AppProps {
   initial?: GameOptions | undefined; // the first game's setup
@@ -97,7 +97,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     },
     [game.click],
   );
-  const newGame = useCallback(() => {
+  const startNewGame = useCallback(() => {
     voiceEngine().cancel();
     game.newGame();
     playFeedback("gameStart");
@@ -145,14 +145,20 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
-  // The leaderboard (D57): the screen, and the last skipped win's sheet.
+  // The leaderboard (D57) and the Profile screen (D61); a qualifying win is
+  // sent by itself from the result panel.
   const [leaderboardOpen, setLeaderboardOpen] = useState(false);
-  // The sheet keeps its own copy: submitting clears the stored one.
-  const [pendingShown, setPendingShown] = useState<PendingWin | null>(null);
-  const pendingOpen = pendingShown !== null;
+  const [profileOpen, setProfileOpen] = useState(false);
   const leaderboardWin = useLeaderboardGame(state);
-  const { pending } = useLeaderboardProfile();
-  useHistoryKeys(goHistory, !result.open && !why.open && !askLevel && !rulesOpen && !termsOpen && !leaderboardOpen && !pendingOpen);
+  // A game against the AI starts through the profile step (D61); Back from
+  // it returns to the home screen.
+  const [requireProfile, profileGate] = useProfileGate(() => onMenu?.(), () => setTermsOpen(true));
+  const gating = profileGate !== null;
+  const newGame = useCallback(() => {
+    if (current.current.mode === "vs-ai") requireProfile(startNewGame);
+    else startNewGame();
+  }, [startNewGame, requireProfile]);
+  useHistoryKeys(goHistory, !result.open && !why.open && !askLevel && !rulesOpen && !termsOpen && !leaderboardOpen && !profileOpen && !gating);
   const loseQuestion = (what: string) => (inProgress ? `${what} The current game will be lost.` : undefined);
 
   // Switching to "Play vs AI" first asks for the AI's level.
@@ -168,22 +174,23 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     () => [
       { label: "How to play", onSelect: openRules },
       { label: "Leaderboard", onSelect: () => setLeaderboardOpen(true) },
-      ...(pending ? [{ label: "Add your last win to the leaderboard", onSelect: () => setPendingShown(pending) }] : []),
+      { label: "Profile", onSelect: () => setProfileOpen(true) },
       { label: "Settings", onSelect: () => setSettingsOpen(true) },
       { label: "Terms and notices", onSelect: openTerms },
       ...(onMenu ? [{ label: "Main menu", onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
     ],
-    [inProgress, openRules, openTerms, onMenu, pending],
+    [inProgress, openRules, openTerms, onMenu],
   );
   // A new game against the AI at `level` (from the level dialog or the
   // Menu). Strongest asks the 18+ consent first (D45); after No or Cancel the
   // current game and level stay as they were.
   const startAt = useCallback(
-    (level: AiLevel) => {
-      playAi(level);
-      onAiLevel?.(level);
-    },
-    [playAi, onAiLevel],
+    (level: AiLevel) =>
+      requireProfile(() => {
+        playAi(level);
+        onAiLevel?.(level);
+      }),
+    [playAi, onAiLevel, requireProfile],
   );
   const [requestLevel, consent] = useStrongestGate(startAt);
   const startVsAi = useCallback(
@@ -217,7 +224,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   }, [startedMove, state.history.length]);
   // Greeting, idle lines, the resign hint and the end of the game (Change 4).
   // Idle lines wait while anything covers the board or the player is busy.
-  const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open || leaderboardOpen || pendingOpen;
+  const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open || leaderboardOpen || profileOpen || gating;
   const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
   const personality = usePersonality(state, playerTurn && !startedMove && !covered);
   // The AI's line appears after its piece has landed: until then, the typing
@@ -243,7 +250,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
       ? { kind: "resign", question: resignQuestion, highlight: personality.hintActive, onResign: resign }
       : { kind: "result", onShow: result.reopen };
   // Sounds and vibrations that follow from what is on screen.
-  const sheets = [menuOpen && "menu", why.open && "why", termsOpen && "terms", rulesOpen && "rules", languageOpen && "language", askLevel && "level", settingsOpen && "settings", leaderboardOpen && "leaderboard", pendingOpen && "pendingWin"]
+  const sheets = [menuOpen && "menu", why.open && "why", termsOpen && "terms", rulesOpen && "rules", languageOpen && "language", askLevel && "level", settingsOpen && "settings", leaderboardOpen && "leaderboard", (profileOpen || gating) && "profile"]
     .filter(Boolean)
     .join(" ");
   useGameFeedback({ state, resultOpen: result.open, sheets, bubble: result.open ? null : bubble });
@@ -323,11 +330,9 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           onTipsShown={speakTips}
           leaderboard={
             leaderboardWin && (
-              <SubmitWin
+              <WinStatus
                 key={leaderboardWin.gameId}
                 win={leaderboardWin}
-                placement="result"
-                onTerms={openTerms}
                 onViewLeaderboard={() => {
                   result.close();
                   setLeaderboardOpen(true);
@@ -355,20 +360,19 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           onClose={() => setLanguageOpen(false)}
         />
       )}
-      {leaderboardOpen && <LeaderboardScreen onClose={() => setLeaderboardOpen(false)} onTerms={openTerms} />}
-      {pendingShown && (
-        <SubmitWinDialog
-          win={pendingShown}
-          onClose={() => setPendingShown(null)}
-          onTerms={openTerms}
-          onViewLeaderboard={() => {
-            setPendingShown(null);
-            setLeaderboardOpen(true);
+      {profileGate}
+      {leaderboardOpen && <LeaderboardScreen onClose={() => setLeaderboardOpen(false)} onOwnProfile={() => setProfileOpen(true)} />}
+      {profileOpen && <ProfileScreen onClose={() => setProfileOpen(false)} onTerms={openTerms} />}
+      {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsSheet
+          onClose={() => setSettingsOpen(false)}
+          onProfile={() => {
+            setSettingsOpen(false);
+            setProfileOpen(true);
           }}
         />
       )}
-      {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
-      {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}
     </main>
   );
 }

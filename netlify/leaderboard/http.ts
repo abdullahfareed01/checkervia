@@ -8,7 +8,8 @@
 // storage errors are logged by their code only.
 import { isCountryCode } from "../../src/leaderboard/countries";
 import { DEVICE_ID_PATTERN } from "../../src/leaderboard/protocol";
-import type { CountryChoice, ErrorResponse } from "../../src/leaderboard/protocol";
+import { NO_COUNTRY } from "../../src/leaderboard/protocol";
+import type { ErrorResponse } from "../../src/leaderboard/protocol";
 import { bearerToken, saltedHash, sha256Hex } from "./security";
 import type { LeaderboardStore, PlayerRecord } from "./store";
 
@@ -18,9 +19,8 @@ export interface LeaderboardRequest {
   readonly query: URLSearchParams;
   readonly authorization: string | null;
   readonly deviceId: string | null;
-  // Set by Netlify itself, so a visitor cannot choose them.
+  // Set by Netlify itself, so a visitor cannot choose it.
   readonly ip: string;
-  readonly geoCountry: string | null;
 }
 
 export interface LeaderboardDeps {
@@ -40,8 +40,8 @@ export type LeaderboardHandler = (request: LeaderboardRequest, deps: Leaderboard
 
 export const ok = (body: unknown, status = 200): LeaderboardResponse => ({ status, body });
 
-export function fail(status: number, code: string, error: string, retryAfter?: number): LeaderboardResponse {
-  const body: ErrorResponse = retryAfter === undefined ? { error, code } : { error, code, retryAfter };
+export function fail(status: number, code: string, error: string, extra: Pick<ErrorResponse, "retryAfter" | "nextRenameAt"> = {}): LeaderboardResponse {
+  const body: ErrorResponse = { error, code, ...extra };
   return { status, body };
 }
 
@@ -62,14 +62,14 @@ export function parseBody(raw: string, maxChars: number, keys: readonly string[]
   return Object.keys(record).every((key) => keys.includes(key)) ? record : null;
 }
 
-export function isCountryChoice(value: unknown): value is CountryChoice {
-  return value === null || value === "auto" || isCountryCode(value);
-}
-
-/** The country to store for a choice: "auto" takes the one Netlify saw, if it is in our list. */
-export function resolveCountry(choice: CountryChoice, geoCountry: string | null): string | null {
-  if (choice === "auto") return isCountryCode(geoCountry) ? geoCountry : null;
-  return choice;
+/**
+ * The country to store for the player's choice: a code from our list, or
+ * null for "none". undefined when the value is not a valid choice. There is
+ * no automatic country: the player always chooses (D61).
+ */
+export function chosenCountry(value: unknown): string | null | undefined {
+  if (value === NO_COUNTRY) return null;
+  return isCountryCode(value) ? value : undefined;
 }
 
 export interface Limit {
@@ -96,7 +96,7 @@ export async function checkRateLimits(
   const refused = (await Promise.all(checks)).filter((result) => !result.allowed);
   if (refused.length === 0) return null;
   const retryAfter = Math.max(...refused.map((result) => result.retryAfterSeconds));
-  return fail(429, "rateLimited", "Too many requests. Please wait a moment.", retryAfter);
+  return fail(429, "rateLimited", "Too many requests. Please wait a moment.", { retryAfter });
 }
 
 /** The device id header, if it has the right shape. */

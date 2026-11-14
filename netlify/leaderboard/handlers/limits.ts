@@ -12,6 +12,9 @@ export const LIMITS = {
   submitWin: { windowSeconds: 3600, perDevice: 10, perIp: 30 },
   reportGame: { windowSeconds: 3600, perDevice: 30, perIp: 90 },
   updateProfile: { windowSeconds: 3600, perDevice: 20, perIp: 60 },
+  // Renaming is also limited to once in 7 days per player (D61); this stops
+  // a device from trying many names in a row.
+  renameUsername: { windowSeconds: 3600, perDevice: 5, perIp: 20 },
   getLeaderboard: { windowSeconds: 60, perIp: 60 },
   getProfile: { windowSeconds: 60, perIp: 60 },
 } satisfies Record<string, Limit>;
@@ -21,5 +24,5 @@ export const MAX_BODY = {
   claimUsername: 256,
   submitWin: 32_000,
   reportGame: 256,
-  updateProfile: 128,
+  updateProfile: 160,
 };

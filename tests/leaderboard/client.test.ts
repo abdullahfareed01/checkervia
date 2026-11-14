@@ -12,11 +12,10 @@ import type { GameState, HistoryEntry } from "../../src/state/gameReducer";
 import { leaderboardApi, setLeaderboardTransport } from "../../src/ui/leaderboard/api";
 import { Flag } from "../../src/ui/leaderboard/Flag";
 import { flagUrl } from "../../src/ui/leaderboard/flags";
-import { LeaderboardScreen, PodiumPlace, Row } from "../../src/ui/leaderboard/LeaderboardScreen";
-import { DEVICE_KEY, PENDING_KEY, PROFILE_KEY, leaderboardStore } from "../../src/ui/leaderboard/profile";
+import { LeaderboardScreen, Row, TopRankedPlayerCard } from "../../src/ui/leaderboard/LeaderboardScreen";
+import { DEVICE_KEY, PROFILE_KEY, QUEUE_KEY, leaderboardStore } from "../../src/ui/leaderboard/profile";
 import { ProfileStats } from "../../src/ui/leaderboard/ProfileSheet";
 import { OFFLINE_TEXT, ProblemPanel, SERVER_TEXT, problemOf, tooManyText } from "../../src/ui/leaderboard/Problem";
-import { SubmitWin, refusal } from "../../src/ui/leaderboard/SubmitWin";
 import { isLeaderboardGame, qualifyingWin } from "../../src/ui/leaderboard/useLeaderboardGame";
 import { BLACK_WIN } from "./fixtures";
 
@@ -37,7 +36,7 @@ beforeEach(() => {
 afterEach(() => setLeaderboardTransport(null));
 
 const TOKEN = "A".repeat(43);
-const PROFILE = { username: "Fan_One", country: "PK", token: TOKEN };
+const PROFILE = { username: "Fan_One", country: "PK", avatar: "a07", token: TOKEN };
 
 // ---------- Fake answers ----------
 
@@ -63,16 +62,17 @@ describe("what the browser keeps", () => {
     expect(storage.get(DEVICE_KEY)).toBe(first);
   });
 
-  it("ignores a broken or tampered profile and pending win", () => {
+  it("ignores a broken or tampered profile and win queue", () => {
     storage.set(PROFILE_KEY, JSON.stringify({ username: "admin", country: "PK", token: TOKEN }));
-    storage.set(PENDING_KEY, "{not json");
+    storage.set(QUEUE_KEY, "{not json");
     leaderboardStore.reload();
-    expect(leaderboardStore.get()).toEqual({ profile: null, pending: null });
+    expect(leaderboardStore.get()).toEqual({ profile: null, queue: [] });
 
-    storage.set(PROFILE_KEY, JSON.stringify({ username: "Fan_One", country: "XX", token: TOKEN }));
-    storage.set(PENDING_KEY, JSON.stringify({ gameId: "nope", level: 4, moves: [[40, 33]] }));
+    // An unknown flag or avatar is dropped (a profile from before avatars has none).
+    storage.set(PROFILE_KEY, JSON.stringify({ username: "Fan_One", country: "XX", avatar: "m01", token: TOKEN }));
+    storage.set(QUEUE_KEY, JSON.stringify([{ gameId: "nope", level: 4, moves: [[40, 33]], queuedAt: Date.now() }]));
     leaderboardStore.reload();
-    expect(leaderboardStore.get()).toEqual({ profile: { username: "Fan_One", country: null, token: TOKEN }, pending: null });
+    expect(leaderboardStore.get()).toEqual({ profile: { username: "Fan_One", country: null, avatar: null, token: TOKEN }, queue: [] });
   });
 
   it("survives storage that throws (private mode)", () => {
@@ -148,19 +148,28 @@ describe("the API client", () => {
 
   it("passes on the code, the username problems and the seconds to wait", async () => {
     answer(422, { error: "x", code: "username", problems: ["startLetter"] });
-    expect(await leaderboardApi.claimUsername("1abc", null)).toEqual({ kind: "failed", status: 422, code: "username", problems: ["startLetter"] });
+    expect(await leaderboardApi.claimUsername("1abc", "none", "a01")).toEqual({ kind: "failed", status: 422, code: "username", problems: ["startLetter"] });
     answer(429, { error: "x", code: "rateLimited", retryAfter: 42 });
     expect(await leaderboardApi.submitWin("g", 4, BLACK_WIN)).toEqual({ kind: "failed", status: 429, code: "rateLimited", retryAfter: 42 });
   });
 
-  it("saves the profile and its token after a claim, and the flag after a change", async () => {
-    answer(201, PROFILE);
-    await leaderboardApi.claimUsername("Fan_One", "auto");
+  it("sends the chosen flag and avatar, and saves the profile and its token after a claim", async () => {
+    const seen = answer(201, PROFILE);
+    await leaderboardApi.claimUsername("Fan_One", "PK", "a07");
+    expect(JSON.parse(String(seen[0]!.init.body))).toEqual({ username: "Fan_One", country: "PK", avatar: "a07" });
     expect(leaderboardStore.get().profile).toEqual(PROFILE);
     expect(JSON.parse(storage.get(PROFILE_KEY)!)).toEqual(PROFILE);
-    answer(200, { username: "Fan_One", country: null });
-    await leaderboardApi.updateCountry(null);
-    expect(leaderboardStore.get().profile).toEqual({ ...PROFILE, country: null });
+  });
+
+  it("saves a renamed username, a new flag or a new avatar after a change, keeping the token", async () => {
+    leaderboardStore.setProfile(PROFILE);
+    const seen = answer(200, { username: "Fan_Two", country: null, avatar: "a33", nextRenameAt: "2026-11-21T12:00:00.000Z" });
+    await leaderboardApi.updateProfile({ username: "Fan_Two", country: "none", avatar: "a33" });
+    expect(JSON.parse(String(seen[0]!.init.body))).toEqual({ username: "Fan_Two", country: "none", avatar: "a33" });
+    expect(leaderboardStore.get().profile).toEqual({ username: "Fan_Two", country: null, avatar: "a33", token: TOKEN });
+    answer(409, { error: "x", code: "renameTooSoon", nextRenameAt: "2026-11-21T12:00:00.000Z" });
+    expect(await leaderboardApi.updateProfile({ username: "Fan_Three" })).toEqual({ kind: "failed", status: 409, code: "renameTooSoon", nextRenameAt: "2026-11-21T12:00:00.000Z" });
+    expect(leaderboardStore.get().profile?.username).toBe("Fan_Two");
   });
 
   it("forgets a profile the server no longer knows", async () => {
@@ -220,14 +229,14 @@ describe("which games can count", () => {
 // ---------- Markup ----------
 
 const noop = () => {};
-const row = (rank: number, extra: Partial<LeaderboardRow> = {}): LeaderboardRow => ({ rank, username: `Player${rank}`, country: "GB", wins: 12, bestMoves: 20, ...extra });
+const row = (rank: number, extra: Partial<LeaderboardRow> = {}): LeaderboardRow => ({ rank, username: `Player${rank}`, country: "GB", avatar: "a05", wins: 12, bestMoves: 20, ...extra });
 
 describe("the screens' markup", () => {
   it("opens on Strongest and This week, with tabs, a period group and the loading rows", () => {
     answer(200, {});
     const html = renderToStaticMarkup(createElement(LeaderboardScreen, { onClose: noop }));
     expect(html).toMatch(/role="tablist" aria-label="Level"/);
-    expect([...html.matchAll(/role="tab"[^>]*aria-selected="(true|false)"[^>]*>([A-Za-z]+)</g)].map((m) => [m[2], m[1]])).toEqual([
+    expect([...html.matchAll(/role="tab"[^>]*aria-selected="(true|false)".*?<span class="lb-tab-name">([A-Za-z]+)</g)].map((m) => [m[2], m[1]])).toEqual([
       ["Strongest", "true"], ["Hard", "false"], ["Medium", "false"], ["Easy", "false"],
     ]);
     expect(html).toMatch(/<legend class="sr-only">Period<\/legend>/);
@@ -241,52 +250,42 @@ describe("the screens' markup", () => {
     const html = renderToStaticMarkup(createElement(Row, { row: row(7, { username: "Fan_One", country: "PK", wins: 1 }), mine: true, onOpen: noop }));
     expect(html).toMatch(/^<button type="button" class="lb-row lb-mine" aria-label="Rank 7, Fan_One, you, Pakistan, 1 win\. Open profile\.">/);
     expect(html).toContain('<span class="lb-you">You</span>');
+    expect(html).toContain('src="/avatars/a05.svg"');
   });
 
-  it("the champion's place says so, with the crown and the wins as a big number", () => {
-    const html = renderToStaticMarkup(createElement(PodiumPlace, { row: row(1, { wins: 31 }), champion: "Champion this week", mine: false, onOpen: noop }));
-    expect(html).toContain('aria-label="Champion this week. Rank 1, Player1, United Kingdom, 31 wins. Open profile."');
-    expect(html).toContain('<span class="lb-big-number">31</span><span class="lb-wins-label">wins</span>');
-    expect(html).toContain("icon-crown");
+  it("a player from before avatars gets the neutral person", () => {
+    const html = renderToStaticMarkup(createElement(Row, { row: row(9, { avatar: null }), mine: false, onOpen: noop }));
+    expect(html).toContain("avatar-person");
+    expect(html).not.toContain("/avatars/");
+  });
+
+  it("the top ranked player card says so, under the crown, with the wins as a big number", () => {
+    const html = renderToStaticMarkup(createElement(TopRankedPlayerCard, { row: row(1, { wins: 31 }), mine: false, onOpen: noop }));
+    expect(html).toContain('class="lb-place lb-place-1 top-ranked-player-card"');
+    expect(html).toContain('aria-label="Top ranked player. Rank 1, Player1, United Kingdom, 31 wins. Open profile."');
+    expect(html).toContain('<span class="lb-big-number lb-num">31</span><span class="lb-wins-label">wins</span>');
+    expect(html).toContain("lb-place-crown");
+    expect(html).toContain('<span class="lb-place-label" aria-hidden="true">Top ranked player</span>');
   });
 
   it("the profile shows the stats cards and wins by level, Strongest first", () => {
     const profile: ProfileResponse = {
-      username: "Fan_One", country: "PK", gamesPlayed: 8, wins: 5, losses: 3, winRate: 0.625,
+      username: "Fan_One", country: "PK", avatar: "a07", gamesPlayed: 8, wins: 5, losses: 3, winRate: 0.625,
       byLevel: [1, 2, 3, 4].map((level) => ({ level: level as 1, wins: level, losses: 1 })),
       bestWin: { moves: 21, level: 4 }, weeklyStrongestRank: 2,
     };
     const html = renderToStaticMarkup(createElement(ProfileStats, { profile }));
-    expect(html).toContain('<dt>Win rate</dt><dd class="lb-card-number">63%</dd>');
-    expect(html).toContain("<caption>Wins and losses by level</caption>");
-    expect([...html.matchAll(/<th scope="row">(\w+)<\/th>/g)].map((m) => m[1])).toEqual(["Strongest", "Hard", "Medium", "Easy"]);
-    expect(html).toContain('<span class="lb-card-number">21</span> moves on Strongest');
-  });
-
-  it("a first win asks for a username and a flag, with the rules and a live region", () => {
-    const html = renderToStaticMarkup(createElement(SubmitWin, { win: { gameId: "g", level: 4, moves: BLACK_WIN }, placement: "result", onTerms: noop }));
-    expect(html).toMatch(/<label for="[^"]+" class="lb-field-label">Username<\/label><input id="[^"]+"/);
-    expect(html).toMatch(/aria-describedby="[^"]+-help"/);
-    expect(html).toContain('aria-live="polite"');
-    expect(html).toContain("Clearing your browser data loses it.");
-    expect(html).toContain(">Automatic</option><option value=\"\">No flag</option>");
-    expect(html).toMatch(/<button type="submit" class="button button-primary" disabled="" aria-busy="false">Save<\/button>/);
-    expect(html).toContain(">Read the Terms and notices<");
-  });
-
-  it("a later win needs one tap", () => {
-    leaderboardStore.setProfile(PROFILE);
-    const html = renderToStaticMarkup(createElement(SubmitWin, { win: { gameId: "g", level: 3, moves: BLACK_WIN }, placement: "result", onTerms: noop }));
-    expect(html).toContain('<span class="lb-name">Fan_One</span><span class="lb-submit-level">Hard</span>');
-    expect(html).toContain(">Add win<");
+    expect(html).toContain('<dt>Win rate</dt><dd class="lb-stat-number">63%</dd>');
+    expect(html).toContain('<caption class="sr-only">Wins and losses by level</caption>');
+    expect([...html.matchAll(/<th scope="row">.*?<\/span>(\w+)<\/th>/g)].map((m) => m[1])).toEqual(["Strongest", "Hard", "Medium", "Easy"]);
+    expect(html).toContain('<span class="lb-stat-number">21</span> moves on Strongest');
   });
 
   it("never calls the counters reported on screen (the Terms do)", () => {
     leaderboardStore.setProfile(PROFILE);
     const screens = [
       renderToStaticMarkup(createElement(LeaderboardScreen, { onClose: noop })),
-      renderToStaticMarkup(createElement(SubmitWin, { win: { gameId: "g", level: 4, moves: BLACK_WIN }, placement: "sheet", onTerms: noop })),
-      renderToStaticMarkup(createElement(ProfileStats, { profile: { username: "A", country: null, gamesPlayed: 1, wins: 0, losses: 1, winRate: 0, byLevel: [], bestWin: null, weeklyStrongestRank: null } })),
+      renderToStaticMarkup(createElement(ProfileStats, { profile: { username: "A", country: null, avatar: null, gamesPlayed: 1, wins: 0, losses: 1, winRate: 0, byLevel: [], bestWin: null, weeklyStrongestRank: null } })),
     ];
     for (const html of screens) expect(html).not.toMatch(/reported/i);
   });
@@ -336,14 +335,5 @@ describe("the three problems", () => {
     expect(SERVER_TEXT).toBe("The leaderboard is having a problem. Please try again in a moment.");
     expect(SERVER_TEXT).not.toMatch(/offline/i);
     expect(OFFLINE_TEXT).toBe("You are offline. The leaderboard is not available right now.");
-  });
-
-  it("the submit form uses the same three messages, and keeps its own for a duplicate or a refused game", () => {
-    expect(refusal({ kind: "offline" })).toEqual({ text: OFFLINE_TEXT, retry: true, forget: false });
-    expect(refusal({ kind: "serverError", status: 503 })).toEqual({ text: SERVER_TEXT, retry: true, forget: false });
-    expect(refusal({ kind: "failed", status: 429, code: "rateLimited", retryAfter: 30 })).toEqual({ text: "Too many requests. Try again in 30 seconds.", retry: true, forget: false });
-    expect(refusal({ kind: "failed", status: 400, code: "invalid" })).toEqual({ text: SERVER_TEXT, retry: true, forget: false });
-    expect(refusal({ kind: "failed", status: 409, code: "duplicate" }).text).toBe("This win is already on the leaderboard.");
-    expect(refusal({ kind: "failed", status: 422, code: "illegal" }).forget).toBe(true);
   });
 });

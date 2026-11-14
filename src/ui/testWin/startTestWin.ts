@@ -1,9 +1,10 @@
 // Development only (D60): /?testwin=easy|medium|hard|strongest opens a game
 // against the AI at that level that has already been won by the player,
 // from one of the recorded games in testWinGames.json. The game is played
-// through the reducer, so the normal result panel opens, with the real
-// submit form, and Save calls the real submit-win function (which replays
-// the game on the server as usual). Never in a production build.
+// through the reducer, so the normal result panel opens and adds the win by
+// itself through the real submit-win function (which replays the game on
+// the server as usual, D61). Without a profile, the Profile screen comes
+// first. Never in a production build.
 //
 // Each visit takes the next recorded game for that level (kept in this
 // browser), because the server refuses the same moves twice from one player

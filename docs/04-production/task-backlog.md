@@ -58,3 +58,5 @@
   - [x] Phase 3: server side. Migration, seven functions with pure handlers, replay check of wins, rate limits, storage interface with Supabase and in memory adapters, tests, setup steps, Terms text (still "Coming soon"). Waiting for the owner's review.
   - [ ] Supabase project created and the three variables set (needs the owner)
   - [x] Phase 4: screens (submit form, leaderboard, profile sheet, links), and the Terms describe it as live. Waiting for the owner's review; nothing is deployed.
+  - [x] Profile first and automatic wins (D61): the Profile screen before the first AI game, the custom country picker, automatic wins with a retry queue, renames. Waiting for the owner's review.
+  - [ ] Run `leaderboard-migration-2.sql` in Supabase before this version goes live (needs the owner)

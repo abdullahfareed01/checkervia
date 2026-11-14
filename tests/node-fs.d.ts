@@ -6,6 +6,7 @@ declare module "node:fs" {
   export function mkdtempSync(prefix: string): string;
   export function rmSync(path: string, options: { recursive: true; force: true }): void;
   export function writeFileSync(path: URL | string, data: string): void;
+  export function existsSync(path: URL | string): boolean;
 }
 
 declare module "node:os" {
