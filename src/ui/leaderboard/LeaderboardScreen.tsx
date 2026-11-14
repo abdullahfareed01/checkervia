@@ -3,7 +3,8 @@
 // stays as it was). Tabs for the four levels (Strongest first), a segmented
 // control for the period, a podium for the top three with the champion
 // first among equals, then a list from 4 on. Every state has its own calm
-// panel: loading rows, empty, offline. Rows open the player's profile.
+// panel: loading rows, empty, offline, a server problem, too many requests.
+// Rows open the player's profile.
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { AI_LEVELS } from "../../ai/difficulty";
@@ -16,7 +17,7 @@ import { BackIcon, CrownIcon, LaurelIcon, TrophyIcon } from "../icons";
 import { Flag, countryName } from "./Flag";
 import { ProfileSheet } from "./ProfileSheet";
 import { useLeaderboardProfile } from "./profile";
-import { OFFLINE_TEXT } from "./SubmitWin";
+import { ProblemPanel, problemText } from "./Problem";
 import { useLeaderboardPage } from "./useLeaderboardPage";
 
 const PERIOD_NAMES: Record<Period, string> = { week: "This week", month: "This month", all: "All time" };
@@ -145,17 +146,8 @@ export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; o
         <div id={panelId} role="tabpanel" aria-labelledby={`${ids}-tab-${level}`} aria-busy={state.kind === "loading"} className="lb-panel">
           {state.kind === "loading" && <Skeleton />}
 
-          {state.kind === "offline" && (
-            <div className="lb-state" role="status">
-              <span className="lb-state-icon" aria-hidden="true">
-                <OfflineIcon />
-              </span>
-              <p className="lb-state-text">{OFFLINE_TEXT}</p>
-              <button type="button" className="button button-primary" onClick={retry}>
-                Try again
-              </button>
-            </div>
-          )}
+          {/* Offline, a server problem or too many requests: each its own words (D59). */}
+          {state.kind === "problem" && <ProblemPanel problem={state.problem} onRetry={retry} />}
 
           {state.kind === "ready" && state.total === 0 && (
             <div className="lb-state" role="status">
@@ -206,9 +198,13 @@ export function LeaderboardScreen({ onClose, onTerms }: { onClose: () => void; o
 
               {rows.length < state.total && (
                 <div className="lb-more">
-                  {state.more === "offline" && <p className="lb-more-error">{OFFLINE_TEXT}</p>}
+                  {typeof state.more === "object" && (
+                    <p className="lb-more-error" role="status">
+                      {problemText(state.more)}
+                    </p>
+                  )}
                   <button type="button" className="button" disabled={state.more === "loading"} aria-busy={state.more === "loading"} onClick={() => void loadMore()}>
-                    {state.more === "loading" ? "Loading…" : state.more === "offline" ? "Try again" : "Load more"}
+                    {state.more === "loading" ? "Loading…" : typeof state.more === "object" ? "Try again" : "Load more"}
                   </button>
                 </div>
               )}
@@ -312,15 +308,5 @@ function Skeleton() {
       Loading the leaderboard.
     </p>
     </>
-  );
-}
-
-// A cloud with a line through it.
-function OfflineIcon() {
-  return (
-    <svg className="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.2 9.1 4.5 4.5 0 0 0 7 18z" />
-      <path d="M4 4l16 16" />
-    </svg>
   );
 }

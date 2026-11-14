@@ -6,7 +6,9 @@
 //   ?lb=long       the same with 16 character names
 //   ?lb=few        two players only
 //   ?lb=empty      no wins at all
-//   ?lb=offline    every request fails
+//   ?lb=offline    every request fails on the network
+//   ?lb=error      every request gets a 503 (a server problem)
+//   ?lb=limited    every request gets a 429 with 42 seconds to wait
 //   ?lb=slow       requests never finish (the loading state)
 //   ?lb=new        45 players, no profile on this device
 import { handleCheckUsername } from "../../../netlify/leaderboard/handlers/checkUsername";
@@ -47,6 +49,12 @@ const COUNTRIES = ["PK", "GB", "US", "DE", "NG", "IN", "JP", "BR", "TR", "FR", n
 export async function startDevLeaderboard(mode: string): Promise<void> {
   if (mode === "offline") {
     setLeaderboardTransport(() => Promise.reject(new TypeError("Failed to fetch")));
+    return;
+  }
+  if (mode === "error" || mode === "limited") {
+    const status = mode === "error" ? 503 : 429;
+    const body = mode === "error" ? { error: "The leaderboard is not available right now.", code: "unavailable" } : { error: "Too many requests.", code: "rateLimited", retryAfter: 42 };
+    setLeaderboardTransport(async () => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } }));
     return;
   }
   if (mode === "slow") {

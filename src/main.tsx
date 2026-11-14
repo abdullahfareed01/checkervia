@@ -35,7 +35,7 @@ async function start() {
       return;
     }
   }
-  // Development only: ?lb=populated|long|few|empty|offline|slow|new answers
+  // Development only: ?lb=populated|long|few|empty|offline|error|limited|slow|new answers
   // the leaderboard in the browser with made up players (devServer.ts).
   if (import.meta.env.DEV) {
     const lb = new URLSearchParams(window.location.search).get("lb");

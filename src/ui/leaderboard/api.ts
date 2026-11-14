@@ -1,10 +1,11 @@
-// The browser's side of the leaderboard functions (D56, D57). Every call
-// returns a result instead of throwing, so the screens can show a calm
-// state for each case:
+// The browser's side of the leaderboard functions (D56, D57, D59). Every
+// call returns a result instead of throwing, so the screens can show a calm
+// state for each case (Problem.tsx has their words):
 // - ok: the answer;
-// - offline: no network, a timeout, or the service is not available (503 or
-//   any 5xx): the screens show "You are offline. The leaderboard is not
-//   available right now." with Try again;
+// - offline: the browser says it is offline, or the request failed on the
+//   network (no answer came back at all);
+// - serverError: the device is online but the server answered with a 5xx,
+//   sent something unreadable, or gave no answer in time;
 // - failed: the server refused the request (its code, and the username rules
 //   or the seconds to wait when it gives them).
 import type { AiLevel } from "../../ai/difficulty";
@@ -25,6 +26,7 @@ import { deviceId, leaderboardStore } from "./profile";
 export type ApiResult<T> =
   | { readonly kind: "ok"; readonly value: T }
   | { readonly kind: "offline" }
+  | { readonly kind: "serverError"; readonly status: number } // 0: no answer in time
   | {
       readonly kind: "failed";
       readonly status: number;
@@ -51,8 +53,15 @@ async function call<T>(name: string, options: { query?: Record<string, string>; 
 
   // The caller's cancel and our timeout in one signal (AbortSignal.any is
   // missing in Safari before 17.4).
+  // The browser knows it has no network: do not even try.
+  if (typeof navigator !== "undefined" && navigator.onLine === false) return { kind: "offline" };
+
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, TIMEOUT_MS);
   options.signal?.addEventListener("abort", () => controller.abort(), { once: true });
   const signal = controller.signal;
   let response: Response;
@@ -66,17 +75,19 @@ async function call<T>(name: string, options: { query?: Record<string, string>; 
   } catch (error) {
     // A cancelled request is not an outage: the caller has moved on.
     if (options.signal?.aborted) throw error;
+    // Our own timeout: the network works but the server did not answer.
+    if (timedOut) return { kind: "serverError", status: 0 };
     return { kind: "offline" };
   } finally {
     clearTimeout(timer);
   }
-  if (response.status >= 500) return { kind: "offline" };
+  if (response.status >= 500) return { kind: "serverError", status: response.status };
 
   let data: unknown;
   try {
     data = await response.json();
   } catch {
-    return { kind: "offline" };
+    return { kind: "serverError", status: response.status };
   }
   // The server no longer knows this token (the profile was removed): forget it.
   if (response.status === 401 && token) leaderboardStore.setProfile(null);

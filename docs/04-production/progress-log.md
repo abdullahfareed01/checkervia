@@ -255,3 +255,7 @@
 ## 14 Nov 2026: Fix: both kinds of Supabase secret key (D58)
 - The adapter now sets `apikey` on every request itself, and the Bearer header only for a legacy JWT key; new `sb_secret_` keys are never sent as a Bearer token. The key is trimmed. Setup steps and `.env.example` name both kinds.
 - Not verifiable here: the owner's real project (please run the check in the deployment guide, step 7, after deploying).
+
+## 14 Nov 2026: Fix: offline versus a server problem (D59)
+- Offline only when the device is offline or the request failed on the network; a 5xx, an unreadable answer or a timeout shows "The leaderboard is having a problem. Please try again in a moment."; a 429 shows "Too many requests. Try again in N seconds." The screen, the profile, the flag change and the submit form share the three messages.
+- Browser check (headless Edge, my own Vite on 5180, `?lb=error`, `?lb=limited`, `?lb=offline`): the server problem panel, the 429 panel, the offline panel and the submit form with each message, at 320 and 390 wide; no overflow, no small targets, no console errors.

@@ -128,7 +128,7 @@ describe("no hyphens or dashes in text shown to players", () => {
   // Texts that only appear after a server answer, so no static render shows them.
   it("the leaderboard's username rules and its messages after an answer", () => {
     for (const message of Object.values(USERNAME_MESSAGES)) expect(message).not.toMatch(DASHES);
-    const sources = ["SubmitWin.tsx", "LeaderboardScreen.tsx", "ProfileSheet.tsx"].map((file) => readFileSync(new URL(`../src/ui/leaderboard/${file}`, import.meta.url), "utf8"));
+    const sources = ["SubmitWin.tsx", "LeaderboardScreen.tsx", "ProfileSheet.tsx", "Problem.tsx"].map((file) => readFileSync(new URL(`../src/ui/leaderboard/${file}`, import.meta.url), "utf8"));
     // Every string literal in these files that reads as a sentence.
     const sentences = sources.flatMap((source) => [...source.matchAll(/"([A-Z][^"]*[a-z][^"]*[.!?])"/g)].map((match) => match[1]!));
     expect(sentences.length).toBeGreaterThan(10);

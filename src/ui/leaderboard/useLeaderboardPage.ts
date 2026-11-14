@@ -5,10 +5,12 @@ import type { AiLevel } from "../../ai/difficulty";
 import type { Period } from "../../leaderboard/periods";
 import type { LeaderboardResponse, LeaderboardRow } from "../../leaderboard/protocol";
 import { leaderboardApi } from "./api";
+import { problemOf } from "./Problem";
+import type { Problem } from "./Problem";
 
 export type BoardState =
   | { readonly kind: "loading" }
-  | { readonly kind: "offline" }
+  | { readonly kind: "problem"; readonly problem: Problem }
   | {
       readonly kind: "ready";
       readonly rows: readonly LeaderboardRow[];
@@ -16,7 +18,7 @@ export type BoardState =
       readonly me: LeaderboardRow | null;
       readonly resetsAt: string | null;
       readonly page: number;
-      readonly more: "idle" | "loading" | "offline";
+      readonly more: "idle" | "loading" | Problem; // Load more, or why it failed
     };
 
 export function useLeaderboardPage(level: AiLevel, period: Period) {
@@ -32,7 +34,7 @@ export function useLeaderboardPage(level: AiLevel, period: Period) {
       .leaderboard(level, period, 0, controller.signal)
       .then((result) => {
         if (id !== tab.current) return;
-        setState(result.kind === "ok" ? ready(result.value, result.value.rows) : { kind: "offline" });
+        setState(result.kind === "ok" ? ready(result.value, result.value.rows) : { kind: "problem", problem: problemOf(result) });
       })
       .catch(() => {});
     return () => controller.abort();
@@ -46,7 +48,7 @@ export function useLeaderboardPage(level: AiLevel, period: Period) {
     setState({ ...state, more: "loading" });
     const result = await leaderboardApi.leaderboard(level, period, state.page + 1).catch(() => ({ kind: "offline" }) as const);
     if (id !== tab.current) return;
-    setState(result.kind === "ok" ? ready(result.value, [...state.rows, ...result.value.rows]) : { ...state, more: "offline" });
+    setState(result.kind === "ok" ? ready(result.value, [...state.rows, ...result.value.rows]) : { ...state, more: problemOf(result) });
   }, [state, level, period]);
 
   return { state, retry, loadMore };

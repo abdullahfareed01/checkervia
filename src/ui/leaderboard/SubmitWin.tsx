@@ -13,9 +13,9 @@ import type { ApiResult } from "./api";
 import { CountrySelect, Flag } from "./Flag";
 import { leaderboardStore, useLeaderboardProfile } from "./profile";
 import type { PendingWin } from "./profile";
+import { problemOf, problemText } from "./Problem";
 import { useUsernameCheck } from "./useUsernameCheck";
 
-export const OFFLINE_TEXT = "You are offline. The leaderboard is not available right now.";
 
 type Outcome =
   | { kind: "editing" }
@@ -34,14 +34,14 @@ interface SubmitWinProps {
   onClose?: (() => void) | undefined;
 }
 
-// The words for a refusal from the server.
-function refusal(result: Exclude<ApiResult<unknown>, { kind: "ok" }>): { text: string; retry: boolean; forget: boolean } {
-  if (result.kind === "offline") return { text: OFFLINE_TEXT, retry: true, forget: false };
-  if (result.status === 429) return { text: "Too many tries. Please wait a few minutes and try again.", retry: true, forget: false };
+// The words for a failed request. Offline, a server problem and too many
+// requests use the same three messages as the leaderboard screen (D59).
+export function refusal(result: Exclude<ApiResult<unknown>, { kind: "ok" }>): { text: string; retry: boolean; forget: boolean } {
+  if (result.kind !== "failed" || result.status === 429) return { text: problemText(problemOf(result)), retry: true, forget: false };
   if (result.code === "duplicate") return { text: "This win is already on the leaderboard.", retry: false, forget: true };
   if (result.status === 422) return { text: "This game could not be checked, so it cannot be added.", retry: false, forget: true };
   if (result.status === 401) return { text: "Your profile was not found on the server. Please choose a username again.", retry: false, forget: false };
-  return { text: "Something went wrong. Please try again.", retry: true, forget: false };
+  return { text: problemText({ kind: "server" }), retry: true, forget: false };
 }
 
 export function SubmitWin({ win, placement, onTerms, onViewLeaderboard, onClose }: SubmitWinProps) {

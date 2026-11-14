@@ -7,9 +7,10 @@ import type { CountryChoice, ProfileResponse } from "../../leaderboard/protocol"
 import { leaderboardApi } from "./api";
 import { CountrySelect, Flag, countryName } from "./Flag";
 import { useLeaderboardProfile } from "./profile";
-import { OFFLINE_TEXT } from "./SubmitWin";
+import { ProblemPanel, problemOf, problemText } from "./Problem";
+import type { Problem } from "./Problem";
 
-type Loaded = { kind: "loading" } | { kind: "offline" } | { kind: "missing" } | { kind: "ready"; profile: ProfileResponse };
+type Loaded = { kind: "loading" } | { kind: "problem"; problem: Problem } | { kind: "missing" } | { kind: "ready"; profile: ProfileResponse };
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 
@@ -34,7 +35,7 @@ export function ProfileSheet({ username, onClose, onTerms }: { username: string;
       .profile(username, controller.signal)
       .then((result) => {
         if (result.kind === "ok") setLoaded({ kind: "ready", profile: result.value });
-        else setLoaded(result.kind === "failed" && result.status === 404 ? { kind: "missing" } : { kind: "offline" });
+        else setLoaded(result.kind === "failed" && result.status === 404 ? { kind: "missing" } : { kind: "problem", problem: problemOf(result) });
       })
       .catch(() => {});
     return () => controller.abort();
@@ -89,14 +90,7 @@ export function ProfileSheet({ username, onClose, onTerms }: { username: string;
           </p>
         )}
 
-        {loaded.kind === "offline" && (
-          <div className="lb-state lb-state-compact" role="status">
-            <p className="lb-state-text">{OFFLINE_TEXT}</p>
-            <button type="button" className="button button-primary" onClick={() => setAttempt((count) => count + 1)}>
-              Try again
-            </button>
-          </div>
-        )}
+        {loaded.kind === "problem" && <ProblemPanel problem={loaded.problem} compact onRetry={() => setAttempt((count) => count + 1)} />}
 
         {loaded.kind === "missing" && (
           <p className="lb-state-text lb-profile-missing" role="status">
@@ -184,19 +178,19 @@ export function ProfileStats({ profile }: { profile: ProfileResponse }) {
 
 // The player's own flag: change it or choose No flag. Saved at once.
 export function OwnFlag({ current }: { current: string | null }) {
-  const [status, setStatus] = useState<"idle" | "saving" | "saved" | "offline">("idle");
+  const [status, setStatus] = useState<"idle" | "saving" | "saved" | Problem>("idle");
   const ids = useId();
   const change = async (choice: CountryChoice) => {
     setStatus("saving");
     const result = await leaderboardApi.updateCountry(choice);
-    setStatus(result.kind === "ok" ? "saved" : "offline");
+    setStatus(result.kind === "ok" ? "saved" : problemOf(result));
   };
-  const words = { idle: "", saving: "Saving…", saved: "Saved.", offline: OFFLINE_TEXT };
+  const words = typeof status === "object" ? problemText(status) : { idle: "", saving: "Saving…", saved: "Saved." }[status];
   return (
     <div className="lb-own-flag">
       <CountrySelect id={`${ids}-flag`} value={current} shown={current} allowAuto={false} disabled={status === "saving"} onChange={(choice) => void change(choice)} />
       <p className="lb-hint" aria-live="polite">
-        {words[status]}
+        {words}
       </p>
     </div>
   );

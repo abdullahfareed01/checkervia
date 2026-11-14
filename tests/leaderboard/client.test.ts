@@ -3,7 +3,7 @@
 // and the screens' markup (labels, roles, numbers, no "reported" on screen).
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { applyMove, getLegalMoves, initialBoard } from "../../src/engine";
 import type { Board, Move, Player } from "../../src/engine";
 import type { LeaderboardRow, ProfileResponse } from "../../src/leaderboard/protocol";
@@ -15,7 +15,8 @@ import { flagUrl } from "../../src/ui/leaderboard/flags";
 import { LeaderboardScreen, PodiumPlace, Row } from "../../src/ui/leaderboard/LeaderboardScreen";
 import { DEVICE_KEY, PENDING_KEY, PROFILE_KEY, leaderboardStore } from "../../src/ui/leaderboard/profile";
 import { ProfileStats } from "../../src/ui/leaderboard/ProfileSheet";
-import { SubmitWin } from "../../src/ui/leaderboard/SubmitWin";
+import { OFFLINE_TEXT, ProblemPanel, SERVER_TEXT, problemOf, tooManyText } from "../../src/ui/leaderboard/Problem";
+import { SubmitWin, refusal } from "../../src/ui/leaderboard/SubmitWin";
 import { isLeaderboardGame, qualifyingWin } from "../../src/ui/leaderboard/useLeaderboardGame";
 import { BLACK_WIN } from "./fixtures";
 
@@ -106,13 +107,43 @@ describe("the API client", () => {
     expect(signedIn!.get("authorization")).toBe(`Bearer ${TOKEN}`);
   });
 
-  it("calls a network failure, a 503 and any 5xx offline", async () => {
+  // D59: offline only when the device is offline or no answer came back at all.
+  it("calls it offline when the browser says so, without sending anything", async () => {
+    const seen = answer(200, {});
+    const real = Object.getOwnPropertyDescriptor(globalThis, "navigator");
+    Object.defineProperty(globalThis, "navigator", { value: { onLine: false }, configurable: true });
+    try {
+      expect(await leaderboardApi.leaderboard(4, "week", 0)).toEqual({ kind: "offline" });
+      expect(seen).toEqual([]);
+    } finally {
+      if (real) Object.defineProperty(globalThis, "navigator", real);
+    }
+  });
+
+  it("calls a network failure offline", async () => {
     setLeaderboardTransport(() => Promise.reject(new TypeError("Failed to fetch")));
     expect(await leaderboardApi.profile("Fan")).toEqual({ kind: "offline" });
+  });
+
+  it("calls a 503, any other 5xx and an unreadable answer a server error, not offline", async () => {
     answer(503, { error: "x", code: "unavailable" });
-    expect(await leaderboardApi.profile("Fan")).toEqual({ kind: "offline" });
-    answer(502, {});
-    expect(await leaderboardApi.profile("Fan")).toEqual({ kind: "offline" });
+    expect(await leaderboardApi.profile("Fan")).toEqual({ kind: "serverError", status: 503 });
+    answer(500, {});
+    expect(await leaderboardApi.leaderboard(4, "week", 0)).toEqual({ kind: "serverError", status: 500 });
+    setLeaderboardTransport(async () => new Response("<html>Bad gateway</html>", { status: 200 }));
+    expect(await leaderboardApi.profile("Fan")).toEqual({ kind: "serverError", status: 200 });
+  });
+
+  it("calls no answer in time a server error", async () => {
+    vi.useFakeTimers();
+    try {
+      setLeaderboardTransport((_input, init) => new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")))));
+      const pending = leaderboardApi.leaderboard(4, "week", 0);
+      await vi.advanceTimersByTimeAsync(12_000);
+      expect(await pending).toEqual({ kind: "serverError", status: 0 });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("passes on the code, the username problems and the seconds to wait", async () => {
@@ -267,5 +298,52 @@ describe("the screens' markup", () => {
     expect(renderToStaticMarkup(createElement(Flag, { code: "PK" }))).toMatch(/<img class="lb-flag" src="[^"]*pk\.svg[^"]*" alt="Pakistan"/);
     expect(renderToStaticMarkup(createElement(Flag, { code: null }))).toBe('<span class="lb-flag lb-flag-none" role="img" aria-label="No flag"></span>');
     expect(renderToStaticMarkup(createElement(Flag, { code: "PK", decorative: true }))).toContain('alt=""');
+  });
+});
+
+// ---------- Offline, a server problem, too many requests (D59) ----------
+
+describe("the three problems", () => {
+  it("each failed result has its own problem", () => {
+    expect(problemOf({ kind: "offline" })).toEqual({ kind: "offline" });
+    expect(problemOf({ kind: "serverError", status: 503 })).toEqual({ kind: "server" });
+    expect(problemOf({ kind: "failed", status: 429, code: "rateLimited", retryAfter: 42 })).toEqual({ kind: "limited", retryAfter: 42 });
+    expect(problemOf({ kind: "failed", status: 429, code: "rateLimited" })).toEqual({ kind: "limited", retryAfter: null });
+    expect(problemOf({ kind: "failed", status: 400, code: "invalid" })).toEqual({ kind: "server" });
+  });
+
+  it("says how long to wait after too many requests", () => {
+    expect(tooManyText(42)).toBe("Too many requests. Try again in 42 seconds.");
+    expect(tooManyText(1)).toBe("Too many requests. Try again in 1 second.");
+    expect(tooManyText(119)).toBe("Too many requests. Try again in 119 seconds.");
+    expect(tooManyText(3600)).toBe("Too many requests. Try again in 60 minutes.");
+    expect(tooManyText(null)).toBe("Too many requests. Try again in a moment.");
+  });
+
+  it.each([
+    ["offline", { kind: "offline" } as const, OFFLINE_TEXT, "M4 4l16 16"],
+    ["a server problem", { kind: "server" } as const, SERVER_TEXT, '<circle cx="12" cy="12" r="9"'],
+    ["too many requests", { kind: "limited", retryAfter: 42 } as const, "Too many requests. Try again in 42 seconds.", "icon-hourglass"],
+  ])("the panel for %s: its words, its icon and Try again", (_label, problem, text, icon) => {
+    const html = renderToStaticMarkup(createElement(ProblemPanel, { problem, onRetry: noop }));
+    expect(html).toContain('role="status"');
+    expect(html).toContain(`<p class="lb-state-text">${text}</p>`);
+    expect(html).toContain(icon);
+    expect(html).toContain(">Try again</button>");
+  });
+
+  it("the server problem never says offline, and offline never blames the server", () => {
+    expect(SERVER_TEXT).toBe("The leaderboard is having a problem. Please try again in a moment.");
+    expect(SERVER_TEXT).not.toMatch(/offline/i);
+    expect(OFFLINE_TEXT).toBe("You are offline. The leaderboard is not available right now.");
+  });
+
+  it("the submit form uses the same three messages, and keeps its own for a duplicate or a refused game", () => {
+    expect(refusal({ kind: "offline" })).toEqual({ text: OFFLINE_TEXT, retry: true, forget: false });
+    expect(refusal({ kind: "serverError", status: 503 })).toEqual({ text: SERVER_TEXT, retry: true, forget: false });
+    expect(refusal({ kind: "failed", status: 429, code: "rateLimited", retryAfter: 30 })).toEqual({ text: "Too many requests. Try again in 30 seconds.", retry: true, forget: false });
+    expect(refusal({ kind: "failed", status: 400, code: "invalid" })).toEqual({ text: SERVER_TEXT, retry: true, forget: false });
+    expect(refusal({ kind: "failed", status: 409, code: "duplicate" }).text).toBe("This win is already on the leaderboard.");
+    expect(refusal({ kind: "failed", status: 422, code: "illegal" }).forget).toBe(true);
   });
 });
