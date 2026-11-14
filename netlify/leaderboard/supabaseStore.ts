@@ -1,5 +1,6 @@
-// The Supabase adapter: Postgres through the service role key, used only in
-// the Netlify functions (never in the browser bundle). Tables and functions
+// The Supabase adapter: Postgres through the server's secret key (a legacy
+// service_role JWT or a new sb_secret key, D58), used only in the Netlify
+// functions (never in the browser bundle). Tables and functions
 // come from docs/07-deployment/leaderboard-migration.sql. Row Level Security
 // is on with no policies, so only this key can read or write.
 //
@@ -63,11 +64,37 @@ const toRanked = (row: RankedDbRow): RankedRow => ({
 
 const rankArgs = (level: AiLevel, since: Date | null) => ({ p_level: level, p_since: since?.toISOString() ?? null });
 
+/**
+ * True for a legacy key (the service_role JWT, "eyJ..."). The new secret
+ * keys ("sb_secret_...") are not JWTs: Supabase reads them from the apikey
+ * header only and refuses them as a Bearer token (D58).
+ */
+export function isJwtKey(key: string): boolean {
+  return key.startsWith("eyJ");
+}
+
+/**
+ * Every request's key headers, set here last so they never depend on how a
+ * supabase-js version fills them in: apikey always, and Authorization only
+ * for a legacy JWT key (removed otherwise).
+ */
+export function withKeyHeaders(fetchImpl: typeof fetch, key: string): typeof fetch {
+  return (input, init) => {
+    const headers = new Headers(init?.headers);
+    headers.set("apikey", key);
+    if (isJwtKey(key)) headers.set("Authorization", `Bearer ${key}`);
+    else headers.delete("Authorization");
+    return fetchImpl(input, { ...init, headers });
+  };
+}
+
 // `fetchImpl` lets the tests answer in place of the database.
-export function createSupabaseStore(url: string, serviceRoleKey: string, fetchImpl?: typeof fetch): LeaderboardStore {
-  const db: SupabaseClient = createClient(url, serviceRoleKey, {
+export function createSupabaseStore(url: string, serviceRoleKey: string, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): LeaderboardStore {
+  // A copied key often carries a space or a line break at its end.
+  const key = serviceRoleKey.trim();
+  const db: SupabaseClient = createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
-    ...(fetchImpl ? { global: { fetch: fetchImpl } } : {}),
+    global: { fetch: withKeyHeaders(fetchImpl, key) },
   });
 
   async function onePlayer(column: "username_key" | "token_hash", value: string): Promise<PlayerRecord | null> {

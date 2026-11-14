@@ -11,7 +11,7 @@ interface Seen {
   body: unknown;
 }
 
-function fakeDb(answer: (request: Seen) => { status: number; body: unknown; headers?: Record<string, string> }) {
+function fakeDb(answer: (request: Seen) => { status: number; body: unknown; headers?: Record<string, string> }, key = "service-key-for-tests") {
   const seen: Seen[] = [];
   const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const request: Seen = {
@@ -24,8 +24,55 @@ function fakeDb(answer: (request: Seen) => { status: number; body: unknown; head
     const { status, body, headers } = answer(request);
     return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", ...headers } });
   }) as typeof fetch;
-  return { seen, store: createSupabaseStore("https://example.supabase.co", "service-key-for-tests", fetchImpl) };
+  return { seen, store: createSupabaseStore("https://example.supabase.co", key, fetchImpl) };
 }
+
+// Made up keys in the two formats (D58): a legacy service_role JWT and a new secret key.
+const LEGACY_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.c2lnbmF0dXJl";
+const SECRET_KEY = "sb_secret_N7xFakeKeyForTests0000000000";
+
+describe("the key headers", () => {
+  // A read, a write and a database function: every kind of request the adapter makes.
+  async function requestsWith(key: string): Promise<Headers[]> {
+    const { seen, store } = fakeDb(() => ({ status: 200, body: { allowed: true, retry_after_seconds: 1 } }), key);
+    await store.playerByKey("fan");
+    await store.setCountry("p1", "PK");
+    await store.hitRateLimit("k", 60, 1);
+    return seen.map((request) => request.headers);
+  }
+
+  it("a legacy service_role JWT goes in apikey and as the Bearer token", async () => {
+    const headers = await requestsWith(LEGACY_KEY);
+    expect(headers).toHaveLength(3);
+    for (const header of headers) {
+      expect(header.get("apikey")).toBe(LEGACY_KEY);
+      expect(header.get("authorization")).toBe(`Bearer ${LEGACY_KEY}`);
+    }
+  });
+
+  it("a new sb_secret key goes in apikey only, never as a Bearer token", async () => {
+    const headers = await requestsWith(SECRET_KEY);
+    expect(headers).toHaveLength(3);
+    for (const header of headers) {
+      expect(header.get("apikey")).toBe(SECRET_KEY);
+      expect(header.get("authorization")).toBeNull();
+    }
+  });
+
+  it("drops spaces and a line break copied around the key", async () => {
+    const headers = await requestsWith(`  ${SECRET_KEY}
+`);
+    expect(headers[0]!.get("apikey")).toBe(SECRET_KEY);
+  });
+
+  it("an error from Supabase carries no key and no value", async () => {
+    const { store } = fakeDb(() => ({ status: 401, body: { message: `No API key found in request ${SECRET_KEY}`, hint: "No apikey request header or url param was found." } }), SECRET_KEY);
+    const error = (await store.playerByKey("fan").catch((caught: unknown) => caught)) as Error & { code: string };
+    expect(error.code).toBe("unknown");
+    expect(`${error.message} ${JSON.stringify(error)}`).not.toContain(SECRET_KEY);
+    expect(`${error.message} ${JSON.stringify(error)}`).not.toContain("fan");
+  });
+});
 
 describe("the Supabase adapter", () => {
   it("finds a player by username key with the service role key", async () => {
