@@ -6,8 +6,7 @@ export const CONTACT_EMAIL = "checkvia.games@gmail.com";
 // The Terms and notices, in plain words. DRAFT text (D45): the owner should
 // have it reviewed; it is not legal advice. Same text as
 // docs/02-design/terms-and-notices.md. No hyphens or dashes anywhere.
-// `soon`: the section describes a feature that does not exist yet.
-export const TERMS_SECTIONS: readonly { title: string; soon?: boolean; points: readonly string[] }[] = [
+export const TERMS_SECTIONS: readonly { title: string; points: readonly string[] }[] = [
   {
     title: "Entertainment only",
     points: ["Checkervia is a free checkers game made for fun. Nothing in it is advice of any kind."],
@@ -37,27 +36,25 @@ export const TERMS_SECTIONS: readonly { title: string; soon?: boolean; points: r
   {
     title: "What is stored",
     points: [
-      "In your browser: your chosen level and your acceptance of the Strongest notice (the time and the notice version). Clearing your browser data removes them.",
+      "In your browser: your chosen level, your settings, your acceptance of the Strongest notice (the time and the notice version) and, for the leaderboard, a random device id, your profile's secret key and a win you have not submitted yet. Clearing your browser data removes them.",
       "In this tab only: your wins and losses against the AI, so it can greet you. They are gone when you close the tab.",
       "During a game, the board and the list of possible moves are sent to the AI provider so the AI can choose its move. No personal details are sent.",
-      "Nothing is stored on our server today.",
+      "On our server: only what the Leaderboard section below lists, and only once you choose a username.",
     ],
   },
   {
-    // Describes the leaderboard (phases 3 and 4), which is not built yet:
-    // shown as coming soon until it exists.
+    // The leaderboard (D56, D57).
     title: "Leaderboard",
-    soon: true,
     points: [
-      "The worldwide leaderboard is not open yet, and nothing is sent to it. When it opens, these rules will apply:",
-      "To join, you will choose a username. Usernames are public and unique, and there is no tag. Please do not use your real name. Usernames are filtered, and names or entries that break these rules may be hidden or removed.",
-      "Only wins against the AI will count, and our server will check each one by replaying all of its moves. Two player games and resigned games never count.",
-      "Your profile will show your games played, wins, losses and win rate. Wins are checked by replay. Games played and losses are reported by the game in your browser and are not checked by replay.",
-      "Our server will store your username, your flag, the level, moves and stats of each win you submit, the results of your finished games against the AI, and the dates. It will also store scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It will never store your raw IP address, your age or your email.",
-      "Your flag will be suggested from the country your connection comes from. You can change it or choose No flag.",
+      "To join, you choose a username. Usernames are public and unique, and there is no tag. Please do not use your real name. Usernames are filtered, and names or entries that break these rules may be hidden or removed.",
+      "Only wins against the AI count, and our server checks each one by replaying all of its moves. Two player games and resigned games never count.",
+      "Your profile shows your games played, wins, losses and win rate. Wins are checked by replay. Games played and losses are reported by the game in your browser and are not checked by replay.",
+      "Our server stores your username, your flag, the level, moves and stats of each win you submit, the results of your finished games against the AI, and the dates. It also stores scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It never stores your raw IP address, your age or your email.",
+      "Your flag is suggested from the country your connection comes from. You can change it or choose No flag.",
       "The scrambled device id and IP address are used only to limit how often requests can be made. They are never shown.",
       "Your profile belongs to the secret key kept in this browser. Clearing your browser data loses the profile, and its username stays taken.",
-      `To have a profile or an entry removed, you will be able to email ${CONTACT_EMAIL} with the username and roughly when you submitted it.`,
+      "Anyone can view the leaderboard and the profiles on it, without choosing a username.",
+      `To have a profile or an entry removed, email ${CONTACT_EMAIL} with the username and roughly when you submitted it.`,
     ],
   },
   {
@@ -95,7 +92,6 @@ export function TermsDialog({ onClose }: { onClose: () => void }) {
           <section key={section.title} className="rules-dialog-section">
             <h3>
               {section.title}
-              {section.soon && <span className="terms-soon">Coming soon</span>}
             </h3>
             <ul>
               {section.points.map((point) => (

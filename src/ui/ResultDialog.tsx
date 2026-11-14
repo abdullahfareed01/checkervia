@@ -43,6 +43,8 @@ interface ResultDialogProps {
   tips?: readonly GameTip[] | null | undefined;
   tipsShownAtStart?: boolean; // tests render the revealed state
   onTipsShown?: ((tips: readonly string[]) => void) | undefined; // the AI voice may read them
+  // After a win that can go on the leaderboard: its form (D57).
+  leaderboard?: ReactNode;
 }
 
 type Outcome = "victory" | "defeat" | "winner";
@@ -248,6 +250,8 @@ export function ResultDialog(props: ResultDialogProps) {
             Review Game
           </button>
         </div>
+
+        {props.leaderboard}
 
         {tips !== undefined && <AiTips tips={tips} shown={tipsShown} onShowNow={() => setTipsShown(true)} onShown={props.onTipsShown} />}
 

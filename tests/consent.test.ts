@@ -98,14 +98,19 @@ describe("Terms and notices", () => {
     expect(html).toContain(`<h3>${title}</h3>`);
   });
 
-  // The leaderboard and its database do not exist yet, so the Terms must not
-  // describe them as live (owner's review).
-  it("marks the leaderboard as coming soon and describes no live server storage", () => {
-    expect(html).toMatch(/<h3>Leaderboard<span class="terms-soon">Coming soon<\/span><\/h3>/);
-    expect(html).toContain("Nothing is stored on our server today.");
-    for (const section of TERMS_SECTIONS.filter((s) => !s.soon)) {
-      expect(section.points.join(" ")).not.toMatch(/leaderboard|database|server will|submit|device id|IP address/i);
+  // Phase 4 (D57): the leaderboard is described as live, with what is stored,
+  // the reported counters and removal by email (the owner's list).
+  it("describes the leaderboard as live, with what is stored and how to have it removed", () => {
+    expect(html).toContain("<h3>Leaderboard</h3>");
+    expect(html).not.toContain("Coming soon");
+    expect(html).not.toMatch(/will be|will apply|is not open yet|Nothing is stored on our server/);
+    const leaderboard = TERMS_SECTIONS.find((section) => section.title === "Leaderboard")!.points.join(" ");
+    for (const phrase of ["public and unique", "there is no tag", "replaying all of its moves", "reported by the game in your browser", "never stores your raw IP address, your age or your email", "No flag", "Clearing your browser data loses the profile"]) {
+      expect(leaderboard).toContain(phrase);
     }
+    expect(leaderboard).toContain(`email ${CONTACT_EMAIL}`);
+    // Server storage begins only with a username.
+    expect(TERMS_SECTIONS.find((section) => section.title === "What is stored")!.points.join(" ")).toContain("only once you choose a username");
   });
 
   it("says plainly that age cannot be checked, and gives the contact email", () => {

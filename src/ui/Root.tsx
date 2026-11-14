@@ -14,6 +14,7 @@ import { useAiLevel } from "./useAiLevel";
 import { useAiStatus, useSplash } from "./useAiStatus";
 import { useInterfaceFeedback } from "./useFeedback";
 import { useSettings } from "./settings";
+import { LeaderboardScreen } from "./leaderboard/LeaderboardScreen";
 
 // Which screen is showing. A game gets a fresh `id` each time one is started
 // from the menu, so the board always starts clean.
@@ -58,6 +59,7 @@ export function Root({ initial, checkAi }: RootProps) {
 
   const [askLevel, setAskLevel] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
+  const [leaderboardOpen, setLeaderboardOpen] = useState(false);
 
   const start = (mode: GameMode, level = aiLevel) =>
     setScreen((current) => ({
@@ -93,6 +95,7 @@ export function Root({ initial, checkAi }: RootProps) {
           onRecheck={ai.recheck}
           onTerms={() => setTermsOpen(true)}
           onSettings={() => setSettingsOpen(true)}
+          onLeaderboard={() => setLeaderboardOpen(true)}
         />
       )}
       {screen.name === "rules" && <HowToPlay onBack={home} onPlay={play} onLearn={() => setScreen({ name: "learn" })} />}
@@ -100,6 +103,7 @@ export function Root({ initial, checkAi }: RootProps) {
       {screen.name === "game" && <App key={screen.id} initial={screen.options} onMenu={home} onAiLevel={setAiLevel} />}
       {askLevel && <LevelDialog initial={aiLevel} onStart={startVsAi} onCancel={() => setAskLevel(false)} />}
       {consent}
+      {leaderboardOpen && <LeaderboardScreen onClose={() => setLeaderboardOpen(false)} onTerms={() => setTermsOpen(true)} />}
       {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
       {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}
       {splash !== "gone" && <Splash leaving={splash === "leaving"} />}

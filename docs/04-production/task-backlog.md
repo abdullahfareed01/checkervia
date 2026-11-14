@@ -57,4 +57,4 @@
 - [ ] 11. Leaderboard (owner's request, D56; nothing live before the owner approves phase 4)
   - [x] Phase 3: server side. Migration, seven functions with pure handlers, replay check of wins, rate limits, storage interface with Supabase and in memory adapters, tests, setup steps, Terms text (still "Coming soon"). Waiting for the owner's review.
   - [ ] Supabase project created and the three variables set (needs the owner)
-  - [ ] Phase 4: screens (submit form, leaderboard, profile sheet, links), then the Terms go live
+  - [x] Phase 4: screens (submit form, leaderboard, profile sheet, links), and the Terms describe it as live. Waiting for the owner's review; nothing is deployed.

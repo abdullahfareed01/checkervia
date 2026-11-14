@@ -2,6 +2,7 @@
 // Renders each screen and dialog and checks the visible text only (class
 // names and other attributes are left out). The AI's own lines are cleaned
 // in src/ai/language.ts and tested there.
+import { readFileSync } from "node:fs";
 import { createElement } from "react";
 import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -25,6 +26,10 @@ import { Learn } from "../src/ui/Learn";
 import { judgeMove } from "../src/ai/judge";
 import { getLegalMoves } from "../src/engine";
 import { scenario } from "../src/ui/devScenarios";
+import { LeaderboardScreen, PodiumPlace, Row } from "../src/ui/leaderboard/LeaderboardScreen";
+import { ProfileStats } from "../src/ui/leaderboard/ProfileSheet";
+import { SubmitWin, SubmitWinDialog } from "../src/ui/leaderboard/SubmitWin";
+import { USERNAME_MESSAGES } from "../src/leaderboard/username";
 
 const noop = () => {};
 const DASHES = /[-‐-―−]/;
@@ -75,6 +80,14 @@ const screens: [string, ReactElement][] = [
     }),
   ],
   ["learn", createElement(Learn, { onMenu: noop })],
+  // The leaderboard (D57).
+  ["home with the leaderboard", createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop, onLeaderboard: noop })],
+  ["leaderboard", createElement(LeaderboardScreen, { onClose: noop })],
+  ["podium", createElement(PodiumPlace, { row: { rank: 1, username: "Fan", country: null, wins: 3, bestMoves: 20 }, champion: "Champion this week", mine: true, onOpen: noop })],
+  ["leaderboard row", createElement(Row, { row: { rank: 4, username: "Fan", country: "PK", wins: 1, bestMoves: 20 }, mine: true, onOpen: noop })],
+  ["profile", createElement(ProfileStats, { profile: { username: "Fan", country: "PK", gamesPlayed: 3, wins: 1, losses: 2, winRate: 1 / 3, byLevel: [{ level: 4, wins: 1, losses: 2 }], bestWin: { moves: 20, level: 4 }, weeklyStrongestRank: null } })],
+  ["submit form", createElement(SubmitWin, { win: { gameId: "g", level: 4, moves: [] }, placement: "result", onTerms: noop })],
+  ["submit sheet", createElement(SubmitWinDialog, { win: { gameId: "g", level: 4, moves: [] }, onTerms: noop, onClose: noop })],
   [
     "AI failure details (texts from the code, and a model error with hyphens)",
     createElement(StatusBar, {
@@ -110,6 +123,16 @@ describe("no hyphens or dashes in text shown to players", () => {
     const judgement = await judgeMove(board, blunder, "black");
     expect(judgement?.detail).toContain("\u2192");
     expect(judgement?.detail).not.toMatch(DASHES);
+  });
+
+  // Texts that only appear after a server answer, so no static render shows them.
+  it("the leaderboard's username rules and its messages after an answer", () => {
+    for (const message of Object.values(USERNAME_MESSAGES)) expect(message).not.toMatch(DASHES);
+    const sources = ["SubmitWin.tsx", "LeaderboardScreen.tsx", "ProfileSheet.tsx"].map((file) => readFileSync(new URL(`../src/ui/leaderboard/${file}`, import.meta.url), "utf8"));
+    // Every string literal in these files that reads as a sentence.
+    const sentences = sources.flatMap((source) => [...source.matchAll(/"([A-Z][^"]*[a-z][^"]*[.!?])"/g)].map((match) => match[1]!));
+    expect(sentences.length).toBeGreaterThan(10);
+    expect(sentences.filter((text) => DASHES.test(text))).toEqual([]);
   });
 
   it("level names, descriptions and voices, the language rules, and every banked line", () => {

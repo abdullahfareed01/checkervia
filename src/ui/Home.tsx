@@ -1,6 +1,6 @@
 import type { AiStatus } from "../ai";
 import type { GameMode } from "../state/gameReducer";
-import { CrownIcon, HumanIcon, RobotIcon } from "./icons";
+import { CrownIcon, HumanIcon, RobotIcon, TrophyIcon } from "./icons";
 import { Logo } from "./Splash";
 import { GameTitle } from "./TopBar";
 
@@ -12,6 +12,7 @@ interface HomeProps {
   onRecheck: () => void;
   onTerms: () => void;
   onSettings?: (() => void) | undefined; // sound, haptics, voice, animation, board
+  onLeaderboard?: (() => void) | undefined; // D57: open to everyone
 }
 
 // What the AI badge says for each health check result.
@@ -28,8 +29,8 @@ const AI_HELP: Partial<Record<AiStatus, string>> = {
   unreachable: "The AI service did not answer. Run the game with netlify dev, or try again.",
 };
 
-// The home menu: Play vs AI, 2 Players, Learn and How to play.
-export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerms, onSettings }: HomeProps) {
+// The home menu: Play vs AI, 2 Players, Learn, the Leaderboard and How to play.
+export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerms, onSettings, onLeaderboard }: HomeProps) {
   const badge = AI_BADGES[aiStatus];
   const help = aiStatus === "checking" ? undefined : AI_HELP[aiStatus];
 
@@ -84,6 +85,18 @@ export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerm
             <span className="menu-hint">Watch two robots play out every rule.</span>
           </span>
         </button>
+
+        {onLeaderboard && (
+          <button type="button" className="menu-card menu-card-leaderboard" onClick={onLeaderboard}>
+            <span className="menu-icon" aria-hidden="true">
+              <TrophyIcon />
+            </span>
+            <span className="menu-text">
+              <span className="menu-label">Leaderboard</span>
+              <span className="menu-hint">The best players against the AI, this week and ever.</span>
+            </span>
+          </button>
+        )}
 
         <button type="button" className="menu-card" onClick={onHowToPlay}>
           <span className="menu-icon" aria-hidden="true">

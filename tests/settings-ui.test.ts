@@ -49,7 +49,7 @@ describe("Settings sheet", () => {
   it("has every section, in order, the first one open, and Reset to defaults", () => {
     const html = sheet();
     const titles = [...html.matchAll(/<summary>([^<]+)<\/summary>/g)].map((m) => m[1]);
-    expect(titles).toEqual(["Sound", "Haptics", "AI voice", "Animation", "Board and pieces", "AI chat"]);
+    expect(titles).toEqual(["Sound", "Haptics", "AI voice", "Animation", "Board and pieces", "AI chat", "Leaderboard"]);
     expect(html).toMatch(/<details class="settings-section" open=""><summary>Sound</);
     expect(html).toContain(">Reset to defaults<");
   });

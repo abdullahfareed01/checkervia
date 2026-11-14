@@ -7,6 +7,11 @@ import { haptics } from "./haptics";
 import { settingsStore, useSettings } from "./settings";
 import type { AnimationLevel, BoardTheme, Coordinates, HapticIntensity, PieceStyle, Settings } from "./settings";
 import { voiceEngine } from "./voice/voiceEngine";
+import { TermsDialog } from "./TermsDialog";
+import { Flag } from "./leaderboard/Flag";
+import { OwnFlag } from "./leaderboard/ProfileSheet";
+import { useLeaderboardProfile } from "./leaderboard/profile";
+import { SubmitWin } from "./leaderboard/SubmitWin";
 
 // ---------- Small controls (each at least 44px, keyboard friendly) ----------
 
@@ -153,6 +158,10 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const { available, voices } = useVoices();
   const canVibrate = haptics().supported;
   const [confirmReset, setConfirmReset] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const leaderboard = useLeaderboardProfile();
+  // A copy, so "Added" stays on screen after the stored win is cleared.
+  const [pendingShown, setPendingShown] = useState(leaderboard.pending);
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => closeRef.current?.focus(), []);
 
@@ -174,7 +183,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
         aria-labelledby="settings-title"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
-          if (event.key === "Escape" && !confirmReset) onClose();
+          if (event.key === "Escape" && !confirmReset && !termsOpen) onClose();
         }}
       >
         <div className="settings-head">
@@ -280,9 +289,30 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
           <p className="settings-note">This only hides the bubbles. What the AI may say, the 18+ badge and its consent stay the same.</p>
         </Section>
 
+        <Section title="Leaderboard">
+          {leaderboard.profile ? (
+            <>
+              <p className="settings-profile">
+                <span>Your username</span>
+                <span className="settings-profile-name">
+                  <Flag code={leaderboard.profile.country} decorative />
+                  <span className="lb-name">{leaderboard.profile.username}</span>
+                </span>
+              </p>
+              <OwnFlag current={leaderboard.profile.country} />
+            </>
+          ) : (
+            <p className="settings-note">No leaderboard profile on this device yet. Win a game against the AI to make one.</p>
+          )}
+          {pendingShown && <SubmitWin win={pendingShown} placement="sheet" onTerms={() => setTermsOpen(true)} onClose={() => setPendingShown(null)} />}
+          <p className="settings-note">Your profile is kept in this browser. Clearing your browser data loses it.</p>
+        </Section>
+
         <button type="button" className="button settings-reset" onClick={() => setConfirmReset(true)}>
           Reset to defaults
         </button>
+
+        {termsOpen && createPortal(<TermsDialog onClose={() => setTermsOpen(false)} />, document.body)}
 
         {/* Under <body>, so the sheet's own layout cannot trap it. */}
         {confirmReset &&

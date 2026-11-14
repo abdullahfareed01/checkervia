@@ -159,6 +159,11 @@ Stale replies: New game, a mode change and Retry all change `aiRequestId`. The r
 - Storage sits behind `LeaderboardStore` (`store.ts`): `supabaseStore.ts` for Postgres (service role key, the SQL in `docs/07-deployment/leaderboard-migration.sql`) and `memoryStore.ts` for tests.
 - `replay.ts` replays a claimed win through the real engine from the starting position; `security.ts` makes tokens and hashes with Web Crypto; `http.ts` holds body parsing, errors, the token check and the rate limits (kept in the store, so they hold across function instances).
 
+## Leaderboard screens (`src/ui/leaderboard`, D57)
+- `api.ts` calls the functions and returns ok, offline or failed (never throws); `profile.ts` keeps the device id, the profile with its token and the last unsubmitted win in localStorage; `useLeaderboardGame.ts` gives each game an id, keeps a qualifying win and reports finished games.
+- `LeaderboardScreen.tsx` (tabs, periods, podium, list, pinned own row), `ProfileSheet.tsx`, `SubmitWin.tsx` (in the result panel, and on its own sheet from the Menu and Settings), `Flag.tsx` and `flags.ts` (the SVG files of `flag-icons`), styles in `src/ui/leaderboard.css`.
+- Development only: `devServer.ts` and `DevResultPreview.tsx` behind `?lb=`, which run the real handlers on the memory store in the browser. They are the one place `src/` imports `netlify/`, and the production build leaves them out (checked by its test).
+
 ## Rules
 - Engine never mutates inputs.
 - Moves have a stable id (index in the legal list), so the AI picks an id, not free form coordinates.

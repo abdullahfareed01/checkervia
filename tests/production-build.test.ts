@@ -63,4 +63,16 @@ describe("production build", () => {
     expect(code).not.toContain("LEADERBOARD_HASH_SALT");
     expect(code).not.toContain("hit_rate_limit");
   });
+
+  // D57: the ?lb= preview and its made up players are development only, and
+  // the flags stay separate files, fetched only when shown.
+  it("has no ?lb= leaderboard preview, and ships the flags as separate files", () => {
+    expect(files.some((file) => /devServer|DevResultPreview/i.test(file))).toBe(false);
+    expect(code).not.toContain("Grandmaster_Wolf");
+    expect(code).not.toContain("startDevLeaderboard");
+    expect(code).not.toMatch(literal("lb"));
+    expect(files.filter((file) => /^pk-.*\.svg$/.test(file))).toHaveLength(1);
+    expect(files.filter((file) => file.endsWith(".svg")).length).toBeGreaterThan(240);
+    expect(code).not.toMatch(/data:image\/svg\+xml[^"']{0,40}(?:flag|viewBox="0 0 640 480")/);
+  });
 });

@@ -13,6 +13,7 @@ import "./ui/layout.css";
 import "./ui/result.css";
 import "./ui/motion.css";
 import "./ui/settings.css";
+import "./ui/leaderboard.css";
 
 async function start() {
   let initial: GameOptions | undefined;
@@ -31,6 +32,18 @@ async function start() {
     if (params.has("sounds")) {
       const { SoundAudition } = await import("./ui/SoundAudition");
       createRoot(document.getElementById("root")!).render(<SoundAudition />);
+      return;
+    }
+  }
+  // Development only: ?lb=populated|long|few|empty|offline|slow|new answers
+  // the leaderboard in the browser with made up players (devServer.ts).
+  if (import.meta.env.DEV) {
+    const lb = new URLSearchParams(window.location.search).get("lb");
+    if (lb) await (await import("./ui/leaderboard/devServer")).startDevLeaderboard(lb);
+    // ?lb=...&form=1: the result panel with the leaderboard form, for a real win.
+    if (lb && new URLSearchParams(window.location.search).has("form")) {
+      const { DevResultPreview } = await import("./ui/leaderboard/DevResultPreview");
+      createRoot(document.getElementById("root")!).render(<DevResultPreview />);
       return;
     }
   }
