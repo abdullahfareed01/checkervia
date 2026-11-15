@@ -924,3 +924,89 @@ html[data-anim="off"] .winbar-part {
     scrollbar-color: #c9924c transparent;
   }
 }
+
+/* ---------- The AI's bubble above the action bar on phones (D80) ----------
+   Phones held upright show the title, both cards, the board, the turn
+   pill, the AI with its bubble and the action bar together, without
+   scrolling the page (the move list comes under them). The board is the
+   smaller of the width and the height left over: everything else on the
+   screen, the AI's row (--coach-space: its fixed slot and the gap above it)
+   included. Large text grows the cards and the pill up to their caps
+   (--text-extra). Once the game is over a line under the pill says why
+   (--status-extra). On tall phones the width decides, as before. When the
+   height decides, only the board is smaller: the title, the cards, the
+   side panel and the bar keep the full width (--column-w), so their text
+   never wraps onto more lines. */
+@media (max-width: 599px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
+  .app {
+    --column-w: min(calc(100vw - 16px), 560px);
+    --text-extra: clamp(0px, 5 * (1rem - 16px), 26px);
+    --board-size: min(var(--column-w), max(180px, calc(100dvh - 300px - var(--text-extra) - var(--status-extra, 0px) - var(--coach-space, 0px))));
+  }
+
+  .app:has(.status-winner .status-hint) {
+    --status-extra: calc(min(0.8rem, 15px) * 1.35 + 4px);
+  }
+
+  .app .status-hint {
+    font-size: min(0.8rem, 15px);
+  }
+
+  .app .game {
+    width: var(--column-w);
+  }
+
+  .app .topbar,
+  .app .sidebar,
+  .app .action-bar-inner {
+    max-width: var(--column-w);
+  }
+
+  .app-ai {
+    --coach-space: calc(var(--coach-h) + 12px);
+  }
+
+  /* The AI card's larger name and count, capped like the rest. */
+  .app-ai .card-top .card-name {
+    font-size: min(1.1rem, 22px);
+  }
+
+  .app-ai .card-top .card-count {
+    font-size: min(1.45rem, 29px);
+  }
+}
+
+/* Short phones (under 740px of height): tighter cards, gaps and bar, and
+   the bubble's slot cut to its three lines with less padding, so the board
+   keeps as much room as it can. Every button stays 44px or more. */
+@media (max-width: 599px) and (max-height: 739px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
+  :root {
+    --bar-h: 44px;
+    --bar-float: 4px;
+  }
+
+  .app {
+    padding-top: 2px;
+    --board-size: min(var(--column-w), max(180px, calc(100dvh - 270px - var(--text-extra) - var(--status-extra, 0px) - var(--coach-space, 0px))));
+  }
+
+  .app-ai {
+    --ai-card-extra: 0px;
+    --coach-h: 71px; /* padding 2 x 6, 3 lines of 19.5 */
+    --coach-space: calc(var(--coach-h) + 6px);
+  }
+
+  .app .card {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .app .sidebar {
+    gap: 6px;
+  }
+
+  .app .speech {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+}

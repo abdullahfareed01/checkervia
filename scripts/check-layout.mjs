@@ -8,7 +8,14 @@
 //     or the page scrolling behind an open sheet or dialog);
 //   - scrollbars that take room on touch screens, or thick ones on desktop;
 //   - text under 12 px, tap targets under 44 px;
-//   - overlapping buttons or text, and console errors.
+//   - overlapping buttons or text, and console errors;
+//   - on the game screen on phones held upright: the board, both cards, the
+//     turn pill, the AI's bubble and the action bar not all on screen at
+//     once without scrolling, or the bubble behind the bar;
+//   - text that a long press can select (only text fields, the Terms text
+//     and the rules text may be selected, and they must stay selectable);
+//   - the browser's tap highlight, or a pressable thing without a pressed
+//     state of its own.
 //
 // Run the dev server first (npx vite --port 5180 --strictPort), then:
 //   node scripts/check-layout.mjs [--sizes 390x844,1280x800] [--variants base,text130,text200]
@@ -125,6 +132,8 @@ const SCREENS = {
   "profile-create": { query: "?lb=new", steps: click(".home-profile") + until(".pf-backdrop input"), layer: ".pf-backdrop" },
   result: { query: "?lb=populated&result=1", steps: until(".result-backdrop .dialog, .result-backdrop [role=dialog]"), layer: ".result-backdrop" },
   "game-ai": { query: "?lb=populated&scenario=react", steps: until(".board"), layer: ".app" },
+  // After a move: the AI's reaction in the bubble, with its "Why?".
+  "game-ai-moved": { query: "?lb=populated&scenario=react", steps: until(".board") + playMove + until(".speech-why", 8000), layer: ".app" },
   "game-ai-why": { query: "?lb=populated&scenario=react", steps: until(".board") + playMove + click(".speech-why") + until(".why-sheet"), layer: ".why-sheet" },
   // A whole recorded game, with its result panel closed: the long move list.
   "game-long": { query: "?lb=populated&testwin=strongest", steps: until(".result-backdrop") + `document.querySelector(".result-backdrop").click(); await new Promise(r => setTimeout(r, 500));` + until(".history-list"), layer: ".app" },
@@ -171,6 +180,25 @@ const CHECK = (layerSelector, touch) => `(() => {
   if (!layer) return { issues: ['layer not found: ${layerSelector}'] };
   const all = [...document.body.querySelectorAll('*')].filter((el) => !(el instanceof SVGElement && !(el instanceof SVGSVGElement)));
   const inLayer = [layer, ...layer.querySelectorAll('*')].filter((el) => !(el instanceof SVGElement && !(el instanceof SVGSVGElement)) && visible(el));
+
+  // 0. The game screen on phones held upright: the board, both cards, the
+  // turn pill, the AI's row with its bubble and the action bar are all on
+  // screen at once, the page not scrolled, and nothing hides behind the bar.
+  if (layer.matches('.app:not(.learn)') && vw <= 599 && vh > vw) {
+    window.scrollTo(0, 0);
+    const bar = document.querySelector('.action-bar-inner');
+    const barTop = bar ? bar.getBoundingClientRect().top : vh;
+    const parts = ['.card-top', '.board-frame', '.card-bottom', '.status-pill', '.action-bar-inner'];
+    if (layer.matches('.app-ai')) parts.push('.coach', '.speech');
+    for (const sel of parts) {
+      const el = document.querySelector(sel);
+      if (!el) { if (sel !== '.speech') issues.push('game screen: no ' + sel); continue; }
+      const r = el.getBoundingClientRect();
+      const limit = el === bar ? vh : barTop;
+      if (r.top < -0.5 || r.left < -0.5 || r.right > vw + 0.5 || r.bottom > limit + 0.5)
+        issues.push('game screen: ' + sel + ' not on screen' + (el === bar ? '' : ' above the bar') + ' without scrolling (' + Math.round(r.top) + ' to ' + Math.round(r.bottom) + (el === bar ? '' : ', bar at ' + Math.round(barTop)) + ', window ' + vh + ')');
+    }
+  }
 
   // 1. The page never scrolls sideways.
   if (document.documentElement.scrollWidth > vw + 1) issues.push('page scrolls sideways: ' + document.documentElement.scrollWidth + 'px wide in ' + vw);
@@ -327,8 +355,37 @@ const CHECK = (layerSelector, touch) => `(() => {
     if (size < 11.95) issues.push('text ' + size.toFixed(1) + 'px: ' + name(el));
   }
 
+  // 7. Text selection: a long press selects no text in the app, except in
+  // text fields, the Terms text and the rules text, which must stay
+  // selectable (to type, or to copy). The whole document is checked.
+  const copyable = 'input, textarea, .terms-scroll, .rules-body, .rules-dialog-section';
+  const selectable = [];
+  const textWalker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let node = textWalker.nextNode(); node; node = textWalker.nextNode()) {
+    if (!node.textContent.trim()) continue;
+    const el = node.parentElement;
+    if (!el || el.closest('script, style, noscript') || !visible(el)) continue;
+    const select = getComputedStyle(el).userSelect;
+    if (el.closest(copyable)) { if (select === 'none') issues.push('cannot be selected to copy: ' + name(el)); }
+    else if (select !== 'none' && !selectable.includes(el)) selectable.push(el);
+  }
+  for (const el of selectable.slice(0, 5)) issues.push('text can be selected: ' + name(el));
+  if (selectable.length > 5) issues.push('text can be selected: ' + (selectable.length - 5) + ' more');
+  for (const el of document.querySelectorAll('input:not([type=hidden], [type=radio], [type=checkbox], [type=range]), textarea'))
+    if (visible(el) && getComputedStyle(el).userSelect === 'none') issues.push('text field cannot be selected: ' + name(el));
+
+  // 8. Taps: no browser tap highlight, and every pressable thing marked for
+  // the pressed state check (run from outside, which can force :active).
+  const pressable = targets.filter((el) => !el.matches('input, select, textarea, :disabled') && el.getAttribute('aria-disabled') !== 'true');
+  for (const el of targets) if (getComputedStyle(el).webkitTapHighlightColor !== 'rgba(0, 0, 0, 0)') issues.push('tap highlight shown: ' + name(el));
+  const look = (el) => { const cs = getComputedStyle(el); return ${JSON.stringify(PRESS_PROPS)}.map((p) => cs[p]).join('|'); };
+  window.__press = pressable.map((el, i) => { el.dataset.lcPress = i; return { el, name: name(el), before: look(el) }; });
+  window.__pressCompare = () => window.__press.filter((p) => look(p.el) === p.before).map((p) => 'no pressed state: ' + p.name);
+
   return { issues: [...new Set(issues)] };
 })()`;
+// What a pressed state may change.
+const PRESS_PROPS = ["filter", "scale", "transform", "translate", "backgroundColor", "backgroundImage", "boxShadow", "borderTopColor", "color", "opacity", "outlineStyle"];
 
 // ---------- The browser ----------
 
@@ -419,21 +476,32 @@ async function checkState(browser, [width, height], variantName, screenName) {
   await s("Page.addScriptToEvaluateOnNewDocument", { source: setup });
   await s("Animation.enable");
   await s("Animation.setPlaybackRate", { playbackRate: 20 });
+  // The steps run once the page has loaded (a cold browser can still be on
+  // about:blank right after the navigation starts).
+  const loaded = new Promise((resolve) => {
+    const onLoad = (msg) => {
+      if (msg.sessionId !== sessionId || msg.method !== "Page.loadEventFired") return;
+      listeners.delete(onLoad);
+      resolve();
+    };
+    listeners.add(onLoad);
+  });
   await s("Page.navigate", { url: `http://localhost:${port}/${screen.query}` });
+  await Promise.race([loaded, wait(20000)]);
   const result = { size: `${width}x${height}`, variant: variantName, screen: screenName, issues: [] };
   // Wait for the app (or the splash) to be there.
   const ready = screenName === "splash" ? ".splash" : screen.query.includes("result=1") ? ".result-backdrop" : ".home, .app";
   const steps = screenName === "splash" ? until(".splash", 15000) : `${until(ready, 20000)} ${ready === ".home, .app" ? `await (async () => { while (document.querySelector('.splash')) await new Promise(r => setTimeout(r, 50)); })();` : ""} ${screen.steps}`;
   const run = await s("Runtime.evaluate", { expression: `(async () => { ${steps}; await new Promise(r => setTimeout(r, 600)); })()`, awaitPromise: true });
-  if (run.result?.exceptionDetails) {
-    result.issues.push("could not open: " + (run.result.exceptionDetails.exception?.description ?? run.result.exceptionDetails.text).split("\n")[0]);
+  if (run.error || run.result?.exceptionDetails) {
+    result.issues.push("could not open: " + (run.error?.message ?? run.result.exceptionDetails.exception?.description ?? run.result.exceptionDetails.text).split("\n")[0]);
   } else {
     // The screen as opened, kept only if the check finds something.
     const before = shots ? (await s("Page.captureScreenshot", { format: "png" })).result?.data : null;
     const checked = await s("Runtime.evaluate", { expression: CHECK(screen.layer, touch), returnByValue: true });
     const value = checked.result?.result?.value;
     if (!value) result.issues.push("check failed: " + JSON.stringify(checked.result?.exceptionDetails?.exception?.description ?? checked.result).slice(0, 300));
-    else result.issues.push(...value.issues);
+    else result.issues.push(...value.issues, ...(await pressedStates(s)));
     if (shots && before && (value?.issues?.length || allShots)) {
       writeFileSync(join(shots, `${width}x${height}-${variantName}-${screenName}.png`), Buffer.from(before, "base64"));
       // After the check every scroll box is at its end: show that too.
@@ -446,6 +514,23 @@ async function checkState(browser, [width, height], variantName, screenName) {
   listeners.delete(onEvent);
   await send("Target.closeTarget", { targetId });
   return result;
+}
+
+// Forces :active on every pressable thing the check marked, and reports
+// the ones whose look does not change.
+async function pressedStates(s) {
+  await s("DOM.enable");
+  await s("CSS.enable");
+  const root = (await s("DOM.getDocument", { depth: 0 })).result.root.nodeId;
+  const nodeIds = (await s("DOM.querySelectorAll", { nodeId: root, selector: "[data-lc-press]" })).result?.nodeIds ?? [];
+  for (const nodeId of nodeIds) await s("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: ["active"] });
+  await wait(150);
+  const found = (await s("Runtime.evaluate", { expression: "window.__pressCompare ? window.__pressCompare() : []", returnByValue: true })).result?.result?.value ?? [];
+  for (const nodeId of nodeIds) await s("CSS.forcePseudoState", { nodeId, forcedPseudoClasses: [] });
+  await s("Runtime.evaluate", { expression: "document.querySelectorAll('[data-lc-press]').forEach((el) => el.removeAttribute('data-lc-press'))" });
+  await s("CSS.disable");
+  await s("DOM.disable");
+  return found;
 }
 
 const results = [];

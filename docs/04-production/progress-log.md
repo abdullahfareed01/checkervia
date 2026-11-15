@@ -329,3 +329,9 @@
 - No sideways scrolling anywhere, one scroll at a time, the page locked behind sheets and dialogs, home fits every portrait phone, tighter phone sizes, text at least 12px and targets at least 44px.
 - `scripts/check-layout.mjs`: 32 screens and states at 16 sizes and three text and animation settings, 1536 checks, zero issues in the final run.
 - Tests: 1336 passing in 74 files (with the shell's SUPABASE variables unset). Two size tests in `tests/action-bar.test.ts` now expect 12px instead of 11px (an intended change).
+
+## 16 Nov 2026: The game screen on short phones, and touch polish (D80)
+- On every phone held upright, 320 by 568 to 430 by 932, the board, both cards, the turn pill, the AI's bubble and the action bar are on screen together without scrolling; the board takes the height that is left. Tall phones look as before.
+- A long press selects no text and opens no callout, except in text fields, the Terms and the rules; no tap highlight; every pressable thing has its own pressed state.
+- `scripts/check-layout.mjs`: 33 screens and states at 16 sizes and three text and animation settings, 1584 checks, zero issues in the final run (with the new game screen, text selection, tap highlight and pressed state checks).
+- Tests: 1343 passing in 75 files (with the shell's SUPABASE variables unset); new `tests/touch.test.ts`. No test changed.

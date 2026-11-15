@@ -14,6 +14,7 @@ import "./ui/result.css";
 import "./ui/motion.css";
 import "./ui/settings.css";
 import "./ui/leaderboard.css";
+import "./ui/touch.css";
 
 async function start() {
   let initial: GameOptions | undefined;

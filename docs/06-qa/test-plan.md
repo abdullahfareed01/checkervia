@@ -23,6 +23,8 @@ Done during development (see the progress log): real AI at all levels, the speec
 
 Layout check (D78): `node scripts/check-layout.mjs` with the dev server on port 5180 opens every screen and state at 16 sizes and three text and animation settings and reports overflow, cut off content, extra scrolls, scrollbars, small text and targets, overlaps and console errors. It exits with 1 when it finds anything; `--sizes`, `--screens`, `--part` and `--shots` make smaller runs.
 
+Since D80 it also checks, on the game screen at every portrait phone size, that the board, both cards, the turn pill, the AI's bubble and the action bar are on screen together without scrolling; that no text can be selected outside text fields, the Terms and the rules (which stay selectable); that no tap highlight shows; and that every pressable thing has a pressed state.
+
 ## Not automated
 - Looks (checked from screenshots)
 - A full human game against the live AI
