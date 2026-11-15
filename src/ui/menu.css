@@ -138,6 +138,7 @@
 
 .home-head {
   flex: none;
+  max-width: 100%; /* never wider than the frame, so it never scrolls sideways */
   text-align: center;
 }
 
@@ -453,15 +454,18 @@
    --u follows the window's height so the whole menu fits. */
 @media (min-width: 700px) {
   .home {
-    --u: max(0.62px, min(1px, calc(100dvh / 1000)));
+    --u: max(0.5px, min(1px, calc(100dvh / 1000)));
     padding: 0;
   }
 
   .home-frame {
     width: 100%;
     max-width: none;
-    justify-content: center;
-    overflow: hidden;
+    justify-content: safe center;
+    /* Scrolls only when even the smallest sizes cannot fit (a phone held
+       sideways); the frame is then the one thing that scrolls. */
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: calc(var(--u) * 16) 24px;
     border: none;
     border-radius: 0;
@@ -487,25 +491,147 @@
   }
 }
 
-/* Narrow phones: the badge goes under the hint. */
-@media (max-width: 400px) {
-  .menu-card-ai {
-    flex-wrap: wrap;
-    row-gap: 6px;
+/* Phones (portrait and sideways): tighter than the mockup, so the whole
+   menu fits one screen without scrolling. --u may go down to 0.5px here
+   (a 320 by 568 phone); text and tap targets keep their own floors, and the
+   title follows the width too, so it never pushes the frame sideways. */
+@media (max-width: 699px) {
+  .home {
+    --u: max(0.5px, min(1px, calc(100vw / 430), calc(100dvh / 1000)));
   }
 
-  .menu-card-ai .menu-text {
-    flex: 1 1 60%;
+  .home-logo {
+    width: calc(var(--u) * 132);
+    height: calc(var(--u) * 122);
   }
 
-  .menu-card-ai .ai-badge {
-    order: 1;
-    margin-left: calc(max(44px, calc(var(--u) * 60)) + 1px + calc(var(--u) * 22));
+  .home-profile {
+    width: max(44px, calc(var(--u) * 58));
+    height: max(44px, calc(var(--u) * 58));
+  }
+
+  .home .game-title-large h1 {
+    font-size: clamp(30px, min(calc(var(--u) * 60), 12vw), 56px);
   }
 
   .home .game-title-large .icon-laurel {
-    width: 18px;
-    height: 32px;
+    width: calc(var(--u) * 22);
+    height: calc(var(--u) * 40);
+  }
+
+  .home-tagline {
+    margin-top: calc(var(--u) * 8);
+    font-size: clamp(14px, calc(var(--u) * 17), 17px);
+  }
+
+  .home-menu {
+    gap: calc(var(--u) * 10);
+    margin-top: calc(var(--u) * 18);
+  }
+
+  .menu-card {
+    min-height: max(52px, calc(var(--u) * 72));
+    gap: calc(var(--u) * 10);
+    padding: max(6px, calc(var(--u) * 8)) calc(var(--u) * 10);
+  }
+
+  .menu-icon {
+    width: max(40px, calc(var(--u) * 54));
+    height: max(40px, calc(var(--u) * 52));
+  }
+
+  .menu-label {
+    font-size: clamp(16px, calc(var(--u) * 20), 20px);
+  }
+
+  .menu-hint {
+    font-size: clamp(12px, calc(var(--u) * 14), 14px);
+    line-height: 1.25;
+  }
+
+  .ai-badge {
+    padding: max(3px, calc(var(--u) * 5)) calc(var(--u) * 10);
+    font-size: clamp(12px, calc(var(--u) * 13), 13px);
+  }
+
+  .home-foot {
+    margin-top: calc(var(--u) * 16);
+    padding-bottom: calc(var(--u) * 14);
+  }
+
+  .home-link {
+    font-size: clamp(14px, calc(var(--u) * 17), 17px);
+  }
+}
+
+/* The shortest phones (a 320 by 568 phone): a smaller logo and crown and
+   tighter gaps, so the menu still fits without scrolling. */
+@media (max-width: 699px) and (max-height: 600px) {
+  .home-frame {
+    padding-top: max(calc(var(--u) * 18), env(safe-area-inset-top));
+  }
+
+  .home-logo {
+    width: calc(var(--u) * 96);
+    height: calc(var(--u) * 86);
+  }
+
+  .home .game-title-large .game-title-crown .icon {
+    height: calc(var(--u) * 24);
+  }
+
+  .home-menu {
+    margin-top: calc(var(--u) * 12);
+  }
+
+  .home-foot {
+    margin-top: calc(var(--u) * 8);
+    padding-bottom: calc(var(--u) * 4);
+  }
+}
+
+/* Narrow phones: the badge sits beside "Play vs AI", the hint under both,
+   so the card needs no extra row. */
+@media (max-width: 400px) {
+  .menu-card-ai {
+    display: grid;
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    grid-template-rows: auto auto;
+    row-gap: calc(var(--u) * 3);
+  }
+
+  .menu-card-ai .menu-icon,
+  .menu-card-ai .menu-divider,
+  .menu-card-ai .menu-chevron {
+    grid-row: 1 / span 2;
+  }
+
+  .menu-card-ai .menu-text {
+    display: contents;
+  }
+
+  .menu-card-ai .menu-label {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: end;
+  }
+
+  .menu-card-ai .ai-badge {
+    grid-column: 4;
+    grid-row: 1;
+    align-self: end;
+    justify-self: end;
+  }
+
+  .menu-card-ai .menu-hint {
+    grid-column: 3 / span 2;
+    grid-row: 2;
+    align-self: start;
+  }
+
+  .menu-card-ai .menu-chevron {
+    grid-column: 5;
+    align-self: center;
   }
 }
 
@@ -532,7 +658,7 @@
 }
 
 .rules-head h1 {
-  font-size: 1.8rem;
+  font-size: clamp(1.4rem, 6.5vw, 1.8rem);
 }
 
 .rules-body {
@@ -564,6 +690,18 @@
   flex-wrap: wrap;
   justify-content: center;
   gap: 10px;
+}
+
+/* Phones: a little tighter. */
+@media (max-width: 599px) {
+  .rules {
+    padding: 12px 12px calc(20px + env(safe-area-inset-bottom));
+    gap: 12px;
+  }
+
+  .rules .rules-section {
+    padding: 10px 12px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

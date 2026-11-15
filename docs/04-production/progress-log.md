@@ -324,3 +324,8 @@
 ## 15 Nov 2026: Five more robot reactions (D72)
 - Wink, starstruck, proud, annoyed and sleepy; fourteen faces in all, each checked side by side in the browser.
 - Tests: 1299 passing in 72 files (with the shell's SUPABASE variables unset).
+
+## 15 Nov 2026: Responsive and scroll fix for every screen (D78)
+- No sideways scrolling anywhere, one scroll at a time, the page locked behind sheets and dialogs, home fits every portrait phone, tighter phone sizes, text at least 12px and targets at least 44px.
+- `scripts/check-layout.mjs`: 32 screens and states at 16 sizes and three text and animation settings, 1536 checks, zero issues in the final run.
+- Tests: 1336 passing in 74 files (with the shell's SUPABASE variables unset). Two size tests in `tests/action-bar.test.ts` now expect 12px instead of 11px (an intended change).

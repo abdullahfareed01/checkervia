@@ -60,7 +60,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 3px 6px;
+  padding: 3px clamp(2px, 1.5cqi, 6px); /* a little less on the narrowest bars, so the labels fit */
   border: 1px solid rgba(201, 146, 76, 0.26);
   border-radius: 14px;
   font: inherit;
@@ -82,7 +82,7 @@
 }
 
 .bar-label {
-  font-size: clamp(11px, 3.8cqi, 15px);
+  font-size: clamp(12px, 3.8cqi, 15px);
   font-weight: 800;
   line-height: 1.1;
   white-space: nowrap;
@@ -145,6 +145,14 @@
     right: auto;
     bottom: calc(100% + 8px);
     left: 0;
+  }
+}
+
+/* Two columns: never wider than the side column it opens from (320px
+   below 1200px wide), so it never runs past the window's right edge. */
+@media (min-width: 900px) and (min-height: 600px) {
+  .action-bar .menu-list {
+    width: min(380px, var(--sidebar-w));
   }
 }
 
@@ -285,9 +293,9 @@
   display: inline-flex;
   align-items: stretch;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 17px;
+  line-height: 18px;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
@@ -674,7 +682,7 @@
   }
 
   .winbar-label {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 
@@ -700,4 +708,219 @@ html[data-anim="off"] .winbar-part {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* ---------- Large text sizes on phones (browser text 130% to 200%) ----------
+   The cards grow with their text instead of keeping a fixed height, and
+   the status line wraps. The title and the card text grow with the text
+   size up to a cap, so the title still fits beside Menu and a card's
+   words never run into its counts. */
+@media (max-width: 599px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
+  .app .card {
+    height: auto;
+    min-height: var(--card-h);
+  }
+
+  .app .card-status {
+    flex-wrap: wrap;
+    row-gap: 0;
+    white-space: normal;
+  }
+
+  .app .game-title h1 {
+    font-size: min(1.35rem, 7.5vw);
+  }
+
+  .app .card-name {
+    font-size: min(1rem, 20px);
+  }
+
+  .app .card-status {
+    font-size: min(0.8rem, 15px);
+  }
+
+  .card-count {
+    font-size: min(1.25rem, 24px);
+  }
+
+  .app .card-took {
+    font-size: min(0.75rem, 14px);
+  }
+
+  .app .status-main {
+    font-size: min(0.95rem, 19px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* ---------- Phones held sideways ----------
+   375 to 430px of height cannot hold the side panel's status, robot, move
+   list and bar at once. The panel is then the one thing that scrolls (the
+   page does not), the bar stays at its foot, the move list grows inside the
+   panel, and the Menu sheet is fixed to the window so the scrolling panel
+   never clips it. Learn's panel scrolls the same way. Text in the cards and
+   the title grows with the text size up to a cap. */
+@media (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {
+  .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #c9924c transparent;
+  }
+
+  /* Locked behind an open sheet or dialog, like the page. */
+  html:has(:is(.result-backdrop, .lb-backdrop, .lb-sheet-backdrop, .lb-info-backdrop, .why-sheet-backdrop, .menu-backdrop, .cp-backdrop)) .sidebar {
+    overflow: hidden;
+  }
+
+  .app .history {
+    flex: none;
+    overflow: visible;
+  }
+
+  .app .history-list {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+  }
+
+  .action-bar .menu-list {
+    position: fixed;
+    top: auto;
+    left: auto;
+    right: calc(12px + env(safe-area-inset-right));
+    bottom: 8px;
+    max-height: calc(100dvh - 16px);
+  }
+
+  .app .game-title h1 {
+    font-size: min(1.35rem, 6dvh);
+  }
+
+  .app .card-name {
+    font-size: min(1.2rem, 22px);
+  }
+
+  .app .card-status {
+    font-size: min(0.8rem, 15px);
+  }
+
+  .card-count {
+    font-size: min(1.2rem, 23px);
+  }
+
+  .app .card-took {
+    font-size: min(0.85rem, 16px);
+  }
+
+  .app .status-main {
+    font-size: min(1rem, 19px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* ---------- Large text sizes on tablets held upright (one column) ----------
+   The same as on phones, with the tablet's larger sizes as the caps. */
+@media (min-width: 600px) and (not ((min-width: 900px) and (min-height: 600px))) and (not ((orientation: landscape) and (max-height: 599px))) {
+  .app .card {
+    height: auto;
+    min-height: var(--card-h);
+  }
+
+  .app .card-status {
+    flex-wrap: wrap;
+    row-gap: 0;
+    white-space: normal;
+  }
+
+  .app .game-title h1 {
+    font-size: min(2rem, 40px);
+  }
+
+  .app .card-name {
+    font-size: min(1.2rem, 24px);
+  }
+
+  .app .card-status {
+    font-size: min(0.88rem, 17px);
+  }
+
+  .card-count {
+    font-size: min(1.7rem, 34px);
+  }
+
+  .app .card-took {
+    font-size: min(0.85rem, 17px);
+  }
+
+  .app .status-main {
+    font-size: min(1.3rem, 25px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .app .mode-note {
+    font-size: min(0.95rem, 18px);
+  }
+}
+
+/* ---------- Large text sizes in two columns (desktop, phones sideways) ----------
+   The title and the cards keep their fixed room (the board's size is worked
+   out from it), so their text grows with the text size up to a cap; the
+   status wraps. Learn has no Menu sheet, so its side panel scrolls when
+   large text makes it taller than the window. */
+@media (min-width: 900px) and (min-height: 600px) {
+  .app .game-title h1 {
+    font-size: min(2rem, 40px);
+  }
+
+  .app .card-name {
+    font-size: min(1.2rem, 22px);
+  }
+
+  .app .card-status {
+    font-size: min(0.88rem, 16px);
+  }
+
+  .card-count {
+    font-size: min(1.7rem, 30px);
+  }
+
+  .app .card-took {
+    font-size: min(0.85rem, 16px);
+  }
+
+  .app .status-main {
+    font-size: min(1.3rem, 26px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+@media (min-width: 900px) and (min-height: 600px), (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {
+  .learn .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #c9924c transparent;
+  }
 }

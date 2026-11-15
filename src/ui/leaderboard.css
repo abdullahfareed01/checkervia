@@ -40,7 +40,7 @@
 
 :root {
   /* One mockup pixel, from the width and (for short windows) the height. */
-  --s: clamp(0.72px, min(calc(100vw / 600), calc(100vh / 1000)), 1px);
+  --s: clamp(0.72px, min(calc(100vw / 600), calc(100dvh / 1000)), 1px);
   --lb-sans: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
   --lb-serif: "Fraunces", Georgia, "Times New Roman", serif;
   --lb-numbers: "Checkervia Numerals", "Fraunces", Georgia, serif;
@@ -256,6 +256,7 @@
 }
 
 .lb-screen {
+  --pad-x: max(calc(var(--s) * 22), 10px); /* the side padding, for parts that reach to the frame's edge */
   position: relative;
   box-sizing: border-box;
   width: min(100% - 12px, 620px);
@@ -263,9 +264,9 @@
   margin: 6px auto;
   padding:
     max(calc(var(--s) * 26), env(safe-area-inset-top))
-    max(calc(var(--s) * 22), 10px, env(safe-area-inset-right))
+    max(var(--pad-x), env(safe-area-inset-right))
     max(calc(var(--s) * 28), env(safe-area-inset-bottom))
-    max(calc(var(--s) * 22), 10px, env(safe-area-inset-left));
+    max(var(--pad-x), env(safe-area-inset-left));
   border: 1.5px solid #8a5a2c;
   border-radius: calc(var(--s) * 34);
   background:
@@ -515,6 +516,15 @@
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+}
+/* With its (i): the line is as tall as the (i)'s 44px tap area, so that
+   area never reaches into the period buttons above. */
+.lb-resets:has(.lb-info-button) {
+  min-height: 44px;
+  margin-top: 0;
+}
+.lb-resets .lb-info-button {
+  margin-block: 0;
 }
 .lb-resets-laurel {
   flex: none;
@@ -1319,6 +1329,13 @@
 .lb-stat dd.lb-stat-number {
   font-size: max(26px, calc(var(--s) * 40));
 }
+/* A big number inside a line of small words ("18 moves on Strongest"): an
+   inline block, so the line grows to hold it and the dd, which clips for
+   the ellipsis, never cuts off the top or bottom of the digits. */
+.lb-stat dd > .lb-stat-number {
+  display: inline-block;
+  line-height: 1.2;
+}
 .lb-stat-none dd.lb-stat-number,
 .lb-stat-words {
   font-family: var(--lb-sans);
@@ -2103,6 +2120,7 @@
 
 @media (max-width: 380px) {
   .lb-screen {
+    --pad-x: 8px;
     padding-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right));
   }
   .lb-podium {
@@ -2291,8 +2309,8 @@
   position: sticky;
   top: calc(max(calc(var(--s) * 26), env(safe-area-inset-top)) * -1);
   z-index: 3;
-  margin-inline: calc(var(--s) * -22);
-  padding: 6px calc(var(--s) * 22);
+  margin-inline: calc(var(--pad-x) * -1);
+  padding: 6px var(--pad-x);
   background: linear-gradient(180deg, #3a2213 80%, rgba(58, 34, 19, 0));
 }
 .lb-board-stacked > .lb-panel {
@@ -2351,6 +2369,9 @@
   z-index: 55;
   display: grid;
   place-items: center;
+  /* One row as tall as the window, so the panel's max-height: 100% holds
+     and its body scrolls instead of the panel running off the screen. */
+  grid-template-rows: minmax(0, 100%);
   padding: max(12px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
   background: rgba(12, 7, 3, 0.82);
   animation: fade-in 0.18s ease-out both;
@@ -2565,7 +2586,7 @@
   margin: 0;
   font-family: var(--lb-serif);
   font-weight: 900;
-  font-size: clamp(22px, 7vw, 32px);
+  font-size: clamp(20px, 6vw, 32px);
   line-height: 1.15;
   color: #fff4dc;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
@@ -2732,6 +2753,19 @@ html[data-anim="off"] .cp-panel {
 }
 
 /* Under 360px wide five avatars would be smaller than a 44px target: four. */
+/* Phones: the popup's text one step smaller, and the stats' big numbers
+   a little smaller, so more fits on the screen. */
+@media (max-width: 599px) {
+  .lb-info-body {
+    font-size: 15px;
+    line-height: 1.45;
+  }
+  .lb-stat-number,
+  .lb-stat dd.lb-stat-number {
+    font-size: clamp(22px, 7vw, 28px);
+  }
+}
+
 @media (max-width: 359px) {
   .pf-edit-card .pf-avatars,
   .pf-panel .pf-avatars {

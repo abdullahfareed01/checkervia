@@ -123,8 +123,8 @@ describe("phone sizes (CSS)", () => {
     expect(layout).toMatch(/\.speech-why \{\r?\n  min-width: 44px;\r?\n  min-height: 44px;/);
   });
 
-  it("the chips' text is at least 11px", () => {
-    expect(layout).toMatch(/\.chip-level,\n\.chip-adult \{[^}]*font-size: 11px;/);
+  it("the chips' text is at least 12px", () => {
+    expect(layout).toMatch(/\.chip-level,\n\.chip-adult \{[^}]*font-size: 12px;/);
   });
 });
 
@@ -148,8 +148,8 @@ describe("the action bar never squeezes its labels (D67)", () => {
     expect(layout).toContain("grid-template-columns: repeat(4, minmax(min-content, 1fr)) minmax(min-content, 1.3fr);");
   });
 
-  it("labels on one line, sized by the bar's width, at least 11px", () => {
-    expect(layout).toMatch(/\.bar-label \{[^}]*font-size: clamp\(11px, [\d.]+cqi, 15px\);[^}]*white-space: nowrap;/);
+  it("labels on one line, sized by the bar's width, at least 12px", () => {
+    expect(layout).toMatch(/\.bar-label \{[^}]*font-size: clamp\(12px, [\d.]+cqi, 15px\);[^}]*white-space: nowrap;/);
     expect(layout).toMatch(/\.action-bar-inner \{[^}]*container-type: inline-size;/);
   });
 });
