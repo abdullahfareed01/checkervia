@@ -354,3 +354,20 @@
 - A long press selects no text and opens no callout, except in text fields, the Terms and the rules; no tap highlight; every pressable thing has its own pressed state.
 - `scripts/check-layout.mjs`: 33 screens and states at 16 sizes and three text and animation settings, 1584 checks, zero issues in the final run (with the new game screen, text selection, tap highlight and pressed state checks).
 - Tests: 1343 passing in 75 files (with the shell's SUPABASE variables unset); new `tests/touch.test.ts`. No test changed.
+
+## 16 Nov 2026: Random colours against the AI (D81)
+- Every new game against the AI gives you Black or White at random; as White the AI moves first. Your pieces are always at the bottom (the board turns round, with its coordinates), and a banner says which colour you have and who moves first.
+- The server checks a win for either colour by replaying the whole game, the AI's first move included; a forged colour is refused, and both colours rank the same (only your own moves count).
+- Tests: `tests/random-colour.test.ts`, `tests/leaderboard/colour.test.ts`; four tests that check the exact win request now include the colour. Browser check in headless Edge on the owner's `netlify dev` at 320 by 568, 375 by 667 and 390 by 844, as White and as Black.
+
+## 16 Nov 2026: Idle lines every 5 seconds, escalating to warnings (D82)
+- After 30 seconds the AI speaks, then every 5 seconds until you play a move; picking up a piece no longer pauses it. First it asks if someone is there, from the third line it gets angry, from the sixth it warns that it will report the game. Every level.
+- Tests: `tests/idle-session.test.ts` (30 then 5 seconds, the stages, App passing the picked up piece only to the resign pressure); the new `idleWarn` bank in `src/ai/lines.test.ts`. Checked in the browser with `?idle=fast` while holding a piece.
+
+## 16 Nov 2026: The AI's record popup says only true things (D83)
+- Fixed the owner's two bugs: after the game nothing talks about a win still to come, and with a win rate under half the robot no longer brags.
+- Tests: `tests/ai-record-dialog.test.ts` reproduces both bugs.
+
+## 16 Nov 2026: Steady thinking dots, one piece bubble (D84)
+- The AI card's "Thinking..." dots no longer wrap on narrow phones, so the board no longer moves up and down while the AI thinks; the bubble and its tail are one shape.
+- Tests: 1382 passing in 77 files after D81 to D84 (with the shell's SUPABASE variables unset); typecheck and production build pass.
