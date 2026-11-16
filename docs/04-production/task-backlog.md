@@ -61,3 +61,4 @@
   - [x] Profile first and automatic wins (D61): the Profile screen before the first AI game, the custom country picker, automatic wins with a retry queue, renames. Waiting for the owner's review.
   - [x] Redesign after the mockups, avatars and the profile icon (D62). Waiting for the owner's review.
   - [ ] Run `leaderboard-migration-2.sql` in Supabase before this version goes live (needs the owner)
+  - [ ] Run `leaderboard-migration-3.sql` in Supabase (the AI's record, D75) before this version goes live (needs the owner)

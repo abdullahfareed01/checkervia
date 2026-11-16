@@ -325,6 +325,25 @@
 - Wink, starstruck, proud, annoyed and sleepy; fourteen faces in all, each checked side by side in the browser.
 - Tests: 1299 passing in 72 files (with the shell's SUPABASE variables unset).
 
+## 15 Nov 2026: Idle lines stay, come faster, the robot gets angry (D73)
+- Fixed: an idle line no longer disappears when the board is tapped. Idle lines after 30, 20, 12, then every 8 seconds; an angry bank and an angry face from the third.
+- Tests: 1306 passing in 72 files (with the shell's SUPABASE variables unset). Browser check on my own Vite (the dev server on 8888 was down).
+
+## 15 Nov 2026: Stats against the AI, and the robot's taunt (D75)
+- A compact stats panel under the robot: your games, wins, losses and resignations (this device) and the AI's record over every player (server, migration 3); tapping the AI's row makes the robot taunt with its number of wins.
+- Tests: 1331 passing in 74 files (with the shell's SUPABASE variables unset). Browser check on my own Vite (the dev server on 8888 was down).
+- Needs the owner: run `leaderboard-migration-3.sql` in Supabase before this goes live.
+
+## 15 Nov 2026: The AI's record popup (D76)
+- Tapping the AI's row in the stats now opens a popup with its full record and a taunt; the row has an arrow so it reads as a button.
+- The AI's numbers show before migration 3: the server counts the games from the table when the `ai_record` function is missing (resignations show 0 until the migration).
+- Tests: 1337 passing in 74 files (with the shell's SUPABASE variables unset). Browser check on the owner's `netlify dev` (8888) with the live database.
+
+## 15 Nov 2026: The AI's record from the robot's avatar (D77)
+- The stats panel is gone from the game screen. Tapping the robot's avatar under the board (gold chart badge) opens a popup: the robot typing then taunting in its bubble (a different line each time, tap for another), a win rate ring, the AI's totals and its record per level. The player's own stats are not shown.
+- The server returns the AI's record per level too; migration 3's `ai_record` now groups by level.
+- Tests: 1336 passing in 74 files (with the shell's SUPABASE variables unset). Browser check on the owner's `netlify dev` at four sizes.
+
 ## 15 Nov 2026: Responsive and scroll fix for every screen (D78)
 - No sideways scrolling anywhere, one scroll at a time, the page locked behind sheets and dialogs, home fits every portrait phone, tighter phone sizes, text at least 12px and targets at least 44px.
 - `scripts/check-layout.mjs`: 32 screens and states at 16 sizes and three text and animation settings, 1536 checks, zero issues in the final run.
