@@ -91,4 +91,20 @@ describe("production build", () => {
     expect(files.filter((file) => file.endsWith(".svg")).length).toBeGreaterThan(240);
     expect(code).not.toMatch(/data:image\/svg\+xml[^"']{0,40}(?:flag|viewBox="0 0 640 480")/);
   });
+
+  // D95: the ?online= preview with its scripted friend, and the in memory
+  // room functions behind it, are development only; so is the room store's
+  // server code (the browser only calls the functions).
+  it("has no ?online= preview, no room functions and no room tables", () => {
+    expect(files.some((file) => /devOnline|devBackend/i.test(file))).toBe(false);
+    expect(code).not.toContain("startDevOnline");
+    expect(code).not.toContain("createDevBackend");
+    expect(code).not.toContain("Zara_K");
+    expect(code).not.toContain("dev-friend-device");
+    expect(code).not.toContain("online_rooms");
+    expect(code).not.toContain("online_cleanup");
+    expect(code).not.toContain("roomCodeFrom");
+    // The browser does call the functions by name.
+    expect(code).toContain("room-state");
+  });
 });

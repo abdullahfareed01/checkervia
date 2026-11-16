@@ -1,8 +1,57 @@
 import { defineConfig } from "vitest/config";
+import type { Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 
+// Development only (D95): `npm run dev:online` serves every function from
+// netlify/ on in memory stores inside this Vite server, so two browser
+// windows (one normal, one private) can play an online room without
+// Supabase or netlify dev. Nothing here is in a build: the plugin only runs
+// with the dev server in mode "online". The AI is not served in this mode.
+// The parts of Node's request this uses (the project has no Node types).
+interface NodeRequest extends AsyncIterable<unknown> {
+  readonly url?: string;
+  readonly method?: string;
+  readonly headers: Record<string, string | string[] | undefined>;
+  readonly socket: { readonly remoteAddress?: string };
+}
+
+function devFunctions(): Plugin {
+  return {
+    name: "checkervia-dev-functions",
+    apply: "serve",
+    configureServer(server) {
+      if (server.config.mode !== "online") return;
+      let backend: Promise<{ call: (name: string, request: unknown) => Promise<{ status: number; body: unknown } | null> }> | null = null;
+      server.middlewares.use(async (incoming, res, next) => {
+        const req = incoming as unknown as NodeRequest;
+        const url = new URL(req.url ?? "/", "http://localhost");
+        if (!url.pathname.startsWith("/.netlify/functions/")) return next();
+        backend ??= server.ssrLoadModule("/netlify/online/devBackend.ts").then((module) => module.createDevBackend());
+        let body = "";
+        for await (const chunk of req) body += String(chunk);
+        const header = (name: string) => {
+          const value = req.headers[name];
+          return typeof value === "string" ? value : null;
+        };
+        const result = await (await backend).call(url.pathname.split("/").pop() ?? "", {
+          method: req.method ?? "GET",
+          body: req.method === "POST" ? body : "",
+          query: url.searchParams,
+          authorization: header("authorization"),
+          deviceId: header("x-checkervia-device"),
+          ip: req.socket.remoteAddress ?? "127.0.0.1",
+        });
+        res.statusCode = result?.status ?? 404;
+        res.setHeader("content-type", "application/json");
+        res.setHeader("cache-control", "no-store");
+        res.end(JSON.stringify(result?.body ?? { error: "Not served in this mode.", code: "notFound" }));
+      });
+    },
+  };
+}
+
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), devFunctions()],
   server: {
     // netlify dev forwards pages to exactly this port (netlify.toml,
     // targetPort). If it is taken, stop with an error instead of quietly

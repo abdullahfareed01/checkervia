@@ -731,3 +731,12 @@
     display: none;
   }
 }
+
+/* ---------- Online games (D93): the winner's own picture in the ring ---------- */
+
+.result-portrait .result-avatar {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

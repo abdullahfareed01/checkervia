@@ -1,0 +1,704 @@
+/* Online rooms with a friend (D92 to D94). The sheets and the room pages
+   wear the leather and gold of the game's Menu and the home menu; the game
+   screen itself stays calm (D41, D42). Mobile first: 320px phones up, safe
+   areas respected, every tap target 44px or more, text 12px or more.
+   Loaded after the other stylesheets. */
+
+/* ---------- The 2 Players sheet (bottom sheet on phones) ---------- */
+
+.online-backdrop {
+  align-items: end;
+  padding: 0;
+}
+
+.online-sheet {
+  --u: 0.82px;
+  --home-cream: #fbedd2;
+  --home-soft: #ead6b4;
+  --sheet-title: #fde3a6;
+  --sheet-cream: #fbedd2;
+  --sheet-soft: #ead6b4;
+  --sheet-rim: rgba(201, 146, 76, 0.45);
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px max(14px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+  border-radius: 22px 22px 0 0;
+  color: var(--sheet-cream);
+  font-family: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(120% 50% at 50% 0%, rgba(150, 86, 36, 0.3), transparent 70%),
+    linear-gradient(180deg, #3a2414 0%, #2e1c0e 55%, #26170b 100%);
+  box-shadow:
+    0 0 0 1px var(--sheet-rim),
+    inset 0 1px 0 rgba(255, 220, 160, 0.1),
+    0 -12px 40px rgba(0, 0, 0, 0.55);
+  animation: online-sheet-up 0.28s ease-out both;
+}
+
+@keyframes online-sheet-up {
+  from {
+    transform: translateY(24px);
+    opacity: 0;
+  }
+}
+
+@media (min-width: 600px) and (min-height: 500px) {
+  .online-backdrop {
+    align-items: center;
+    padding: 16px;
+  }
+  .online-sheet {
+    --u: 0.9px;
+    width: min(440px, 100%);
+    max-height: calc(100dvh - 32px);
+    padding: 16px 18px 20px;
+    border-radius: 20px;
+    box-shadow:
+      0 0 0 1px var(--sheet-rim),
+      inset 0 1px 0 rgba(255, 220, 160, 0.1),
+      0 22px 56px rgba(0, 0, 0, 0.6);
+    animation-name: pop-in;
+  }
+}
+
+.online-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.online-sheet-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  text-align: center;
+}
+
+.online-sheet-space {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+
+.online-sheet .menu-sheet-close .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.online-choices {
+  display: grid;
+  gap: 12px;
+}
+
+.online-choices .menu-card {
+  min-height: 72px;
+}
+
+.online-choices .menu-icon .spinner {
+  margin: 0;
+  width: 22px;
+  height: 22px;
+}
+
+.online-note {
+  margin: 4px 2px 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--sheet-soft, #ead6b4);
+  text-align: center;
+}
+
+.online-note-problem {
+  color: #ffc2b4;
+}
+
+/* ---------- Join with a code ---------- */
+
+.online-join {
+  display: grid;
+  gap: 10px;
+}
+
+.online-join-label {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #f2cf86;
+}
+
+.online-code-input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 60px;
+  padding: 8px 12px;
+  border: 1.5px solid rgba(201, 146, 76, 0.6);
+  border-radius: 14px;
+  /* 16px or more: iPhones do not zoom into the field. */
+  font: 900 clamp(1.6rem, 8vw, 2.1rem) / 1.1 "Fraunces", Georgia, serif;
+  letter-spacing: 0.28em;
+  text-align: center;
+  text-transform: uppercase;
+  color: #fde3a6;
+  background: rgba(0, 0, 0, 0.32);
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.online-code-input::placeholder {
+  color: rgba(234, 214, 180, 0.32);
+}
+
+.online-code-input:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+}
+
+.online-code-input[aria-invalid="true"] {
+  border-color: #e98d7a;
+}
+
+.online-join-button {
+  width: 100%;
+}
+
+/* ---------- The offline notice ---------- */
+
+.online-offline {
+  display: grid;
+  gap: 10px;
+}
+
+.online-offline-close {
+  justify-self: center;
+  min-height: 44px;
+}
+
+/* ---------- The room pages (waiting, messages) ---------- */
+
+/* The page never scrolls (the app's rule); this box does, when a short
+   screen or large text needs it. */
+.online-page {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  justify-content: center;
+  padding: 6px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(90% 50% at 50% 0%, rgba(140, 78, 30, 0.35), transparent 70%),
+    #1d120a;
+  font-family: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  color: #fbedd2;
+  animation: fade-in 0.3s ease-out both;
+}
+
+.online-frame {
+  box-sizing: border-box;
+  container-type: inline-size;
+  width: min(100%, 480px);
+  height: max-content;
+  margin: auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding:
+    max(22px, env(safe-area-inset-top))
+    max(14px, env(safe-area-inset-right))
+    max(22px, env(safe-area-inset-bottom))
+    max(14px, env(safe-area-inset-left));
+  border: 1.5px solid #9a6630;
+  border-radius: 28px;
+  background:
+    radial-gradient(110% 38% at 50% 8%, rgba(160, 92, 38, 0.42), transparent 70%),
+    linear-gradient(180deg, #43271a 0%, #34200f 50%, #2a180c 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 200, 120, 0.1),
+    inset 0 0 40px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.online-frame-message {
+  justify-content: center;
+  min-height: min(420px, calc(100dvh - 12px));
+}
+
+@media (min-width: 700px) {
+  .online-page {
+    align-items: center;
+    padding: 24px;
+  }
+}
+
+.online-head {
+  width: 100%;
+}
+
+.online-message {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.online-code-card {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 16px 12px 10px;
+  border: 1px solid rgba(201, 146, 76, 0.45);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(36, 21, 11, 0.85), rgba(44, 26, 13, 0.85));
+  box-shadow: inset 0 3px 10px rgba(0, 0, 0, 0.45);
+}
+
+.online-code-label {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #f2cf86;
+}
+
+.online-code {
+  display: flex;
+  justify-content: center;
+  gap: clamp(4px, 1.6vw, 8px);
+  margin: 0;
+}
+
+.online-code-letter {
+  display: grid;
+  place-items: center;
+  width: clamp(38px, 12vw, 52px);
+  height: clamp(48px, 15vw, 62px);
+  border-radius: 10px;
+  font: 900 clamp(1.6rem, 8vw, 2.2rem) / 1 "Fraunces", Georgia, serif;
+  color: #3a2006;
+  background: linear-gradient(180deg, #ffe48e 0%, #f7c04a 48%, #e39a28 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 3px 8px rgba(0, 0, 0, 0.4);
+}
+
+.online-code-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.online-code-actions .lb-button {
+  flex: 1 1 120px;
+  max-width: 200px;
+}
+
+.online-code-actions .icon,
+.online-leave .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.online-feedback {
+  margin: 0;
+  min-height: 1.4em;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #b9e6a8;
+}
+
+.online-seats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.online-seat {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.online-seat-ring {
+  width: 80px;
+  height: 80px;
+  box-sizing: border-box;
+}
+
+.online-seat-ring .avatar {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.online-seat-pulse {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  border: 2px dashed rgba(244, 197, 92, 0.7);
+  background: rgba(0, 0, 0, 0.25);
+  animation: online-pulse 1.6s ease-in-out infinite;
+}
+
+.online-seat-question {
+  font: 900 2rem / 1 "Fraunces", Georgia, serif;
+  color: rgba(253, 227, 166, 0.75);
+}
+
+@keyframes online-pulse {
+  50% {
+    transform: scale(0.92);
+    border-color: rgba(244, 197, 92, 0.3);
+  }
+}
+
+.online-seat-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.online-seat-name .lb-flag {
+  width: 22px;
+}
+
+.online-seat-note {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #e3cfac;
+}
+
+.online-vs {
+  font: 900 1.3rem / 1 "Fraunces", Georgia, serif;
+  color: #f4c55c;
+}
+
+.online-waiting {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fde3a6;
+}
+
+.online-leave {
+  margin-top: 4px;
+}
+
+/* ---------- The game screen online ---------- */
+
+/* The status slot keeps one height, so nothing below it moves when the
+   line under the pill comes and goes. */
+.app-online .online-status {
+  min-height: 0;
+}
+
+.online-status .status-pill {
+  white-space: normal;
+  text-align: center;
+}
+
+.online-hint {
+  min-height: 2.6em;
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--text-soft, #e3cfac);
+}
+
+.online-hint-problem {
+  color: #ffc2b4;
+}
+
+.status-pill-you {
+  border-color: #f4c55c;
+  color: #fde3a6;
+}
+
+.status-pill-warn {
+  border-color: #e9a65a;
+  color: #ffd9b0;
+}
+
+.online-clock {
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+}
+
+.action-bar-online {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(min-content, 1fr);
+}
+
+/* Who is here: a dot on the corner of the opponent's picture. */
+.presence-dot {
+  position: absolute;
+  left: calc(var(--card-h) - 22px);
+  bottom: 5px;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid #241b14;
+  background: #7d8a96;
+}
+
+.presence-online {
+  background: #5fd068;
+}
+
+.presence-away {
+  background: #f0b43c;
+}
+
+.presence-offline {
+  background: #8b7a6a;
+}
+
+/* ---------- The ready screen ---------- */
+
+.ready-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  background: rgba(10, 6, 3, 0.72);
+  backdrop-filter: blur(6px);
+  animation: fade-in 0.25s ease-out both;
+}
+
+.ready-panel {
+  box-sizing: border-box;
+  container-type: inline-size;
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  display: grid;
+  justify-items: center;
+  gap: 14px;
+  padding: 20px 14px 18px;
+  border: 1.5px solid #9a6630;
+  border-radius: 24px;
+  color: #fbedd2;
+  text-align: center;
+  font-family: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(110% 45% at 50% 0%, rgba(160, 92, 38, 0.45), transparent 70%),
+    linear-gradient(180deg, #43271a 0%, #2a180c 100%);
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.6);
+  animation: pop-in 0.3s ease-out both;
+}
+
+.ready-title {
+  margin: 0;
+  font: 900 1.6rem / 1.1 "Fraunces", Georgia, serif;
+  color: #fde3a6;
+}
+
+.ready-seats {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.ready-seat {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-width: 0;
+  animation: ready-slide-left 0.45s ease-out both;
+}
+
+.ready-seat:last-child {
+  animation-name: ready-slide-right;
+}
+
+@keyframes ready-slide-left {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+@keyframes ready-slide-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+}
+
+.ready-ring {
+  width: clamp(72px, 24vw, 96px);
+  height: clamp(72px, 24vw, 96px);
+  box-sizing: border-box;
+}
+
+.ready-ring .avatar {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.ready-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  font-weight: 800;
+}
+
+.ready-name .lb-flag {
+  width: 22px;
+}
+
+.ready-colour {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  background: rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 0 1px rgba(201, 146, 76, 0.45);
+}
+
+.ready-colour .disc {
+  width: 1.1em;
+  height: 1.1em;
+}
+
+.ready-seat-you .ready-colour {
+  box-shadow: inset 0 0 0 1.5px #f4c55c;
+  color: #fde3a6;
+}
+
+.ready-vs {
+  font: 900 1.4rem / 1 "Fraunces", Georgia, serif;
+  color: #f4c55c;
+}
+
+.ready-first {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #e3cfac;
+}
+
+.ready-count {
+  margin: 0;
+  height: 76px;
+  display: grid;
+  place-items: center;
+}
+
+.ready-number {
+  font: 900 4rem / 1 "Fraunces", Georgia, serif;
+  color: #ffd668;
+  animation: ready-pop 0.9s ease-out both;
+}
+
+@keyframes ready-pop {
+  from {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ---------- The result panel online ---------- */
+
+.online-result-actions .icon {
+  width: 20px;
+  height: 20px;
+}
+
+.online-result-note {
+  margin: 0;
+  min-height: 1.3em;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #ead6b4;
+  text-align: center;
+}
+
+/* ---------- Less motion ---------- */
+
+html[data-anim="off"] .online-sheet,
+html[data-anim="off"] .online-seat-pulse,
+html[data-anim="off"] .ready-backdrop,
+html[data-anim="off"] .ready-panel,
+html[data-anim="off"] .ready-seat,
+html[data-anim="off"] .ready-number,
+html[data-anim="off"] .online-page {
+  animation: none;
+}
+
+html[data-anim="reduced"] .online-seat-pulse,
+html[data-anim="reduced"] .ready-seat {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .online-sheet,
+  .online-seat-pulse,
+  .ready-panel,
+  .ready-seat,
+  .ready-number {
+    animation: none;
+  }
+}
+
+.ready-wait {
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #e3cfac;
+}
+
+/* Narrow panels or large text: the two players one above the other. */
+@container (max-width: 17em) {
+  .online-seats,
+  .ready-seats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+}
+
+/* One scroll at a time (as in styles.css): the ready screen locks the page
+   behind it, and any dialog locks the room page. */
+html:has(.ready-backdrop),
+html:has(.ready-backdrop) body,
+html:has(:is(.ready-backdrop, .result-backdrop, .lb-backdrop, .menu-backdrop)) .online-page {
+  overflow: hidden;
+}

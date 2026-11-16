@@ -397,3 +397,11 @@
 - The leaderboard wrapper tests now unset the Supabase variables themselves, so they pass with the shell's variables set and never reach the live database.
 - Housekeeping: D64 split into D64a and D64b; focus mode, first labelled D87, is D88.
 - Tests: 1465 passing in 80 files; typecheck and build pass.
+
+## 17 Nov 2026: Online rooms with a friend, phase 1 (D90 to D93, D95)
+- 2 Players now offers Same screen or Online with a friend. Online: a profile first, then Create a room (a 6 character code, Copy, Share with a link) or Join with a code; a ready screen with both players, their colours and 3, 2, 1; then the real game screen with the opponent's avatar, flag, username and presence, Resign and Leave, no undo and no AI. Disconnects get a 60 second countdown and a forfeit; a reload goes straight back into the room. The result panel names the winner and offers a rematch with the colours swapped.
+- The server decides everything: seven new functions on a new store, every move replayed with the rules engine, colours, turns, duplicates and replays checked. Polling through the functions, not Supabase Realtime (D91, with the free plan limits).
+- Migration 6 (not run). Online games never touch the AI's record or the leaderboard.
+- Tested: the room functions, migration 6 in PGlite, the Supabase adapter, the browser's sync and words, the screens; two real browser windows (headless Edge, one normal and one private context) on `npm run dev:online`: create, join by link, ready, moves both ways, reload mid game, disconnect and return, forfeit, resign, rematch.
+- Needs the owner: run `leaderboard-migration-6.sql` in Supabase before this goes live.
+

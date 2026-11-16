@@ -71,8 +71,10 @@ describe("the first game against the AI", () => {
     // The consent gate starts the game through the profile gate.
     expect(root).toMatch(/useStrongestGate\(gatedStart\)/);
     expect(root).toMatch(/const gatedStart = useCallback\(\(level: AiLevel\) => requireProfile\(\(\) => startAt\(level\)\)/);
-    // Two players start at once; the AI asks for its level, unless the account is suspended (D85).
-    expect(root).toMatch(/if \(mode !== "vs-ai"\) start\(mode\);\s*else if \(!notifySuspended\(\)\) setAskLevel\(true\);/);
+    // Two players first choose one screen or online (D92); the AI asks for its level, unless the account is suspended (D85).
+    expect(root).toMatch(/if \(mode !== "vs-ai"\) setSheet\(\{ kind: "choose" \}\);\s*else if \(!notifySuspended\(\)\) setAskLevel\(true\);/);
+    // One screen starts at once, with no profile step.
+    expect(root).toMatch(/onSameScreen=\{\(\) => \{\s*setSheet\(null\);\s*start\("two-player"\);/);
     const app = source("src/ui/App.tsx");
     expect(app).toMatch(/useStrongestGate\(startAt\)/);
     expect(app).toMatch(/requireProfile\(\(\) => \{\s*playAi\(level\);/);

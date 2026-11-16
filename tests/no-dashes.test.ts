@@ -33,6 +33,7 @@ import { ProfileScreen } from "../src/ui/leaderboard/ProfileScreen";
 import { ProfileStats, TierRibbon } from "../src/ui/leaderboard/ProfileSheet";
 import { WinStatus } from "../src/ui/leaderboard/WinStatus";
 import { USERNAME_MESSAGES } from "../src/leaderboard/username";
+import { ONLINE_SCREENS } from "./online/onlineScreens";
 
 const noop = () => {};
 const DASHES = /[-‐-―−]/;
@@ -133,6 +134,10 @@ const screens: [string, ReactElement][] = [
   ["consent: age", createElement(ConsentDialog, { step: "age", onAnswer: noop })],
   ["consent: notice", createElement(ConsentDialog, { step: "notice", onAnswer: noop })],
   ["consent: declined", createElement(ConsentDialog, { step: "declined", onAnswer: noop })],
+  // Online rooms with a friend (D92, D93): the whole screens (their small
+  // parts, the status line and the rematch buttons, are in tests/online).
+  ...ONLINE_SCREENS.filter(([name]) => !/^(status|rematch):/.test(name)),
+  ["first online profile", createElement(ProfileScreen, { onClose: noop, onTerms: noop, firstGame: true, purpose: "online" })],
 ];
 
 describe("no hyphens or dashes in text shown to players", () => {

@@ -51,7 +51,7 @@ export function setLeaderboardTransport(next: typeof fetch | null): void {
   transport = next ?? ((input, init) => fetch(input, init));
 }
 
-async function call<T>(name: string, options: { query?: Record<string, string>; body?: unknown; signal?: AbortSignal } = {}): Promise<ApiResult<T>> {
+export async function call<T>(name: string, options: { query?: Record<string, string>; body?: unknown; signal?: AbortSignal } = {}): Promise<ApiResult<T>> {
   const query = options.query ? `?${new URLSearchParams(options.query)}` : "";
   const headers: Record<string, string> = { [DEVICE_HEADER]: deviceId() };
   const token = leaderboardStore.get().profile?.token;

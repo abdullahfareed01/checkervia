@@ -1,6 +1,6 @@
 # Deployment Guide
 
-Checkervia is a static Vite site plus Netlify functions: `netlify/functions/ai-move.ts`, which holds the OpenRouter key, and the leaderboard functions (see Leaderboard setup), which hold the Supabase key. Everything is in `netlify.toml`: build command `npm run build`, publish folder `dist`, functions folder `netlify/functions`.
+Checkervia is a static Vite site plus Netlify functions: `netlify/functions/ai-move.ts`, which holds the OpenRouter key, and the leaderboard and online room functions (see Leaderboard setup and Online rooms setup), which hold the Supabase key. Everything is in `netlify.toml`: build command `npm run build`, publish folder `dist`, functions folder `netlify/functions`.
 
 ## One time setup
 1. Push the code to a GitHub repository (see the release checklist). `.env` is git ignored; never commit a key.
@@ -48,6 +48,24 @@ Moderation: in Table Editor set `hidden` to true on a row of `players` (the play
 
 ## Testing the leaderboard by hand (development only, D60)
 With `netlify dev` running and the three Supabase variables in `.env` (and migration 2 run), open `http://localhost:8888/?testwin=strongest` (or `easy`, `medium`, `hard`). Without a profile on this browser the Profile screen comes first; then the game opens already won and the result panel adds the win by itself through the real `submit-win` function and its replay check, into the real database. Each visit uses the next of 20 recorded games for that level; add `&game=5` to pick one. This works only in development: the production build does not contain it.
+
+## Online rooms setup (D90, D91)
+Online play with a friend uses the same Supabase project, the same three variables and the same Netlify functions setup as the leaderboard. Nothing new goes into the browser: no Supabase key, no Realtime. The browser asks the room functions about once a second during a game (D91).
+
+1. Run migration 6, once, after migrations 1 to 4 (it does not need migration 5) and before the version with online play goes live: SQL Editor, New query, paste all of `docs/07-deployment/leaderboard-migration-6.sql` and Run. It adds six tables (`online_rooms`, `online_members`, `online_matches`, `online_emotes`, `online_reports`, `online_blocks`), their indexes, and the function `online_cleanup`, which only the service role can call. Row Level Security is on for all six with no policies, and `anon` and `authenticated` get no rights. Run it only once: a second run stops at its first line with "already exists".
+2. Check: Table Editor shows the six new tables, each with "RLS enabled". `select online_cleanup(now() - interval '30 days', now() - interval '180 days');` runs without an error.
+3. No new variables. Until migration 6 is run, the room functions answer 503 and the online screens show "Online play is having a problem"; everything else works.
+4. Realtime: nothing to turn on. Leave "Allow public access" as it is; the game does not use Realtime.
+5. Watch the Netlify credits (Usage): online play costs about 4 to 7 credits per hour of a game for two (D91). If they run low, raise the numbers in `POLL_MS` in `src/ui/online/roomSync.ts`.
+
+The functions: `room-create` (POST `{}`), `room-join` (POST `{ code }`), `room-state` (GET `?code=&since=&away=1`), `room-move` (POST `{ code, match, ply, move }`), `room-resign` (POST `{ code, match }`), `room-rematch` (POST `{ code, match }`), `room-leave` (POST `{ code }`). All need the profile token.
+
+Moderation: in Table Editor, `online_rooms` and its `online_members` and `online_matches` show who played whom and every move. To end a room at once, set its `closed_at`. Deleting a player in `players` removes their rooms, seats and blocks too.
+
+## Testing online play by hand (development only, D95)
+- Without Supabase: stop any server on port 5190, run `npm run dev:online` and open `http://localhost:5190` in a normal window and in a private window. Make a profile in each (any username), then 2 Players, Online with a friend, Create a room in one and Join with a code (or open the shared link) in the other. Both windows talk to the same in memory store inside the dev server; it is emptied when the server stops. The AI is not served in this mode, so its badge says unreachable. A phone on the same Wi Fi can join too, at the Network address Vite prints.
+- With the real database: run migration 6, then `netlify dev` and use `http://localhost:8888` the same way, in a normal and a private window.
+- Alone: `http://localhost:5173/?online=game` (or `lobby`, `ready`, `disconnected`, `result`) shows the online screens with a scripted friend, in any dev server.
 
 ## Local run (for reference)
 `netlify dev` (port 8888). Vite must be on port 5173 (`strictPort`): if "Could not proxy request" appears, stop every `npm run dev` / `netlify dev` window and start `netlify dev` again (`DEV-008`).
