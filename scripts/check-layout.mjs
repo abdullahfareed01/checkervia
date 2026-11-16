@@ -119,7 +119,9 @@ const SCREENS = {
   "profile-gate": { query: "?lb=new", steps: click(".menu-card-ai") + click(".level-dialog .button-primary") + until(".pf-backdrop"), layer: ".pf-backdrop" },
   terms: { query: "?lb=populated", steps: clickText(".home-link", "Terms") + until(".terms-dialog"), layer: ".terms-dialog" },
   settings: { query: "?lb=populated", steps: clickText(".home-link", "Settings") + until(".settings-dialog"), layer: ".settings-dialog" },
-  "settings-open": { query: "?lb=populated", steps: clickText(".home-link", "Settings") + until(".settings-dialog") + `document.querySelectorAll(".settings-dialog details").forEach((d) => (d.open = true)); await new Promise(r => setTimeout(r, 300));`, layer: ".settings-dialog" },
+  // Each page a Settings tile opens; the voice list after turning the AI voice on.
+  ...Object.fromEntries(["sound", "haptics", "voice", "animation", "board", "chat", "profile"].map((page) => [`settings-${page}`, { query: "?lb=populated", steps: clickText(".home-link", "Settings") + until(".settings-dialog") + click(`.settings-tile[data-opens="${page}"]`) + until(".settings-back") + `await new Promise(r => setTimeout(r, 300));`, layer: ".settings-dialog" }])),
+  "settings-voices": { query: "?lb=populated", steps: clickText(".home-link", "Settings") + until(".settings-dialog") + click('.settings-tile[data-opens="voice"]') + until(".settings-back") + clickText(".settings-switch", "AI voice") + click('.settings-row-link[data-opens="voices"]') + until(".settings-voices") + `await new Promise(r => setTimeout(r, 300));`, layer: ".settings-dialog" },
   board: { query: "?lb=populated", steps: click(".menu-card-leaderboard") + until(".lb-row"), layer: ".lb-backdrop" },
   "board-empty": { query: "?lb=empty", steps: click(".menu-card-leaderboard") + until(".lb-board"), layer: ".lb-backdrop" },
   "board-error": { query: "?lb=error", steps: click(".menu-card-leaderboard") + until(".lb-board .lb-button, .lb-board .lb-state"), layer: ".lb-backdrop" },

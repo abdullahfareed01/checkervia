@@ -729,3 +729,158 @@
     transition: none;
   }
 }
+
+/* ---------- The AI level dialog ----------
+   The same leather as the Menu sheet, where these four levels also appear
+   (.level-options-compact above): bronze rimmed rows, the chosen one with a
+   gold rim and a gold tick, gold signal bars, the Fraunces title, and a gold
+   Start game beside a leather Cancel. Scoped to .level-dialog, so the shared
+   level list and the other dialogs keep their own look. */
+
+.level-dialog {
+  --sheet-gold: #f4c55c;
+  --sheet-title: #fde3a6;
+  --sheet-cream: #fbedd2;
+  --sheet-soft: #ead6b4;
+  --sheet-rim: rgba(201, 146, 76, 0.45);
+  border-radius: 18px;
+  color: var(--sheet-cream);
+  background:
+    radial-gradient(120% 40% at 50% 0%, rgba(150, 86, 36, 0.3), transparent 70%),
+    linear-gradient(180deg, #3a2414 0%, #2e1c0e 55%, #26170b 100%);
+  box-shadow:
+    0 0 0 1px var(--sheet-rim),
+    inset 0 1px 0 rgba(255, 220, 160, 0.1),
+    0 22px 56px rgba(0, 0, 0, 0.6);
+}
+
+.level-dialog .dialog-title {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  line-height: 1.15;
+  color: var(--sheet-title);
+}
+
+.level-dialog .dialog-subtitle {
+  margin-top: 4px;
+  color: var(--sheet-soft);
+}
+
+.level-dialog .level-option {
+  min-height: 60px;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  color: var(--sheet-cream);
+  background: linear-gradient(180deg, rgba(74, 44, 25, 0.6) 0%, rgba(50, 30, 14, 0.6) 100%);
+  box-shadow: inset 0 0 0 1px rgba(201, 146, 76, 0.3);
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.level-dialog .level-option:hover {
+  background: linear-gradient(180deg, rgba(88, 54, 30, 0.7) 0%, rgba(58, 35, 16, 0.7) 100%);
+  box-shadow: inset 0 0 0 1px rgba(244, 197, 92, 0.6);
+}
+
+.level-dialog .level-option-on,
+.level-dialog .level-option-on:hover {
+  background: linear-gradient(180deg, rgba(246, 201, 104, 0.17) 0%, rgba(220, 156, 56, 0.07) 100%);
+  box-shadow: inset 0 0 0 2px #e0a93e;
+}
+
+.level-dialog .level-option-on::after {
+  content: "\2713";
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #3a2006;
+  background: linear-gradient(180deg, #ffe48e 0%, #f7c04a 48%, #e39a28 100%);
+}
+
+/* The signal bars sit in a dark well, like the home menu's symbols. */
+.level-dialog .level-steps {
+  box-sizing: content-box;
+  padding: 9px 9px 8px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #22140a 0%, #2c1a0d 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 146, 76, 0.38),
+    inset 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+.level-dialog .level-steps span {
+  background: rgba(201, 146, 76, 0.28);
+}
+
+.level-dialog .level-steps .level-step-on {
+  background: linear-gradient(180deg, #ffe48e 0%, #f6b733 55%, #e89a1c 100%);
+}
+
+.level-dialog .level-name {
+  font-weight: 800;
+}
+
+.level-dialog .level-description {
+  color: var(--sheet-soft);
+}
+
+/* Cancel and Start game: side by side and the same width, one over the
+   other when large text needs the room. */
+.level-dialog .dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7em), 1fr));
+  gap: 10px;
+}
+
+.level-dialog .dialog-actions .button {
+  min-height: 48px;
+  border: 1px solid rgba(201, 146, 76, 0.5);
+  border-radius: 14px;
+  font-weight: 800;
+  color: var(--sheet-cream);
+  background: rgba(0, 0, 0, 0.22);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.level-dialog .dialog-actions .button:hover {
+  border-color: rgba(244, 197, 92, 0.8);
+  background: rgba(244, 197, 92, 0.1);
+}
+
+.level-dialog .dialog-actions .button-primary {
+  border: 1.5px solid #ffe08a;
+  color: #2e1904;
+  background: linear-gradient(180deg, #ffd668 0%, #f6b733 55%, #e89a1c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.level-dialog .dialog-actions .button-primary:hover {
+  border-color: #fff0b8;
+  background: linear-gradient(180deg, #ffde80 0%, #f8c046 55%, #eca428 100%);
+}
+
+.level-dialog .level-option:focus-visible,
+.level-dialog .dialog-actions .button:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-dialog .level-option,
+  .level-dialog .dialog-actions .button {
+    transition: none;
+  }
+}

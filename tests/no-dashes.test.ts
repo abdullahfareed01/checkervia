@@ -55,6 +55,7 @@ const screens: [string, ReactElement][] = [
   ["terms", createElement(TermsDialog, { onClose: noop })],
   ["are you sure", createElement(ConfirmDialog, { question: "Start a new game? The current game will be lost.", confirmLabel: "Yes, new game", onConfirm: noop, onCancel: noop })],
   ["settings", createElement(SettingsSheet, { onClose: noop })],
+  ...(["sound", "haptics", "voice", "voices", "animation", "board", "chat", "profile"] as const).map((page): [string, ReactElement] => [`settings: ${page}`, createElement(SettingsSheet, { onClose: noop, initialPage: page })]),
   ["home with the settings link", createElement(Home, { aiStatus: "ready", onPlay: noop, onHowToPlay: noop, onLearn: noop, onRecheck: noop, onTerms: noop, onSettings: noop })],
   [
     "result",
