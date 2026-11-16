@@ -120,6 +120,19 @@ export interface LevelRecord {
   readonly losses: number;
 }
 
+/** GET get-ai-stats (D75): the AI's record over every player. */
+export interface AiStatsCounts {
+  readonly games: number;
+  readonly aiWins: number;
+  readonly aiLosses: number;
+  readonly resigned: number;
+}
+
+/** The AI's record over every player: the totals, and per level (D77). */
+export interface AiStatsResponse extends AiStatsCounts {
+  readonly levels: readonly (AiStatsCounts & { readonly level: AiLevel })[];
+}
+
 export interface ProfileResponse {
   readonly username: string;
   readonly country: string | null;

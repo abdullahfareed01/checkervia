@@ -4,6 +4,7 @@
 import { LEVELS } from "../../src/ai/difficulty";
 import type { AiLevel } from "../../src/ai/difficulty";
 import { rankPlayers } from "../../src/leaderboard/ranking";
+import { aiRecordOf } from "./store";
 import type { GameResult, LeaderboardStore, LevelCounts, NewPlayer, NewWin, PlayerRecord, RankedRow } from "./store";
 
 interface StoredPlayer extends PlayerRecord, NewPlayer {}
@@ -136,6 +137,21 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
           games: own.filter((result) => result.level === level).length,
         };
       });
+    },
+    async aiRecord() {
+      const counted = [...results.values()].filter((result) => visiblePlayer(result.playerId));
+      return aiRecordOf(
+        LEVELS.map((level) => {
+          const atLevel = counted.filter((result) => result.level === level);
+          return {
+            level,
+            games: atLevel.length,
+            aiWins: atLevel.filter((result) => result.result === "loss").length,
+            aiLosses: atLevel.filter((result) => result.result === "win").length,
+            resigned: atLevel.filter((result) => result.resigned === true).length,
+          };
+        }),
+      );
     },
     async hitRateLimit(key, windowSeconds, limit) {
       const time = now();

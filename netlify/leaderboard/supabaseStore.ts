@@ -9,11 +9,14 @@
 // guarded() in http.ts logs that code and answers with a calm 503.
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { toAiLevel } from "../../src/ai/difficulty";
+import { LEVELS, toAiLevel } from "../../src/ai/difficulty";
 import type { AiLevel } from "../../src/ai/difficulty";
+import { aiRecordOf } from "./store";
 import type { LeaderboardStore, LevelCounts, PlayerRecord, RankedRow } from "./store";
 
 const UNIQUE_VIOLATION = "23505";
+// PostgREST's "no such function" (PGRST202) and Postgres's (42883).
+const MISSING_FUNCTION = new Set(["PGRST202", "42883"]);
 const PLAYER_COLUMNS = "id, username, username_key, country, avatar, hidden, username_changed_at";
 
 class StoreError extends Error {
@@ -179,7 +182,14 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
     },
 
     async saveGameResult(result, replace) {
-      const row = { player_id: result.playerId, game_id: result.gameId, level: result.level, result: result.result };
+      // `resigned` only when true, so reports work before migration 3 is run.
+      const row = {
+        player_id: result.playerId,
+        game_id: result.gameId,
+        level: result.level,
+        result: result.result,
+        ...(result.resigned ? { resigned: true } : {}),
+      };
       if (replace) {
         check(await db.from("game_results").upsert(row, { onConflict: "player_id,game_id" }));
         return "added";
@@ -217,6 +227,46 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
           games: Number(row.games),
         }))
         .sort((a, b) => a.level - b.level);
+    },
+
+    async aiRecord() {
+      const answer = await db.rpc("ai_record");
+      // Before migration 3 the function does not exist yet: count the games
+      // straight from the table (hidden players left out), a win and a loss
+      // count per level. No resignations are stored before then, so 0.
+      if (answer.error && MISSING_FUNCTION.has(answer.error.code ?? "")) {
+        const count = async (level: number, result: "win" | "loss") => {
+          const counted = await db
+            .from("game_results")
+            .select("player_id, players!inner(hidden)", { count: "exact", head: true })
+            .eq("players.hidden", false)
+            .eq("level", level)
+            .eq("result", result);
+          check(counted);
+          return counted.count ?? 0;
+        };
+        return aiRecordOf(
+          await Promise.all(
+            LEVELS.map(async (level) => {
+              const [aiWins, aiLosses] = await Promise.all([count(level, "loss"), count(level, "win")]);
+              return { level, games: aiWins + aiLosses, aiWins, aiLosses, resigned: 0 };
+            }),
+          ),
+        );
+      }
+      const rows = (check(answer) ?? []) as { level: number; games: number; ai_wins: number; ai_losses: number; resigned: number }[];
+      return aiRecordOf(
+        LEVELS.map((level) => {
+          const row = rows.find((candidate) => Number(candidate.level) === level);
+          return {
+            level,
+            games: Number(row?.games ?? 0),
+            aiWins: Number(row?.ai_wins ?? 0),
+            aiLosses: Number(row?.ai_losses ?? 0),
+            resigned: Number(row?.resigned ?? 0),
+          };
+        }),
+      );
     },
 
     async hitRateLimit(key, windowSeconds, limit) {

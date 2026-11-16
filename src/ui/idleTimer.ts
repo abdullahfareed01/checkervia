@@ -1,9 +1,14 @@
-// The idle lines' timer (Change 4, updated after the owner's review): if it is
+// The idle lines' timer (Change 4, D73, the owner's review in D82): if it is
 // the player's turn and they have not moved, the AI speaks after 30 seconds,
-// and keeps speaking every 30 seconds until they move. Plain TypeScript with
+// then every 5 seconds until they play a move. Plain TypeScript with
 // injectable timers, so tests can use fake timers.
 
-export const IDLE_EVERY_MS = 30_000;
+export const IDLE_DELAYS_MS = [30_000, 5_000] as const;
+
+/** How long to wait for the next idle line, after `shown` lines this turn. */
+export function idleDelay(shown: number): number {
+  return IDLE_DELAYS_MS[Math.min(shown, IDLE_DELAYS_MS.length - 1)]!;
+}
 
 interface Timers {
   setTimeout: (run: () => void, ms: number) => unknown;
@@ -25,16 +30,17 @@ const PAGE_TIMERS: Timers = {
 };
 
 /**
- * Calls `onIdle(n)` for the n-th idle line of a turn, every `everyMs` while
- * the player stays idle. Becoming inactive (page hidden, a sheet open,
- * reviewing an older move, game over) pauses and resets the clock: when
- * active again the next line comes a full `everyMs` later. `n` keeps
- * counting within the turn, so every line has its own key.
+ * Calls `onIdle(n)` for the n-th idle line of a turn, the next one
+ * `delay(lines shown so far)` after the last, while the player stays idle.
+ * Becoming inactive (page hidden, a sheet open, a piece picked up, reviewing
+ * an older move, game over) pauses and resets the clock: when active again
+ * the next line comes its full delay later. `n` keeps counting within the
+ * turn, so every line has its own key and the lines keep speeding up.
  */
 export function createIdleTimer(
   onIdle: (count: number) => void,
   timers: Timers = PAGE_TIMERS,
-  everyMs: number = IDLE_EVERY_MS,
+  delay: (shown: number) => number = idleDelay,
 ): IdleTimer {
   let handle: unknown = null;
   let shown = 0;
@@ -49,7 +55,7 @@ export function createIdleTimer(
       shown += 1;
       onIdle(shown);
       schedule();
-    }, everyMs);
+    }, delay(shown));
   };
 
   return {

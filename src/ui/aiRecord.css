@@ -1,0 +1,587 @@
+/* The AI's record (D77): a popup from the robot's avatar under the board.
+   It wears the game's sheet (sheet.css: dark leather, a bronze rim, gold
+   numbers, the Fraunces title); the robot and its white chat bubble sit at
+   the top as under the board. Compact on phones. Loaded after sheet.css. */
+
+/* ---------- The robot's avatar under the board: a button ---------- */
+
+.coach-avatar-button {
+  position: relative;
+  padding: 0;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.coach-avatar-button:hover {
+  filter: brightness(1.12);
+}
+
+.coach-avatar-button:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+}
+
+/* A small gold chart on its corner says there is something to see. */
+.coach-badge {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #ffd668 0%, #e89a1c 100%);
+  box-shadow:
+    0 0 0 2px #1d140d,
+    0 1px 3px rgba(0, 0, 0, 0.5);
+}
+
+.coach-badge svg {
+  width: 12px;
+  height: 12px;
+  fill: #2e1904;
+}
+
+/* ---------- The popup ---------- */
+
+.airec-backdrop {
+  padding: 12px;
+}
+
+.airec {
+  position: relative;
+  width: min(440px, 100%);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  padding: 18px 18px 16px;
+  text-align: left;
+}
+
+/* The robot and its bubble, as under the board. Either one, tapped, says
+   another taunt. */
+.airec-chat {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.airec-avatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #24313d, #141c24);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 0 0 1.5px rgba(159, 208, 240, 0.45);
+  cursor: pointer;
+}
+
+.airec-avatar .robot-face {
+  width: 88%;
+  height: 88%;
+}
+
+.airec-bubble {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 52px;
+  margin-top: 4px;
+  padding: 11px 14px;
+  border: 0;
+  border-radius: 16px;
+  color: #1f1b17;
+  background: #ffffff;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+/* The tail points left, at the robot. */
+.airec-bubble::before {
+  content: "";
+  position: absolute;
+  top: 14px;
+  left: -9px;
+  width: 10px;
+  height: 18px;
+  background: #ffffff;
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}
+
+.airec-avatar:focus-visible,
+.airec-bubble:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+}
+
+.airec-said {
+  display: block;
+  animation: bubble-in 0.25s ease-out both;
+}
+
+/* The robot typing: three dots in a wave (the bubble's, D70). */
+.airec-typing {
+  display: flex;
+  gap: 5px;
+  padding: 6px 0;
+}
+
+.airec-typing i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8f857b;
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+.airec-typing i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.airec-typing i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.app .airec-title,
+.airec-title {
+  margin: 16px 0 0;
+  text-align: center;
+  font-size: 1.4rem;
+}
+
+.airec-sub {
+  margin: 2px 0 0;
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--sheet-soft);
+}
+
+/* The win rate ring beside the four totals. */
+.airec-main {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.airec-ring {
+  position: relative;
+  width: 108px;
+  height: 108px;
+}
+
+.airec-ring svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.airec-ring circle {
+  fill: none;
+  stroke-width: 11;
+}
+
+.airec-ring-track {
+  stroke: rgba(0, 0, 0, 0.38);
+}
+
+.airec-ring-lost {
+  stroke: #9a4a36;
+}
+
+.airec-ring-won {
+  stroke: var(--sheet-gold);
+  transition: stroke-dasharray 0.6s ease;
+}
+
+.airec-ring-text {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  line-height: 1.05;
+}
+
+.airec-ring-text strong {
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: var(--sheet-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.airec-ring-text span {
+  margin-top: 2px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sheet-soft);
+}
+
+.airec-stats,
+.airec-levels {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.airec-stat {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(201, 146, 76, 0.22);
+}
+
+.airec-stat-icon {
+  display: grid;
+  place-items: center;
+  color: var(--sheet-gold);
+}
+
+.airec-stat-icon .icon,
+.airec-stat-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.airec-stat-losses .airec-stat-icon {
+  color: #d98a74;
+}
+
+.airec-stat-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--sheet-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.airec-stat-value {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: var(--sheet-cream);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Per level: a bar for the AI's win rate; the level being played is
+   marked with "You". */
+.app .airec-head,
+.airec-head {
+  margin: 16px 0 6px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sheet-title);
+}
+
+/* One grid for all four rows (subgrid), so the columns line up and the
+   name column fits the longest name with its "You" mark. */
+.airec-levels {
+  /* Each column as wide as its words, and narrower (the words wrap) when a
+     large text size leaves no room. */
+  grid-template-columns: minmax(0, max-content) minmax(30px, 1fr) minmax(0, max-content) minmax(0, max-content);
+  column-gap: 8px;
+}
+
+.airec-level {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: subgrid;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 4px 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  font-size: 0.9rem;
+}
+
+.airec-level-now {
+  background: rgba(244, 197, 92, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(244, 197, 92, 0.55);
+}
+
+.airec-level-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-weight: 800;
+}
+
+.airec-now {
+  padding: 0 6px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1.5;
+  color: #2e1904;
+  background: var(--sheet-gold);
+}
+
+.airec-bar {
+  height: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.airec-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #b8782a, #f4c55c);
+}
+
+.airec-level-rate {
+  text-align: right;
+  font-weight: 900;
+  color: var(--sheet-gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.airec-level-games {
+  text-align: right;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--sheet-soft);
+}
+
+.airec-empty {
+  margin: 14px 0 0;
+  text-align: center;
+  color: var(--sheet-soft);
+}
+
+.airec-close {
+  width: 100%;
+  margin-top: 16px;
+}
+
+/* ---------- Phones: compact ---------- */
+
+@media (max-width: 420px) {
+  .airec {
+    padding: 14px 12px 12px;
+  }
+
+  .airec-chat {
+    gap: 10px;
+  }
+
+  .airec-avatar {
+    width: 52px;
+    height: 52px;
+    border-radius: 15px;
+  }
+
+  .airec-bubble {
+    min-height: 44px;
+    margin-top: 2px;
+    padding: 9px 12px;
+    font-size: 14px;
+  }
+
+  .app .airec-title,
+  .airec-title {
+    margin-top: 12px;
+    font-size: 1.25rem;
+  }
+
+  .airec-main {
+    gap: 10px;
+    margin-top: 10px;
+  }
+
+  .airec-ring {
+    width: 90px;
+    height: 90px;
+  }
+
+  .airec-ring-text strong {
+    font-size: 1.3rem;
+  }
+
+  .airec-stats {
+    gap: 4px;
+  }
+
+  .airec-stat {
+    gap: 6px;
+    min-height: 28px;
+    padding: 3px 8px;
+  }
+
+  .airec-stat-label {
+    font-size: 0.8rem;
+  }
+
+  .airec-stat-value {
+    font-size: 0.95rem;
+  }
+
+  .app .airec-head,
+  .airec-head {
+    margin-top: 12px;
+  }
+
+  .airec-levels {
+    gap: 4px;
+    column-gap: 6px;
+  }
+
+  .airec-level {
+    gap: 6px;
+    min-height: 30px;
+    padding: 3px 8px;
+    font-size: 0.82rem;
+  }
+
+  .airec-level-games {
+    font-size: 0.75rem;
+  }
+
+  .airec-close {
+    min-height: 44px;
+    margin-top: 12px;
+  }
+}
+
+/* Very narrow phones: the games count leaves the level rows. */
+@media (max-width: 340px) {
+  .airec-levels {
+    grid-template-columns: max-content minmax(30px, 1fr) max-content;
+  }
+
+  .airec-level-games {
+    display: none;
+  }
+}
+
+/* Short screens: tighter still, so it fits without scrolling. */
+@media (max-height: 640px) {
+  .app .airec-title,
+  .airec-title {
+    margin-top: 8px;
+  }
+
+  .airec-sub {
+    display: none;
+  }
+
+  .airec-main {
+    margin-top: 8px;
+  }
+
+  .app .airec-head,
+  .airec-head {
+    margin: 10px 0 4px;
+  }
+}
+
+/* Phones held sideways: two columns, the robot and totals on the left, the
+   levels and the button on the right, so it fits the short height. */
+@media (orientation: landscape) and (max-height: 520px) {
+  .airec {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "chat head"
+      "title levels"
+      "main levels"
+      "main close";
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: 18px;
+    width: min(760px, 100%);
+    padding: 12px 16px;
+  }
+
+  .airec-chat {
+    grid-area: chat;
+  }
+
+  .app .airec-title,
+  .airec-title {
+    grid-area: title;
+    margin-top: 6px;
+    font-size: 1.15rem;
+  }
+
+  .airec-sub {
+    display: none;
+  }
+
+  .airec-main {
+    grid-area: main;
+    align-self: start;
+    margin-top: 6px;
+  }
+
+  .app .airec-head,
+  .airec-head {
+    grid-area: head;
+    align-self: end;
+    margin: 0 0 4px;
+  }
+
+  .airec-levels {
+    grid-area: levels;
+    align-self: start;
+  }
+
+  .airec-empty {
+    grid-area: main;
+  }
+
+  .airec-close {
+    grid-area: close;
+    align-self: safe end; /* never pushed up over the level rows */
+    margin-top: 8px;
+  }
+
+  .airec-avatar {
+    width: 48px;
+    height: 48px;
+  }
+
+  .airec-ring {
+    width: 84px;
+    height: 84px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .airec-said,
+  .airec-typing i {
+    animation: none;
+  }
+
+  .airec-ring-won {
+    transition: none;
+  }
+}

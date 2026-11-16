@@ -12,6 +12,7 @@ import type { AiLevel } from "../../ai/difficulty";
 import type { Period } from "../../leaderboard/periods";
 import { DEVICE_HEADER } from "../../leaderboard/protocol";
 import type {
+  AiStatsResponse,
   CheckUsernameResponse,
   ClaimResponse,
   CountryChoice,
@@ -120,8 +121,11 @@ export const leaderboardApi = {
   submitWin: (gameId: string, level: AiLevel, moves: readonly EncodedMove[]) =>
     call<SubmitWinResponse>("submit-win", { body: { gameId, level, mode: "vs-ai", moves } }),
 
-  reportGame: (gameId: string, level: AiLevel, result: "win" | "loss") =>
-    call<{ recorded: boolean }>("report-game", { body: { gameId, level, result } }),
+  reportGame: (gameId: string, level: AiLevel, result: "win" | "loss", resigned = false) =>
+    call<{ recorded: boolean }>("report-game", { body: { gameId, level, result, ...(resigned ? { resigned: true } : {}) } }),
+
+  /** The AI's record over every player (D75). */
+  aiStats: (signal?: AbortSignal) => call<AiStatsResponse>("get-ai-stats", signal ? { signal } : {}),
 
   leaderboard: (level: AiLevel, period: Period, page: number, signal?: AbortSignal) =>
     call<LeaderboardResponse>("get-leaderboard", { query: { level: String(level), period, page: String(page) }, ...(signal ? { signal } : {}) }),

@@ -22,7 +22,7 @@ import { ModeSelector } from "./ModeSelector";
 import { ResultDialog } from "./ResultDialog";
 import { RulesDialog } from "./RulesDialog";
 import { LanguageInfo } from "./LanguageInfo";
-import { usePersonality } from "./usePersonality";
+import { ANGRY_FROM_IDLE, usePersonality } from "./usePersonality";
 import { reactionBubble } from "./bubble";
 import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
@@ -52,6 +52,8 @@ import { useLeaderboardGame } from "./leaderboard/useLeaderboardGame";
 import { WinStatus } from "./leaderboard/WinStatus";
 import { useLeaderboardProfile } from "./leaderboard/profile";
 import { WinChanceBar } from "./WinChanceBar";
+import { AiRecordDialog, useAiStats } from "./AiRecordDialog";
+import { useVsAiRecord } from "./vsAiRecord";
 
 interface AppProps {
   initial?: GameOptions | undefined; // the first game's setup
@@ -238,7 +240,9 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // Idle lines wait while anything covers the board or the player is busy.
   const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open || leaderboardOpen || profileOpen || gating;
   const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
-  const personality = usePersonality(state, playerTurn && !startedMove && !covered);
+  // Idle lines keep coming while the player taps or picks up a piece; only
+  // their move stops them (D82). The resign pressure still waits.
+  const personality = usePersonality(state, playerTurn && !covered, startedMove);
   // The AI's line appears after its piece has landed: until then, the typing
   // dots stay (the same bubble, so nothing flickers). Worked out during the
   // render from the move's animation key, so no effect (the bubble's pop, the
@@ -278,23 +282,42 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const showBubbles = settings.chat.bubbles;
   // The robot types its next ask with its thinking face, and laughs while
   // the ask is on screen (D69, D70).
-  // Bored of waiting after the second idle line: it dozes off (D72).
-  const mood = aiLanding
-    ? "thinking"
-    : personality.pressure
-      ? personality.pressure.text
-        ? "laughing"
-        : "thinking"
-      : personality.idle && personality.idle.count >= 2
-        ? "sleepy"
-        : aiMood(state, 1 - chance);
   // After the game, the AI's last words stay in its bubble (D71); not read
   // out again (the result panel did).
   const lastWords =
     state.winner && state.viewIndex === null && personality.end
       ? { key: `end-${state.history.length}`, text: personality.end.line.text, tone: personality.end.line.tone, why: false, announce: false }
       : null;
-  const coachLine = coachMessage(bubble, showBubbles, lastWords);
+  const coachBase = coachMessage(bubble, showBubbles, lastWords);
+  // The AI's record (D75, D77): a popup that opens only from the robot's
+  // avatar, fetching the record again as it opens. Your own totals only
+  // choose its taunt; they are never shown.
+  const myRecord = useVsAiRecord();
+  const [recordOpens, setRecordOpens] = useState(0);
+  const aiStats = useAiStats(myRecord.games, recordOpens);
+  const [recordOpen, setRecordOpen] = useState(false);
+  const openRecord = useCallback(() => {
+    setRecordOpen(true);
+    setRecordOpens((count) => count + 1);
+  }, []);
+  const closeRecord = useCallback(() => setRecordOpen(false), []);
+  const coachLine = coachBase;
+  // Bored of waiting after the second idle line: it dozes off (D72); from
+  // the third it gets angry (D73).
+  const idleCount = personality.idle?.count ?? 0;
+  const mood = aiLanding
+    ? "thinking"
+    : recordOpen
+      ? "laughing"
+      : personality.pressure
+      ? personality.pressure.text
+        ? "laughing"
+        : "thinking"
+      : idleCount >= ANGRY_FROM_IDLE
+        ? "angry"
+        : idleCount === 2
+          ? "sleepy"
+          : aiMood(state, 1 - chance);
 
   return (
     <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}`}>
@@ -322,7 +345,8 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           aiFailureReasons={state.aiFailureReasons}
           onRetryAi={retryAi}
         />
-        {state.mode === "vs-ai" && <AiCoach message={coachLine} mood={mood} whyOpen={why.open} onWhy={why.toggleWhy} />}
+        {state.mode === "vs-ai" && <AiCoach message={coachLine} mood={mood} whyOpen={why.open} onWhy={why.toggleWhy} onAvatar={openRecord} />}
+        {state.mode === "vs-ai" && recordOpen && <AiRecordDialog ai={aiStats} mine={myRecord} level={state.aiLevel} gameOver={state.winner !== null} onClose={closeRecord} />}
         <HistoryControls index={shown.index} total={shown.total} live={shown.live} moves={moves} nameOf={moveNameOf} onGo={goHistory} />
         <ActionBar
           menu={<GameMenu items={menuItems} setup={setup} onOpenChange={setMenuOpen} />}

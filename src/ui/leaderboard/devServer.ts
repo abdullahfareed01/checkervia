@@ -18,6 +18,7 @@
 import { handleCheckUsername } from "../../../netlify/leaderboard/handlers/checkUsername";
 import { handleClaimUsername } from "../../../netlify/leaderboard/handlers/claimUsername";
 import { handleGetLeaderboard } from "../../../netlify/leaderboard/handlers/getLeaderboard";
+import { handleGetAiStats } from "../../../netlify/leaderboard/handlers/getAiStats";
 import { handleGetProfile } from "../../../netlify/leaderboard/handlers/getProfile";
 import { handleReportGame } from "../../../netlify/leaderboard/handlers/reportGame";
 import { handleSubmitWin } from "../../../netlify/leaderboard/handlers/submitWin";
@@ -39,6 +40,7 @@ const HANDLERS: Record<string, LeaderboardHandler> = {
   "report-game": handleReportGame,
   "get-leaderboard": handleGetLeaderboard,
   "get-profile": handleGetProfile,
+  "get-ai-stats": handleGetAiStats,
   "update-profile": handleUpdateProfile,
 };
 

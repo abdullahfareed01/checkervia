@@ -38,7 +38,7 @@ export const TERMS_SECTIONS: readonly { title: string; points: readonly string[]
   {
     title: "What is stored",
     points: [
-      "In your browser: your chosen level, your settings, your acceptance of the Strongest notice (the time and the notice version) and, for the leaderboard, a random device id, your profile's secret key and any win that could not be sent yet (kept for at most 7 days). Clearing your browser data removes them.",
+      "In your browser: your chosen level, your settings, your acceptance of the Strongest notice (the time and the notice version), your totals against the AI (games, wins, losses and resignations), which the AI uses to tease you and, for the leaderboard, a random device id, your profile's secret key and any win that could not be sent yet (kept for at most 7 days). Clearing your browser data removes them.",
       "In this tab only: your wins and losses against the AI, so it can greet you. They are gone when you close the tab.",
       "During a game, the board and the list of possible moves are sent to the AI provider so the AI can choose its move. No personal details are sent.",
       "On our server: only what the Leaderboard section below lists, and only once you choose a username.",
@@ -51,8 +51,8 @@ export const TERMS_SECTIONS: readonly { title: string; points: readonly string[]
       "Before your first game against the AI you make a profile: a username, an avatar and a flag. Usernames are public and unique, and there is no tag. Please do not use your real name. Usernames are filtered, and names or entries that break these rules may be hidden or removed.",
       "Your username, avatar, flag and wins are public on the leaderboard.",
       "When you win a game against the AI, the win is submitted automatically after the result appears. Our server checks each one by replaying all of its moves. Two player games, resigned games and games the AI wins never count. If the win cannot be sent (for example while you are offline), it is kept in your browser for up to 7 days and sent by itself later.",
-      "Your profile shows your games played, wins, losses and win rate. Wins are checked by replay. Games played and losses are reported by the game in your browser and are not checked by replay.",
-      "Our server stores your username, your avatar (only which picture you chose), your flag, the level, moves and stats of each win, the results of your finished games against the AI, the date of your last username change, and the dates. It also stores scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It never stores your raw IP address, your age or your email.",
+      "Your profile shows your games played, wins, losses and win rate. Wins are checked by replay. Games played and losses are reported by the game in your browser and are not checked by replay. The AI's record in the game adds up the reported games of every player: totals only, never names.",
+      "Our server stores your username, your avatar (only which picture you chose), your flag, the level, moves and stats of each win, the results of your finished games against the AI (a win, a loss, or a loss by resignation), the date of your last username change, and the dates. It also stores scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It never stores your raw IP address, your age or your email.",
       "The avatar groups (male, female, kid, older adult) only help you find a picture. Which group you looked at is never sent or stored.",
       "You choose your flag yourself, or Prefer not to show a flag. It is never guessed from your connection. You can change your flag and your avatar any time.",
       "You can change your username once every 7 days. Your old username stays reserved for you for 30 days, so nobody else can take it; after that it is free again. Your wins and stats stay with you.",

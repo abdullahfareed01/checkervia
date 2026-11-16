@@ -10,6 +10,7 @@ import "./ui/chrome.css";
 import "./ui/sheet.css";
 import "./ui/bubble.css";
 import "./ui/layout.css";
+import "./ui/aiRecord.css";
 import "./ui/result.css";
 import "./ui/motion.css";
 import "./ui/settings.css";

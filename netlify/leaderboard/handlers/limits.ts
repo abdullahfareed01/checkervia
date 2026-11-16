@@ -17,6 +17,8 @@ export const LIMITS = {
   renameUsername: { windowSeconds: 3600, perDevice: 5, perIp: 20 },
   getLeaderboard: { windowSeconds: 60, perIp: 60 },
   getProfile: { windowSeconds: 60, perIp: 60 },
+  // The AI's record (D75): fetched when the game screen opens and after games.
+  getAiStats: { windowSeconds: 60, perIp: 30 },
 } satisfies Record<string, Limit>;
 
 // Body limits in characters. A win of 600 moves fits in about 12,000.

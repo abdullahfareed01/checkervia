@@ -54,7 +54,7 @@ export function useLeaderboardGame(state: GameState): QualifyingWin | null {
     if (!leaderboardStore.get().profile) return;
     if (win) leaderboardStore.enqueue(win);
     // Fire and forget: a lost report only means one game fewer in the counters.
-    void leaderboardApi.reportGame(gameId, state.aiLevel, state.winner === AI_PLAYER || state.resignedBy ? "loss" : "win").catch(() => {});
+    void leaderboardApi.reportGame(gameId, state.aiLevel, state.winner === AI_PLAYER || state.resignedBy ? "loss" : "win", state.resignedBy !== null).catch(() => {});
   }, [state.winner, gameId]);
   return profile ? win : null;
 }

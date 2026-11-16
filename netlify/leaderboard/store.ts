@@ -47,6 +47,30 @@ export interface GameResult {
   readonly gameId: string;
   readonly level: AiLevel;
   readonly result: "win" | "loss";
+  readonly resigned?: boolean; // a loss by resignation (D75)
+}
+
+/** The AI's record at one level, or over all of them. */
+export interface AiCounts {
+  readonly games: number;
+  readonly aiWins: number; // the players' losses, resignations included
+  readonly aiLosses: number; // the players' wins
+  readonly resigned: number; // the players' resignations
+}
+
+/**
+ * The AI's record over every player's reported games (D75); hidden players
+ * left out. The totals, and the same per level, always all four levels in
+ * order (D77).
+ */
+export interface AiRecord extends AiCounts {
+  readonly levels: readonly (AiCounts & { readonly level: AiLevel })[];
+}
+
+/** The totals from the four levels' counts. */
+export function aiRecordOf(levels: readonly (AiCounts & { readonly level: AiLevel })[]): AiRecord {
+  const sum = (key: keyof AiCounts) => levels.reduce((total, level) => total + level[key], 0);
+  return { games: sum("games"), aiWins: sum("aiWins"), aiLosses: sum("aiLosses"), resigned: sum("resigned"), levels };
 }
 
 export interface RankedRow {
@@ -102,6 +126,8 @@ export interface LeaderboardStore {
   rankedRow(level: AiLevel, since: Date | null, playerId: string): Promise<RankedRow | null>;
   /** Counts for each level, Easy to Strongest. */
   levelCounts(playerId: string): Promise<LevelCounts[]>;
+  /** The AI's record over every player (D75). */
+  aiRecord(): Promise<AiRecord>;
   /** Counts a request against a fixed window and says whether it may go ahead. */
   hitRateLimit(key: string, windowSeconds: number, limit: number): Promise<RateLimitResult>;
 }
