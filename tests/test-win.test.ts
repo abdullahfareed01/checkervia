@@ -11,6 +11,8 @@ import { playRecord } from "../src/state/playRecord";
 import { isSubmittableWin } from "../src/ui/usePersonality";
 import { qualifyingWin } from "../src/ui/leaderboard/useLeaderboardGame";
 import { TEST_WIN_COUNT, decodeGame, generateTestWins } from "../src/ui/testWin/testWins";
+import { testWinOptions } from "../src/ui/testWin/startTestWin";
+import { encodeMove } from "../src/leaderboard/protocol";
 import type { EncodedMove } from "../src/leaderboard/protocol";
 
 const FILE = new URL("../src/ui/testWin/testWinGames.json", import.meta.url);
@@ -51,5 +53,46 @@ describe("the ?testwin= games", () => {
     const moves = decodeGame(stored[0]!);
     expect(() => playRecord(createGameState({ mode: "vs-ai" }), [moves[1]!, ...moves])).toThrow(/could not be played/);
     expect(() => decodeGame([[0, 1]])).toThrow(/not legal/);
+  });
+});
+
+// D81: &side=white opens a game won as White, where the AI (Black) moved
+// first, made on the spot by the same engine generator; the win is sent
+// with its colour, so the server's replay for White is tested for real.
+describe("?testwin=...&side=white", () => {
+  const gameId = "00000000-0000-4000-8000-000000000077";
+
+  it.each([1, 2, 3, 4] as const)("level %i: a game won as White, the AI's first move first, sent with its colour", (level) => {
+    const name = ["easy", "medium", "hard", "strongest"][level - 1]!;
+    const options = testWinOptions(name, String(level), "white")!;
+    expect(options).toMatchObject({ mode: "vs-ai", aiLevel: level, humanSide: "white" });
+    const state = playRecord(createGameState(options), options.record!);
+    expect(state.history[1]).toMatchObject({ player: "black", level }); // the AI opened
+    expect(state).toMatchObject({ winner: "white", resignedBy: null, aiPhase: "idle", humanSide: "white" });
+    expect(isSubmittableWin(state)).toBe(true);
+    const win = qualifyingWin(state, gameId)!;
+    expect(win).toMatchObject({ gameId, level, colour: "white" });
+    expect(win.moves).toEqual(options.record!.map(encodeMove));
+    // The server's own replay: a win for White, and not for Black.
+    const replay = replayWin(win.moves, "white");
+    expect(replay).toMatchObject({ ok: true, moveCount: Math.floor(win.moves.length / 2) });
+    expect(replayWin(win.moves, "black")).toEqual({ ok: false, reason: "notWin" });
+  }, 60_000);
+
+  it("each seed is a different game (the server refuses the same moves twice)", () => {
+    const first = testWinOptions("easy", "1", "white")!.record!.map(encodeMove);
+    const second = testWinOptions("easy", "2", "white")!.record!.map(encodeMove);
+    expect(JSON.stringify(first)).not.toBe(JSON.stringify(second));
+  }, 60_000);
+
+  it("side=black, or no side, is the recorded Black win as before; another side is refused", () => {
+    expect(testWinOptions("easy", "1", "black")).toMatchObject({ humanSide: "black", record: decodeGame(stored[0]!) });
+    expect(testWinOptions("easy", "1")).toMatchObject({ humanSide: "black", record: decodeGame(stored[0]!) });
+    expect(testWinOptions("easy", "1", "red")).toBeUndefined();
+  });
+
+  it("main.tsx reads &side only inside the development only block", () => {
+    const main = readFileSync(new URL("../src/main.tsx", import.meta.url), "utf8");
+    expect(main).toMatch(/if \(import\.meta\.env\.DEV\) \{\s*const params = new URLSearchParams\(window\.location\.search\);\s*const level = params\.get\("testwin"\);\s*if \(level\) initial = \(await import\("\.\/ui\/testWin\/startTestWin"\)\)\.testWinOptions\(level, params\.get\("game"\), params\.get\("side"\)\);/);
   });
 });

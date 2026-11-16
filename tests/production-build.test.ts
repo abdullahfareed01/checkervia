@@ -71,6 +71,10 @@ describe("production build", () => {
     expect(code).not.toMatch(literal("testwin"));
     expect(code).not.toContain("checkervia.dev.testwin");
     expect(code).not.toContain("recorded game");
+    // D81: &side=white and its on the spot White wins are development only too.
+    expect(code).not.toMatch(literal("side"));
+    expect(code).not.toContain("side=white");
+    expect(code).not.toContain("a win as White");
     // The first moves of the first recorded game, as the JSON would hold them.
     const first = JSON.parse(readFileSync(join(process.cwd(), "src/ui/testWin/testWinGames.json"), "utf8"))[0].slice(0, 4);
     expect(code).not.toContain(JSON.stringify(first).slice(1, -1));

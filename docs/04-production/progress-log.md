@@ -371,3 +371,7 @@
 ## 16 Nov 2026: Steady thinking dots, one piece bubble (D84)
 - The AI card's "Thinking..." dots no longer wrap on narrow phones, so the board no longer moves up and down while the AI thinks; the bubble and its tail are one shape.
 - Tests: 1382 passing in 77 files after D81 to D84 (with the shell's SUPABASE variables unset); typecheck and production build pass.
+
+## 16 Nov 2026: ?testwin side=white for testing a White win (D81)
+- Development only: `?testwin=easy&side=white` opens a game just won as White (the AI moved first), made by the engine's test win generator, and sends it through the real result panel and `submit-win` with its colour. Not in a production build.
+- Tests: `tests/test-win.test.ts` (every level: the AI's first move first, a submittable White win with its colour, the server's replay accepts it as White and refuses it as Black); `tests/production-build.test.ts` proves it is left out. Checked in headless Edge with `submit-win` answered in the page, so nothing reached the server.
