@@ -2,7 +2,7 @@
 // supabaseStore.ts (the real one, Postgres through the service role key) and
 // memoryStore.ts (for tests and local work without a database).
 import type { AiLevel } from "../../src/ai/difficulty";
-import type { EncodedMove } from "../../src/leaderboard/protocol";
+import type { AbandonPhase, EncodedMove } from "../../src/leaderboard/protocol";
 
 export interface PlayerRecord {
   readonly id: string;
@@ -47,6 +47,45 @@ export interface GameResult {
   readonly gameId: string;
   readonly level: AiLevel;
   readonly result: "win" | "loss";
+  readonly resigned?: boolean; // a loss by resignation (D75)
+}
+
+/** The AI's record at one level, or over all of them. */
+export interface AiCounts {
+  readonly games: number;
+  readonly aiWins: number; // the players' losses, resignations included
+  readonly aiLosses: number; // the players' wins
+  readonly resigned: number; // the players' resignations
+}
+
+/**
+ * The AI's record over every player's reported games (D75); hidden players
+ * left out. The totals, and the same per level, always all four levels in
+ * order (D77).
+ */
+export interface AiRecord extends AiCounts {
+  readonly levels: readonly (AiCounts & { readonly level: AiLevel })[];
+}
+
+/** The totals from the four levels' counts. */
+export function aiRecordOf(levels: readonly (AiCounts & { readonly level: AiLevel })[]): AiRecord {
+  const sum = (key: keyof AiCounts) => levels.reduce((total, level) => total + level[key], 0);
+  return { games: sum("games"), aiWins: sum("aiWins"), aiLosses: sum("aiLosses"), resigned: sum("resigned"), levels };
+}
+
+/** A report for an abandoned game (D85). */
+export interface NewReport {
+  readonly playerId: string;
+  readonly gameId: string;
+  readonly level: AiLevel;
+  readonly phase: AbandonPhase;
+}
+
+/** A player's reports and suspension (D85). */
+export interface Conduct {
+  readonly reports: number; // towards the next suspension
+  readonly totalReports: number;
+  readonly suspendedUntil: Date | null; // null when not suspended now
 }
 
 export interface RankedRow {
@@ -65,6 +104,7 @@ export interface LevelCounts {
   readonly bestMoves: number | null;
   readonly losses: number; // reported
   readonly games: number; // reported, plus every verified win
+  readonly resigned: number; // the losses that were resignations; 0 before migration 3
 }
 
 export interface RateLimitResult {
@@ -102,6 +142,17 @@ export interface LeaderboardStore {
   rankedRow(level: AiLevel, since: Date | null, playerId: string): Promise<RankedRow | null>;
   /** Counts for each level, Easy to Strongest. */
   levelCounts(playerId: string): Promise<LevelCounts[]>;
+  /** The AI's record over every player (D75). */
+  aiRecord(): Promise<AiRecord>;
+  /**
+   * Records a report once per game (a repeat changes nothing). Not
+   * suspended: the count goes up, and at `limit` the player is suspended for
+   * `days` and the count starts again from zero. While suspended a report
+   * only adds to the total.
+   */
+  addReport(report: NewReport, limit: number, days: number): Promise<Conduct>;
+  /** The player's reports and suspension now; zeros before migration 4 is run. */
+  conduct(playerId: string): Promise<Conduct>;
   /** Counts a request against a fixed window and says whether it may go ahead. */
   hitRateLimit(key: string, windowSeconds: number, limit: number): Promise<RateLimitResult>;
 }

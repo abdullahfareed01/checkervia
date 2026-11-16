@@ -179,10 +179,10 @@ describe("the API client", () => {
     expect(leaderboardStore.get().profile).toBeNull();
   });
 
-  it("sends a win with its moves and vs-ai, nothing else", async () => {
+  it("sends a win with its moves, vs-ai and the player's colour (D81), nothing else", async () => {
     const seen = answer(201, { moveCount: 27, weekRank: 3 });
     await leaderboardApi.submitWin("00000000-0000-4000-8000-000000000001", 4, BLACK_WIN);
-    expect(JSON.parse(String(seen[0]!.init.body))).toEqual({ gameId: "00000000-0000-4000-8000-000000000001", level: 4, mode: "vs-ai", moves: BLACK_WIN });
+    expect(JSON.parse(String(seen[0]!.init.body))).toEqual({ gameId: "00000000-0000-4000-8000-000000000001", level: 4, mode: "vs-ai", colour: "black", moves: BLACK_WIN });
     expect(seen[0]!.init.method).toBe("POST");
   });
 });
@@ -210,7 +210,7 @@ describe("which games can count", () => {
   it("a win against the AI from the start is a qualifying win, with every move encoded", () => {
     const state = finishedGame(BLACK_WIN);
     expect(isLeaderboardGame(state)).toBe(true);
-    expect(qualifyingWin(state, gameId)).toEqual({ gameId, level: 4, moves: BLACK_WIN });
+    expect(qualifyingWin(state, gameId)).toEqual({ gameId, level: 4, colour: "black", moves: BLACK_WIN });
   });
 
   it("an AI win, a resignation and a two player game never count", () => {

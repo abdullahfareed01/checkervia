@@ -1,0 +1,41 @@
+/* Touch polish (D80). Loaded last, so it holds over the other files.
+
+   - A long press never selects text or opens the callout menu on buttons,
+     cards, headings, labels and the game: the whole app is set so, and only
+     the places where people type or may want to copy take it back (text
+     fields such as the username, the Terms text and the rules text).
+   - No grey or blue flash on a tap (the browser's tap highlight); every
+     pressable thing shows its own pressed state instead: a little darker
+     and a little smaller while the finger (or the mouse button) is down. */
+
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+input,
+textarea,
+.terms-scroll,
+.rules-body,
+.rules-dialog-section {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
+/* Pressed. `scale` adds to any transform the element already has, and
+   neither it nor the filter moves anything around it. */
+:is(button, a[href], summary, [role="button"], [role="tab"], [role="radio"], [role="option"], [role="switch"], [role="menuitem"], label:has(input:is([type="radio"], [type="checkbox"]))):active:not(:disabled, [aria-disabled="true"]) {
+  filter: brightness(0.86);
+  scale: 0.96;
+}
+
+/* The board's squares only darken: the board keeps its size and lines. */
+.board :is(button, [role="button"]):active:not(:disabled) {
+  scale: none;
+}

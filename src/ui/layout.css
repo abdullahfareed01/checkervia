@@ -12,7 +12,6 @@
 :root {
   --bar-h: 56px; /* the action bar's buttons */
   --bar-pad: 6px;
-  --bar-float: 0px; /* the gap under the bar where it floats (phones, D67) */
 }
 
 /* ---------- The action bar (D67, after the owner's mockup "Polished
@@ -44,6 +43,41 @@
     0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
+/* One column screens: Menu is in the top bar (D74), so the bar has four
+   buttons; New game stays a little wider. */
+.action-bar-four {
+  grid-template-columns: repeat(3, minmax(min-content, 1fr)) minmax(min-content, 1.3fr);
+}
+
+/* Menu at the top right (D74): only the hamburger lines, with no tile, rim
+   or label on screen (owner, D86); the label stays for screen readers. As
+   wide as the empty space on the title's left (.icon-button-space), so the
+   title stays centred, and 44px or more to tap. */
+.topbar .menu .bar-button,
+.topbar .menu .bar-button:hover:not(:disabled) {
+  width: 52px;
+  height: 46px;
+  min-height: 44px;
+  padding: 2px;
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
+}
+
+.topbar .menu .bar-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.topbar .menu .bar-button .icon {
+  width: 28px;
+  height: 28px;
+}
+
 /* The Menu wrapper is one of the five cells. */
 .action-bar .menu {
   display: grid;
@@ -60,7 +94,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  padding: 3px 6px;
+  padding: 3px clamp(2px, 1.5cqi, 6px); /* a little less on the narrowest bars, so the labels fit */
   border: 1px solid rgba(201, 146, 76, 0.26);
   border-radius: 14px;
   font: inherit;
@@ -82,7 +116,7 @@
 }
 
 .bar-label {
-  font-size: clamp(11px, 3.8cqi, 15px);
+  font-size: clamp(12px, 3.8cqi, 15px);
   font-weight: 800;
   line-height: 1.1;
   white-space: nowrap;
@@ -148,9 +182,19 @@
   }
 }
 
+/* Two columns: never wider than the side column it opens from (320px
+   below 1200px wide), so it never runs past the window's right edge. */
+@media (min-width: 900px) and (min-height: 600px) {
+  .action-bar .menu-list {
+    width: min(380px, var(--sidebar-w));
+  }
+}
+
 /* One column (phones upright, tablets, narrow windows): the bar is fixed to
    the bottom of the screen and the page keeps room for it, so nothing
-   hides behind it. */
+   hides behind it. It sits right on the bottom edge with no gold rim and
+   square bottom corners (owner, D86); the phone's home bar space is inside
+   the bar, so nothing shows under it. */
 .action-bar {
   position: fixed;
   left: 0;
@@ -158,19 +202,23 @@
   bottom: 0;
   display: flex;
   justify-content: center;
-  padding: 0 8px max(var(--bar-float), env(safe-area-inset-bottom));
+  padding: 0 8px;
   pointer-events: none; /* only the bar itself takes taps, not the gutters */
 }
 
 .action-bar-inner {
   width: 100%;
   max-width: var(--board-size);
+  padding-bottom: calc(var(--bar-pad) + env(safe-area-inset-bottom));
+  border: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   pointer-events: auto;
 }
 
 /* (Learn has no action bar, so no room is kept for one.) */
 .app:not(.learn) {
-  padding-bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 3px + 8px + max(var(--bar-float), env(safe-area-inset-bottom)));
+  padding-bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 8px + env(safe-area-inset-bottom));
 }
 
 /* Two columns (desktop, and phones held sideways): the bar is the bottom of
@@ -210,8 +258,12 @@
     padding: 0;
   }
 
+  /* Here the bar keeps its gold rim and round corners. */
   .action-bar-inner {
     max-width: none;
+    padding-bottom: var(--bar-pad);
+    border: 1.5px solid #c9953f;
+    border-radius: 22px;
   }
 }
 
@@ -285,9 +337,9 @@
   display: inline-flex;
   align-items: stretch;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
-  line-height: 17px;
+  line-height: 18px;
   letter-spacing: 0.01em;
   white-space: nowrap;
 }
@@ -428,7 +480,6 @@
     --bar-pad: 4px;
     --bar-gap: 4px;
     --bar-icon: 21px;
-    --bar-float: 6px;
   }
 
   .app {
@@ -509,12 +560,22 @@
   }
 
   .action-bar-inner {
-    border-radius: 18px;
+    border-radius: 18px 18px 0 0;
   }
 
   .bar-button {
     padding: 2px 4px;
     border-radius: 12px;
+  }
+
+  /* Hover too: the wide screen size above also holds for :hover, and a tap
+     on a phone leaves the button hovered, so without it the button grew to
+     52 by 46 on every tap and shook the title row. */
+  .topbar .menu .bar-button,
+  .topbar .menu .bar-button:hover:not(:disabled) {
+    width: 44px;
+    height: 44px;
+    padding: 2px;
   }
 }
 
@@ -674,7 +735,7 @@
   }
 
   .winbar-label {
-    font-size: 11px;
+    font-size: 12px;
   }
 }
 
@@ -700,4 +761,304 @@ html[data-anim="off"] .winbar-part {
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* ---------- Large text sizes on phones (browser text 130% to 200%) ----------
+   The cards grow with their text instead of keeping a fixed height, and
+   the status line wraps. The title and the card text grow with the text
+   size up to a cap, so the title still fits beside Menu and a card's
+   words never run into its counts. */
+@media (max-width: 599px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
+  .app .card {
+    height: auto;
+    min-height: var(--card-h);
+  }
+
+  .app .card-status {
+    flex-wrap: wrap;
+    row-gap: 0;
+    white-space: normal;
+  }
+
+  .app .game-title h1 {
+    font-size: min(1.35rem, 7.5vw);
+  }
+
+  .app .card-name {
+    font-size: min(1rem, 20px);
+  }
+
+  .app .card-status {
+    font-size: min(0.8rem, 15px);
+  }
+
+  .card-count {
+    font-size: min(1.25rem, 24px);
+  }
+
+  .app .card-took {
+    font-size: min(0.75rem, 14px);
+  }
+
+  .app .status-main {
+    font-size: min(0.95rem, 19px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* ---------- Phones held sideways ----------
+   375 to 430px of height cannot hold the side panel's status, robot, move
+   list and bar at once. The panel is then the one thing that scrolls (the
+   page does not), the bar stays at its foot, the move list grows inside the
+   panel, and the Menu sheet is fixed to the window so the scrolling panel
+   never clips it. Learn's panel scrolls the same way. Text in the cards and
+   the title grows with the text size up to a cap. */
+@media (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {
+  .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #c9924c transparent;
+  }
+
+  /* Locked behind an open sheet or dialog, like the page. */
+  html:has(:is(.result-backdrop, .lb-backdrop, .lb-sheet-backdrop, .lb-info-backdrop, .why-sheet-backdrop, .menu-backdrop, .cp-backdrop)) .sidebar {
+    overflow: hidden;
+  }
+
+  .app .history {
+    flex: none;
+    overflow: visible;
+  }
+
+  .app .history-list {
+    flex: none;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .action-bar {
+    position: sticky;
+    bottom: 0;
+  }
+
+  .action-bar .menu-list {
+    position: fixed;
+    top: auto;
+    left: auto;
+    right: calc(12px + env(safe-area-inset-right));
+    bottom: 8px;
+    max-height: calc(100dvh - 16px);
+  }
+
+  .app .game-title h1 {
+    font-size: min(1.35rem, 6dvh);
+  }
+
+  .app .card-name {
+    font-size: min(1.2rem, 22px);
+  }
+
+  .app .card-status {
+    font-size: min(0.8rem, 15px);
+  }
+
+  .card-count {
+    font-size: min(1.2rem, 23px);
+  }
+
+  .app .card-took {
+    font-size: min(0.85rem, 16px);
+  }
+
+  .app .status-main {
+    font-size: min(1rem, 19px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+/* ---------- Large text sizes on tablets held upright (one column) ----------
+   The same as on phones, with the tablet's larger sizes as the caps. */
+@media (min-width: 600px) and (not ((min-width: 900px) and (min-height: 600px))) and (not ((orientation: landscape) and (max-height: 599px))) {
+  .app .card {
+    height: auto;
+    min-height: var(--card-h);
+  }
+
+  .app .card-status {
+    flex-wrap: wrap;
+    row-gap: 0;
+    white-space: normal;
+  }
+
+  .app .game-title h1 {
+    font-size: min(2rem, 40px);
+  }
+
+  .app .card-name {
+    font-size: min(1.2rem, 24px);
+  }
+
+  .app .card-status {
+    font-size: min(0.88rem, 17px);
+  }
+
+  .card-count {
+    font-size: min(1.7rem, 34px);
+  }
+
+  .app .card-took {
+    font-size: min(0.85rem, 17px);
+  }
+
+  .app .status-main {
+    font-size: min(1.3rem, 25px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .app .mode-note {
+    font-size: min(0.95rem, 18px);
+  }
+}
+
+/* ---------- Large text sizes in two columns (desktop, phones sideways) ----------
+   The title and the cards keep their fixed room (the board's size is worked
+   out from it), so their text grows with the text size up to a cap; the
+   status wraps. Learn has no Menu sheet, so its side panel scrolls when
+   large text makes it taller than the window. */
+@media (min-width: 900px) and (min-height: 600px) {
+  .app .game-title h1 {
+    font-size: min(2rem, 40px);
+  }
+
+  .app .card-name {
+    font-size: min(1.2rem, 22px);
+  }
+
+  .app .card-status {
+    font-size: min(0.88rem, 16px);
+  }
+
+  .card-count {
+    font-size: min(1.7rem, 30px);
+  }
+
+  .app .card-took {
+    font-size: min(0.85rem, 16px);
+  }
+
+  .app .status-main {
+    font-size: min(1.3rem, 26px);
+  }
+
+  .app .status-pill {
+    max-width: 100%;
+    white-space: normal;
+  }
+}
+
+@media (min-width: 900px) and (min-height: 600px), (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {
+  .learn .sidebar {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #c9924c transparent;
+  }
+}
+
+/* ---------- The AI's bubble above the action bar on phones (D80) ----------
+   Phones held upright show the title, both cards, the board, the turn
+   pill, the AI with its bubble and the action bar together, without
+   scrolling the page (the move list comes under them). The board is the
+   smaller of the width and the height left over: everything else on the
+   screen, the AI's row (--coach-space: its fixed slot and the gap above it)
+   included. Large text grows the cards and the pill up to their caps
+   (--text-extra). Once the game is over a line under the pill says why
+   (--status-extra). On tall phones the width decides, as before. When the
+   height decides, only the board is smaller: the title, the cards, the
+   side panel and the bar keep the full width (--column-w), so their text
+   never wraps onto more lines. */
+@media (max-width: 599px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
+  .app {
+    --column-w: min(calc(100vw - 16px), 560px);
+    --text-extra: clamp(0px, 5 * (1rem - 16px), 26px);
+    --board-size: min(var(--column-w), max(180px, calc(100dvh - 300px - var(--text-extra) - var(--status-extra, 0px) - var(--coach-space, 0px))));
+  }
+
+  .app:has(.status-winner .status-hint) {
+    --status-extra: calc(min(0.8rem, 15px) * 1.35 + 4px);
+  }
+
+  .app .status-hint {
+    font-size: min(0.8rem, 15px);
+  }
+
+  .app .game {
+    width: var(--column-w);
+  }
+
+  .app .topbar,
+  .app .sidebar,
+  .app .action-bar-inner {
+    max-width: var(--column-w);
+  }
+
+  .app-ai {
+    --coach-space: calc(var(--coach-h) + 12px);
+  }
+
+  /* The AI card's larger name and count, capped like the rest. */
+  .app-ai .card-top .card-name {
+    font-size: min(1.1rem, 22px);
+  }
+
+  .app-ai .card-top .card-count {
+    font-size: min(1.45rem, 29px);
+  }
+}
+
+/* Short phones (under 740px of height): tighter cards, gaps and bar, and
+   the bubble's slot cut to its three lines with less padding, so the board
+   keeps as much room as it can. Every button stays 44px or more. */
+@media (max-width: 599px) and (max-height: 739px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
+  :root {
+    --bar-h: 44px;
+  }
+
+  .app {
+    padding-top: 2px;
+    --board-size: min(var(--column-w), max(180px, calc(100dvh - 270px - var(--text-extra) - var(--status-extra, 0px) - var(--coach-space, 0px))));
+  }
+
+  .app-ai {
+    --ai-card-extra: 0px;
+    --coach-h: 71px; /* padding 2 x 6, 3 lines of 19.5 */
+    --coach-space: calc(var(--coach-h) + 6px);
+  }
+
+  .app .card {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  .app .sidebar {
+    gap: 6px;
+  }
+
+  .app .speech {
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
 }

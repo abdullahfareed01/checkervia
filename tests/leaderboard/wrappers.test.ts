@@ -8,6 +8,7 @@ import getProfile from "../../netlify/functions/get-profile";
 import reportGame from "../../netlify/functions/report-game";
 import submitWin from "../../netlify/functions/submit-win";
 import updateProfile from "../../netlify/functions/update-profile";
+import getAiStats from "../../netlify/functions/get-ai-stats";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -20,6 +21,7 @@ describe("leaderboard functions without configuration", () => {
     ["get-leaderboard", getLeaderboard, "GET"],
     ["get-profile", getProfile, "GET"],
     ["update-profile", updateProfile, "POST"],
+    ["get-ai-stats", getAiStats, "GET"],
   ] as const)("%s answers 503 as JSON", async (name, handler, method) => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     const request = new Request(`https://example.test/.netlify/functions/${name}`, { method, ...(method === "POST" ? { body: "{}" } : {}) });

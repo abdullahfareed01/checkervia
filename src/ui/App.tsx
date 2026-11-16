@@ -5,7 +5,7 @@ import { useGame } from "../state/useGame";
 import { isGameInProgress, pieceCounts } from "../state/selectors";
 import { canGoBack, canGoForward, displayedPosition, moveList } from "../state/history";
 import type { MoveListItem } from "../state/history";
-import { AI_PLAYER, gameReducer } from "../state/gameReducer";
+import { aiSideOf, gameReducer } from "../state/gameReducer";
 import type { GameMode, GameOptions } from "../state/gameReducer";
 import { opponentOf } from "../engine";
 import type { Move, Position } from "../engine";
@@ -22,7 +22,7 @@ import { ModeSelector } from "./ModeSelector";
 import { ResultDialog } from "./ResultDialog";
 import { RulesDialog } from "./RulesDialog";
 import { LanguageInfo } from "./LanguageInfo";
-import { usePersonality } from "./usePersonality";
+import { ANGRY_FROM_IDLE, usePageVisible, usePersonality } from "./usePersonality";
 import { reactionBubble } from "./bubble";
 import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
@@ -30,9 +30,12 @@ import { TermsDialog } from "./TermsDialog";
 import { SettingsSheet } from "./SettingsSheet";
 import { TopBar } from "./TopBar";
 import { ActionBar } from "./ActionBar";
+import { ResignButton } from "./ResignButton";
 import type { EndAction } from "./ActionBar";
 import { GameMenu } from "./GameMenu";
-import { DocumentIcon, GearIcon, HomeIcon } from "./icons";
+import { TWO_COLUMNS, useMediaQuery } from "./useMediaQuery";
+import { DocumentIcon, FlagIcon, GearIcon, HomeIcon, RestartIcon, TrophyIcon } from "./icons";
+import { FocusOffer, FocusToggle } from "./FocusToggle";
 import { LbCrown, LbTrophy, PersonIcon } from "./leaderboard/lbIcons";
 import type { MenuRun } from "./GameMenu";
 import { useAiExplanation } from "./useAiExplanation";
@@ -52,6 +55,16 @@ import { useLeaderboardGame } from "./leaderboard/useLeaderboardGame";
 import { WinStatus } from "./leaderboard/WinStatus";
 import { useLeaderboardProfile } from "./leaderboard/profile";
 import { WinChanceBar } from "./WinChanceBar";
+import { SideIntro, useGameNumber } from "./SideIntro";
+import { AiRecordDialog, useAiStats } from "./AiRecordDialog";
+import { useVsAiRecord } from "./vsAiRecord";
+import { useAbandonTimer } from "./abandonTimer";
+import { useAbandonReport } from "./conduct";
+import { AbandonDialog, useSuspendedNotice } from "./ConductDialogs";
+
+// After an abandoned game the popup waits a little longer than the result
+// panel, so the AI's last line ("I reported you") is read first (D85).
+export const ABANDON_POPUP_EXTRA_MS = 2_200;
 
 interface AppProps {
   initial?: GameOptions | undefined; // the first game's setup
@@ -86,8 +99,11 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const onMoveBeat = useCallback((beat: MoveBeat) => {
     if (current.current.viewIndex === null) playFeedback(beat.event, beat.options);
   }, []);
+  // A tap on the board starts the abandon minute again (D85); set below.
+  const touchAbandon = useRef<() => void>(() => {});
   const click = useCallback(
     (position: Position) => {
+      touchAbandon.current();
       if (movingNow.current) return;
       const before = current.current;
       const event = clickFeedback(before, gameReducer(before, { type: "click", position }), position);
@@ -135,8 +151,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   }, []);
   const inProgress = isGameInProgress(state);
   const durationMs = useGameDuration(state.movesPlayed, state.winner);
-  const result = useResultPopup(state.winner, state.lastMove);
+  const result = useResultPopup(state.winner, state.lastMove, state.abandoned ? ABANDON_POPUP_EXTRA_MS : 0);
   const shown = displayedPosition(state);
+  // Your pieces are always at the bottom (D81): the AI's colour on top
+  // against the AI, White on top in two player games.
+  const topSide = state.mode === "vs-ai" ? aiSideOf(state) : "white";
+  // A new number for every new game, for the colour banner (D81).
+  const gameKey = useGameNumber(state.history[0]!);
   const moveKey = useAnimationKey(shown.index);
   // Each side's chance of winning in the position on screen (D65): the side
   // to move there, and 100% once the game is won on the board shown.
@@ -150,11 +171,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const { profile } = useLeaderboardProfile();
   const portrait = state.mode === "vs-ai" ? (profile?.avatar ?? null) : null;
   shownKey.current = moveKey;
-  const why = useAiExplanation(state.mode, shown);
+  // The AI's colour in this game: random against the AI (D81).
+  const aiSide = aiSideOf(state);
+  const why = useAiExplanation(state.mode, shown, aiSide);
   const [askLevel, setAskLevel] = useState(false);
   // The move list only changes when the history does (DEV-010).
   const moves = useMemo(() => moveList(state), [state.history]);
-  const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player), [state.mode]);
+  const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player, aiSide), [state.mode, aiSide]);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -177,25 +200,46 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const loseQuestion = (what: string) => (inProgress ? `${what} The current game will be lost.` : undefined);
 
   // Switching to "Play vs AI" first asks for the AI's level.
-  const chooseMode = useCallback((mode: GameMode) => (mode === "vs-ai" ? setAskLevel(true) : setMode(mode)), [setMode]);
+  // A suspended account (D85) is told so before the level question.
+  const [notifySuspended, suspendedNotice] = useSuspendedNotice();
+  const chooseMode = useCallback(
+    (mode: GameMode) => (mode !== "vs-ai" ? setMode(mode) : notifySuspended() ? undefined : setAskLevel(true)),
+    [setMode, notifySuspended],
+  );
   const openRules = useCallback(() => setRulesOpen(true), []);
   const openTerms = useCallback(() => setTermsOpen(true), []);
   const openLanguage = useCallback(() => setLanguageOpen(true), []);
   // Resign (Change 4): the player against the AI, otherwise the side to move.
   const resignQuestion =
     state.mode === "vs-ai" ? "Resign this game? The AI wins." : `Resign this game? ${state.currentPlayer === "black" ? "White" : "Black"} wins.`;
-  // New game and Resign are on the action bar, not in the Menu (D50).
+  // Focus mode (D87): the big board, the cards and the AI only; remembered
+  // on this device. Its action bar is gone, so New game and Resign (Result
+  // once the game is over) move to the top of the Menu, with the same
+  // questions as on the bar.
+  const focus = useSettings().view.focus;
+  const setFocus = useCallback((on: boolean) => settingsStore().update((s) => ({ ...s, view: { focus: on } })), []);
+  const focusItems = focus
+    ? [
+        { label: "New game", icon: <RestartIcon />, onSelect: newGame, confirm: inProgress ? "Start a new game? The current game will be lost." : undefined },
+        state.winner === null
+          ? { label: "Resign", icon: <FlagIcon />, onSelect: resign, confirm: resignQuestion }
+          : { label: "Result", icon: <TrophyIcon />, onSelect: result.reopen },
+      ]
+    : [];
+  // New game and Resign are on the action bar, not in the Menu (D50),
+  // except in focus mode.
   const menuItems = useMemo(
     () => [
+      ...focusItems,
       // The same symbols as the home menu where it has one.
       { label: "How to play", icon: <LbCrown jewel="#e9a92c" />, onSelect: openRules },
       { label: "Leaderboard", icon: <LbTrophy />, onSelect: () => setLeaderboardOpen(true) },
-      { label: "Profile", icon: <PersonIcon />, onSelect: () => setProfileOpen(true) },
+      { label: "Profile", icon: <PersonIcon />, onSelect: () => notifySuspended(() => setProfileOpen(true)) || setProfileOpen(true) },
       { label: "Settings", icon: <GearIcon />, onSelect: () => setSettingsOpen(true) },
       { label: "Terms and notices", icon: <DocumentIcon />, onSelect: openTerms },
       ...(onMenu ? [{ label: "Main menu", icon: <HomeIcon />, onSelect: onMenu, confirm: loseQuestion("Back to the main menu?") }] : []),
     ],
-    [inProgress, openRules, openTerms, onMenu],
+    [inProgress, openRules, openTerms, onMenu, notifySuspended, focus, state.winner, resignQuestion, newGame, resign, result.reopen],
   );
   // A new game against the AI at `level` (from the level dialog or the
   // Menu). Strongest asks the 18+ consent first (D45); after No or Cancel the
@@ -237,8 +281,16 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // Greeting, idle lines, the resign hint and the end of the game (Change 4).
   // Idle lines wait while anything covers the board or the player is busy.
   const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open || leaderboardOpen || profileOpen || gating;
-  const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
-  const personality = usePersonality(state, playerTurn && !startedMove && !covered);
+  const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === state.humanSide;
+  // Idle lines keep coming while the player taps or picks up a piece; only
+  // their move stops them (D82). The resign pressure still waits.
+  const personality = usePersonality(state, playerTurn && !covered, startedMove);
+  // The abandon minute (D85): on the player's turn against the AI, while the
+  // game is on screen; any tap on the board starts it again. Then the AI
+  // reports the player, once per game.
+  const pageVisible = usePageVisible();
+  touchAbandon.current = useAbandonTimer(state.mode === "vs-ai" && playerTurn && !covered && pageVisible, state.aiRequestId, game.abandon);
+  const abandonOutcome = useAbandonReport(state);
   // The AI's line appears after its piece has landed: until then, the typing
   // dots stay (the same bubble, so nothing flickers). Worked out during the
   // render from the move's animation key, so no effect (the bubble's pop, the
@@ -248,7 +300,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const aiLanding =
     state.mode === "vs-ai" &&
     state.viewIndex === null &&
-    state.history[state.history.length - 1]?.player === AI_PLAYER &&
+    state.history[state.history.length - 1]?.player === aiSide &&
     moveKey > 0 &&
     state.lastMove !== null &&
     state.lastMove !== landedMove &&
@@ -278,38 +330,82 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const showBubbles = settings.chat.bubbles;
   // The robot types its next ask with its thinking face, and laughs while
   // the ask is on screen (D69, D70).
-  // Bored of waiting after the second idle line: it dozes off (D72).
-  const mood = aiLanding
-    ? "thinking"
-    : personality.pressure
-      ? personality.pressure.text
-        ? "laughing"
-        : "thinking"
-      : personality.idle && personality.idle.count >= 2
-        ? "sleepy"
-        : aiMood(state, 1 - chance);
   // After the game, the AI's last words stay in its bubble (D71); not read
   // out again (the result panel did).
   const lastWords =
     state.winner && state.viewIndex === null && personality.end
       ? { key: `end-${state.history.length}`, text: personality.end.line.text, tone: personality.end.line.tone, why: false, announce: false }
       : null;
-  const coachLine = coachMessage(bubble, showBubbles, lastWords);
+  const coachBase = coachMessage(bubble, showBubbles, lastWords);
+  // The AI's record (D75, D77): a popup that opens only from the robot's
+  // avatar, fetching the record again as it opens. Your own totals only
+  // choose its taunt; they are never shown.
+  const myRecord = useVsAiRecord();
+  const [recordOpens, setRecordOpens] = useState(0);
+  const aiStats = useAiStats(myRecord.games, recordOpens);
+  const [recordOpen, setRecordOpen] = useState(false);
+  const openRecord = useCallback(() => {
+    setRecordOpen(true);
+    setRecordOpens((count) => count + 1);
+  }, []);
+  const closeRecord = useCallback(() => setRecordOpen(false), []);
+  const coachLine = coachBase;
+  // Bored of waiting after the second idle line: it dozes off (D72); from
+  // the third it gets angry (D73).
+  const idleCount = personality.idle?.count ?? 0;
+  const mood = aiLanding
+    ? "thinking"
+    : recordOpen
+      ? "laughing"
+      : personality.pressure
+      ? personality.pressure.text
+        ? "laughing"
+        : "thinking"
+      : idleCount >= ANGRY_FROM_IDLE
+        ? "angry"
+        : idleCount === 2
+          ? "sleepy"
+          : aiMood(state, aiSide === "white" ? 1 - chance : chance);
+
+  // One column (phones, tablets, narrow windows): the action bar is fixed to
+  // the bottom and Menu moves to the top right. Two columns keep it in the bar.
+  const twoColumns = useMediaQuery(TWO_COLUMNS);
+  const gameMenu = <GameMenu items={menuItems} setup={setup} onOpenChange={setMenuOpen} />;
+  // The left slot of the top bar turns focus mode on (the big screen symbol)
+  // and, in focus mode, off again (the small screen symbol), with a hint
+  // beside it once the game is over; the Menu stays top right.
+  const focusButton = <FocusToggle focus={focus} onChange={setFocus} gameOver={state.winner !== null && !result.open} gameKey={gameKey} />;
+  // Focus mode is offered at the start of a game outside it, until the
+  // player's first move or Not now (then not again in this game).
+  const playerMoved = state.mode === "vs-ai" ? state.history.some((entry) => entry.player === state.humanSide) : state.movesPlayed > 0;
+  const [offerClosedFor, setOfferClosedFor] = useState<number | null>(null);
+  const offer =
+    !focus && state.winner === null && !playerMoved && offerClosedFor !== gameKey ? (
+      <FocusOffer onFocus={() => setFocus(true)} onClose={() => setOfferClosedFor(gameKey)} />
+    ) : null;
+  // In focus mode Resign is a small flag in a card, after "Your turn" (the
+  // owner's choice): your card against the AI, the side to move's card in a
+  // two player game. It is in the Menu as well.
+  const focusResign =
+    focus && state.winner === null ? <ResignButton compact question={resignQuestion} highlight={personality.hintActive} onResign={resign} /> : null;
+  const muteChat = useCallback(() => settingsStore().update((s) => ({ ...s, chat: { bubbles: !s.chat.bubbles } })), []);
 
   return (
-    <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}`}>
+    <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}${focus ? " app-focus" : ""}`}>
       <header className="topbar">
-        <TopBar title="Checkervia" />
+        <TopBar title="Checkervia" lead={focusButton} action={twoColumns && !focus ? undefined : gameMenu} />
         <ModeSelector mode={state.mode} needsConfirmation={inProgress} onChange={chooseMode} />
       </header>
 
       <section className="game" aria-label="Game">
-        {cardFor(state, shown.board, "white", "top", openLanguage, mood)}
+        {cardFor(state, shown.board, topSide, "top", topSide === aiSide ? openLanguage : undefined, mood, null, state.mode === "two-player" && state.currentPlayer === topSide ? focusResign : undefined)}
         <div className="board-area">
           <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} onMoveBeat={onMoveBeat} onMoveLock={onMoveLock} />
-          <WinChanceBar chance={chance} black={nameOf(state.mode, "black")} white={nameOf(state.mode, "white")} />
+          {!focus && <WinChanceBar chance={chance} black={nameOf(state.mode, "black", aiSide)} white={nameOf(state.mode, "white", aiSide)} bottom={opponentOf(topSide)} />}
+          {!twoColumns && offer}
+          {state.mode === "vs-ai" && <SideIntro key={gameKey} side={state.humanSide} played={state.history.some((entry) => entry.player === state.humanSide)} />}
         </div>
-        {cardFor(state, shown.board, "black", "bottom", undefined, undefined, portrait)}
+        {cardFor(state, shown.board, opponentOf(topSide), "bottom", undefined, undefined, portrait, state.mode === "vs-ai" || state.currentPlayer !== topSide ? focusResign : undefined)}
       </section>
 
       <aside className="sidebar">
@@ -322,23 +418,38 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           aiFailureReasons={state.aiFailureReasons}
           onRetryAi={retryAi}
         />
-        {state.mode === "vs-ai" && <AiCoach message={coachLine} mood={mood} whyOpen={why.open} onWhy={why.toggleWhy} />}
-        <HistoryControls index={shown.index} total={shown.total} live={shown.live} moves={moves} nameOf={moveNameOf} onGo={goHistory} />
-        <ActionBar
-          menu={<GameMenu items={menuItems} setup={setup} onOpenChange={setMenuOpen} />}
-          canBack={canGoBack(state)}
-          canForward={canGoForward(state)}
-          onGo={goHistory}
-          end={endAction}
-          needsConfirmation={inProgress}
-          onNewGame={newGame}
-        />
+        {state.mode === "vs-ai" && (
+          <AiCoach
+            message={coachLine}
+            mood={mood}
+            whyOpen={why.open}
+            onWhy={why.toggleWhy}
+            onAvatar={openRecord}
+            mute={focus ? { muted: !showBubbles, onToggle: muteChat } : undefined}
+          />
+        )}
+        {twoColumns && offer}
+        {state.mode === "vs-ai" && recordOpen && <AiRecordDialog ai={aiStats} mine={myRecord} level={state.aiLevel} gameOver={state.winner !== null} onClose={closeRecord} />}
+        {!focus && <HistoryControls index={shown.index} total={shown.total} live={shown.live} moves={moves} nameOf={moveNameOf} onGo={goHistory} />}
+        {!focus && (
+          <ActionBar
+            menu={twoColumns ? gameMenu : undefined}
+            canBack={canGoBack(state)}
+            canForward={canGoForward(state)}
+            onGo={goHistory}
+            end={endAction}
+            needsConfirmation={inProgress}
+            onNewGame={newGame}
+          />
+        )}
       </aside>
 
-      {state.winner && result.open && (
+      {state.winner && result.open && state.abandoned && <AbandonDialog outcome={abandonOutcome} onClose={result.close} />}
+      {state.winner && result.open && !state.abandoned && (
         <ResultDialog
           winner={state.winner}
           mode={state.mode}
+          aiSide={aiSide}
           reason={winReasonOf(state) ?? ""}
           stats={state.stats}
           pieces={pieceCounts(state.board)}
@@ -351,7 +462,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           }}
           onClose={result.close}
           aiLine={personality.end?.line}
-          tips={state.mode === "vs-ai" && state.winner !== "black" ? (personality.end?.tips ?? null) : undefined}
+          tips={state.mode === "vs-ai" && state.winner !== state.humanSide ? (personality.end?.tips ?? null) : undefined}
           onTipsShown={speakTips}
           leaderboard={
             leaderboardWin && (
@@ -386,6 +497,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
         />
       )}
       {profileGate}
+      {suspendedNotice}
       {leaderboardOpen && <LeaderboardScreen onClose={() => setLeaderboardOpen(false)} onOwnProfile={() => setProfileOpen(true)} />}
       {profileOpen && <ProfileScreen onClose={() => setProfileOpen(false)} onTerms={openTerms} />}
       {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}

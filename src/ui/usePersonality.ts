@@ -9,11 +9,13 @@ import { gameTips } from "../ai/endgame";
 import type { GameTip, PlayedPosition } from "../ai/endgame";
 import { fillLine, pickLine, rememberLine, withWinLaugh } from "../ai/lines";
 import type { LineContext } from "../ai/lines";
-import { AI_PLAYER } from "../state/gameReducer";
+import { aiSideOf } from "../state/gameReducer";
 import type { GameState } from "../state/gameReducer";
 import type { BubbleTone } from "./ChatBubble";
-import { IDLE_EVERY_MS, createIdleTimer, createPressureTimer } from "./idleTimer";
+import { createIdleTimer, createPressureTimer, idleDelay } from "./idleTimer";
 import { nextRound, readSession, withResult, writeSession } from "./session";
+import { vsAiRecordStore } from "./vsAiRecord";
+import type { VsAiOutcome } from "./vsAiRecord";
 
 export interface EndLine {
   readonly text: string;
@@ -22,8 +24,9 @@ export interface EndLine {
 
 /** Which bank the end of game line comes from. */
 export function endContext(state: GameState): LineContext {
+  if (state.abandoned) return "abandoned"; // the AI reported the player (D85)
   if (state.resignedBy) return "resigned";
-  if (state.winner !== AI_PLAYER) return "playerWon";
+  if (state.winner !== aiSideOf(state)) return "playerWon";
   // The engine proved it lost and the player played on anyway (D69).
   if (state.history.some((entry) => entry.provenLoss)) return "aiWonStubborn";
   const blundered = state.history.some((entry) => entry.judgement?.verdict === "blunder");
@@ -40,7 +43,17 @@ export function greetingContext(last: "won" | "lost" | null): LineContext {
  * playing. A resignation never counts, whoever resigned.
  */
 export function isSubmittableWin(state: GameState): boolean {
-  return state.mode === "vs-ai" && state.winner !== null && state.winner !== AI_PLAYER && state.resignedBy === null;
+  return state.mode === "vs-ai" && state.winner !== null && state.winner !== aiSideOf(state) && state.resignedBy === null;
+}
+
+/**
+ * A finished game against the AI for this device's record: a win, a loss,
+ * or a resignation when the player pressed Resign. An abandoned game (D85)
+ * ends like a resignation but is a plain loss.
+ */
+export function vsAiOutcomeOf(state: GameState): VsAiOutcome {
+  if (state.winner !== aiSideOf(state)) return "win";
+  return state.resignedBy !== null && !state.abandoned ? "resigned" : "loss";
 }
 
 /** The player's moves of the game, for the tips. */
@@ -51,10 +64,22 @@ export function playedPositions(state: GameState): PlayedPosition[] {
 }
 
 // Development only: ?idle=fast shows an idle line every 3 seconds, for
-// testing by hand. Production builds always wait 30 seconds between lines.
-function idleEvery(): number {
+// testing by hand. Production builds use the real delays (30 seconds, then
+// every 5).
+function idleDelays(): (shown: number) => number {
   const fast = import.meta.env.DEV && typeof window !== "undefined" && new URLSearchParams(window.location.search).get("idle") === "fast";
-  return fast ? 3_000 : IDLE_EVERY_MS;
+  return fast ? () => 3_000 : idleDelay;
+}
+
+// The idle lines of a turn escalate (D73, D82): first a check that someone
+// is there, from the third the AI loses its patience, and from the sixth it
+// warns that it will report the game.
+export const ANGRY_FROM_IDLE = 3;
+export const WARN_FROM_IDLE = 6;
+
+/** Which bank the n-th idle line of a turn comes from. */
+export function idleContext(count: number): LineContext {
+  return count >= WARN_FROM_IDLE ? "idleWarn" : count >= ANGRY_FROM_IDLE ? "idleAngry" : "idle";
 }
 
 const TONES: Partial<Record<LineContext, BubbleTone>> = { aiWonBlunder: "roast", playerWon: "respect" };
@@ -69,8 +94,9 @@ function pressurePart(now: { count: number; showing: boolean; text: string | nul
 // The AI's wins, whose last line ends with a random laugh (D69).
 const AI_WINS: readonly LineContext[] = ["aiWon", "aiWonBlunder", "aiWonStubborn"];
 
-// True while the page is on screen (the idle timer pauses otherwise).
-function usePageVisible(): boolean {
+// True while the page is on screen (the idle timer pauses otherwise; so
+// does the abandon timer, D85).
+export function usePageVisible(): boolean {
   const [visible, setVisible] = useState(() => typeof document === "undefined" || document.visibilityState !== "hidden");
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -82,10 +108,12 @@ function usePageVisible(): boolean {
 }
 
 /**
- * `idleAllowed`: the board is interactive on the player's turn and nothing
- * covers it (App knows about its sheets and dialogs).
+ * `idleAllowed`: it is the player's turn and nothing covers the board (App
+ * knows about its sheets and dialogs). `busy`: the player has picked up a
+ * piece; idle lines go on regardless (only a move stops them, D82), the
+ * resign pressure waits.
  */
-export function usePersonality(state: GameState, idleAllowed: boolean) {
+export function usePersonality(state: GameState, idleAllowed: boolean, busy = false) {
   const ai = state.mode === "vs-ai";
   const game = state.history[0]; // a new object for every new game
   const turn = state.aiRequestId; // changes with every AI turn and every new game
@@ -104,10 +132,13 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
   // A: the greeting, fresh for every game against the AI.
   const [greeting, setGreeting] = useState<string | null>(null);
   useEffect(() => {
-    setGreeting(ai ? say(greetingContext(readSession().last)) : null);
+    // When the AI opens (the player is White, D81) its first line comes
+    // after its first move, from its own bank: the greetings say "your move
+    // first" (D85).
+    setGreeting(ai ? say(state.currentPlayer === state.humanSide ? greetingContext(readSession().last) : "aiOpens") : null);
   }, [game, ai]);
 
-  // B: idle lines, every 30 seconds until the player moves.
+  // B: idle lines, after 30 seconds and then every 5 until the player moves.
   const [idle, setIdle] = useState<{ key: string; text: string; count: number; turn: number } | null>(null);
   const timer = useRef<ReturnType<typeof createIdleTimer> | null>(null);
   const sayRef = useRef(say);
@@ -115,16 +146,21 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
   const turnRef = useRef(turn);
   turnRef.current = turn;
   timer.current ??= createIdleTimer(
-    (count) => setIdle({ key: `idle-${turnRef.current}-${count}`, text: sayRef.current("idle"), count, turn: turnRef.current }),
+    (count) =>
+      setIdle({
+        key: `idle-${turnRef.current}-${count}`,
+        text: sayRef.current(idleContext(count)),
+        count,
+        turn: turnRef.current,
+      }),
     undefined,
-    idleEvery(),
+    idleDelays(),
   );
   const pageVisible = usePageVisible();
   useEffect(() => () => timer.current!.stop(), []);
-  // An idle line belongs to its turn, and goes when the player starts moving.
-  useEffect(() => {
-    if (!idleAllowed) setIdle(null);
-  }, [idleAllowed, turn]);
+  // An idle line belongs to its turn: it stays while the player picks up a
+  // piece or opens a sheet, and goes once their move is played (D73; it used
+  // to go at the first tap, and the bubble showed the older line again).
 
   // D: the resign hint, once per game, only when the engine proved it.
   const [hint, setHint] = useState<{ index: number; text: string } | null>(null);
@@ -155,7 +191,7 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
       text: next.showing && next.count > 0 ? sayRef.current("resignPush") : null,
     }),
   );
-  const pressureActive = ai && hintActive && idleAllowed && pageVisible;
+  const pressureActive = ai && hintActive && idleAllowed && !busy && pageVisible;
   useEffect(() => pressureTimer.current!.update(pressureActive, turn), [pressureActive, turn]);
   useEffect(() => () => pressureTimer.current!.stop(), []);
   const pressureNow = hintActive && pressure.turn === turn ? pressure : null;
@@ -167,14 +203,18 @@ export function usePersonality(state: GameState, idleAllowed: boolean) {
     if (!ai || !state.winner) return setEnd(null);
     if (recordedFor.current !== game) {
       recordedFor.current = game;
-      writeSession(withResult(readSession(), state.winner !== AI_PLAYER));
+      writeSession(withResult(readSession(), state.winner !== aiSideOf(state)));
+      // The player's own totals on this device (D75).
+      vsAiRecordStore.add(vsAiOutcomeOf(state));
     }
     const context = endContext(state);
     const text = AI_WINS.includes(context) ? withWinLaugh(say(context), state.aiLevel) : say(context);
     setEnd({ line: { text, tone: TONES[context] ?? "banter" }, tips: null });
-    if (state.winner !== AI_PLAYER) return undefined;
+    // No tips after a win by the AI, nor after an abandoned game (D85).
+    if (state.winner !== aiSideOf(state) || state.abandoned) return undefined;
     let cancelled = false;
-    void gameTips(playedPositions(state), { player: state.stats.black.kingsMade, ai: state.stats.white.kingsMade }, analyze).then((tips) => {
+    const kingsMade = { player: state.stats[state.humanSide].kingsMade, ai: state.stats[aiSideOf(state)].kingsMade };
+    void gameTips(playedPositions(state), kingsMade, analyze, state.humanSide).then((tips) => {
       if (!cancelled) setEnd((current) => current && { ...current, tips });
     });
     return () => {

@@ -4,7 +4,8 @@
 import { LEVELS } from "../../src/ai/difficulty";
 import type { AiLevel } from "../../src/ai/difficulty";
 import { rankPlayers } from "../../src/leaderboard/ranking";
-import type { GameResult, LeaderboardStore, LevelCounts, NewPlayer, NewWin, PlayerRecord, RankedRow } from "./store";
+import { aiRecordOf } from "./store";
+import type { Conduct, GameResult, LeaderboardStore, LevelCounts, NewPlayer, NewWin, PlayerRecord, RankedRow } from "./store";
 
 interface StoredPlayer extends PlayerRecord, NewPlayer {}
 const DAY_MS = 86_400_000;
@@ -27,6 +28,13 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
   const results = new Map<string, GameResult>(); // key: player id and game id
   const windows = new Map<string, { hits: number; end: number }>(); // key and window start
   const reservations = new Map<string, { playerId: string; until: number }>(); // key: username key
+  const reports = new Set<string>(); // player id and game id (D85)
+  const conducts = new Map<string, { reports: number; totalReports: number; suspendedUntil: number | null }>();
+  const conductOf = (playerId: string): Conduct => {
+    const stored = conducts.get(playerId) ?? { reports: 0, totalReports: 0, suspendedUntil: null };
+    const suspended = stored.suspendedUntil !== null && stored.suspendedUntil > now();
+    return { reports: stored.reports, totalReports: stored.totalReports, suspendedUntil: suspended ? new Date(stored.suspendedUntil!) : null };
+  };
   let nextId = 1;
 
   const reservedFor = (key: string): string | null => {
@@ -134,8 +142,42 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
           bestMoves: levelWins.length > 0 ? Math.min(...levelWins.map((win) => win.moveCount)) : null,
           losses: own.filter((result) => result.level === level && result.result === "loss").length,
           games: own.filter((result) => result.level === level).length,
+          resigned: own.filter((result) => result.level === level && result.resigned === true).length,
         };
       });
+    },
+    async addReport(report, limit, days) {
+      const key = `${report.playerId} ${report.gameId}`;
+      if (reports.has(key)) return conductOf(report.playerId);
+      reports.add(key);
+      const current = conductOf(report.playerId);
+      const totalReports = current.totalReports + 1;
+      if (current.suspendedUntil) {
+        conducts.set(report.playerId, { reports: current.reports, totalReports, suspendedUntil: current.suspendedUntil.getTime() });
+      } else if (current.reports + 1 >= limit) {
+        conducts.set(report.playerId, { reports: 0, totalReports, suspendedUntil: now() + days * DAY_MS });
+      } else {
+        conducts.set(report.playerId, { reports: current.reports + 1, totalReports, suspendedUntil: null });
+      }
+      return conductOf(report.playerId);
+    },
+    async conduct(playerId) {
+      return conductOf(playerId);
+    },
+    async aiRecord() {
+      const counted = [...results.values()].filter((result) => visiblePlayer(result.playerId));
+      return aiRecordOf(
+        LEVELS.map((level) => {
+          const atLevel = counted.filter((result) => result.level === level);
+          return {
+            level,
+            games: atLevel.length,
+            aiWins: atLevel.filter((result) => result.result === "loss").length,
+            aiLosses: atLevel.filter((result) => result.result === "win").length,
+            resigned: atLevel.filter((result) => result.resigned === true).length,
+          };
+        }),
+      );
     },
     async hitRateLimit(key, windowSeconds, limit) {
       const time = now();

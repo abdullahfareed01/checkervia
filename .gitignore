@@ -4,3 +4,4 @@ dist
 !.env.example
 .netlify
 *.log
+*.tsbuildinfo

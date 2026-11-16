@@ -1,11 +1,13 @@
-// POST { gameId, level, mode, moves } with the player's token: replays the
-// whole game through the engine and records the win only if it is a real,
-// complete win by the player. Nothing the browser says about the result is
-// trusted; only the level and "vs-ai" are taken from it (see replay.ts).
+// POST { gameId, level, mode, colour, moves } with the player's token:
+// replays the whole game through the engine and records the win only if it
+// is a real, complete win by the player's colour. Nothing the browser says
+// about the result is trusted; only the level, "vs-ai" and the colour are
+// taken from it, and the colour must be the one that won (see replay.ts).
+// Older clients send no colour: Black, as before random colours (D81).
 import { LEVELS } from "../../../src/ai/difficulty";
 import type { AiLevel } from "../../../src/ai/difficulty";
 import { periodStart } from "../../../src/leaderboard/periods";
-import { GAME_ID_PATTERN } from "../../../src/leaderboard/protocol";
+import { GAME_ID_PATTERN, parseColour } from "../../../src/leaderboard/protocol";
 import type { EncodedMove, SubmitWinResponse } from "../../../src/leaderboard/protocol";
 import { checkRateLimits, fail, guarded, invalid, notSignedIn, ok, parseBody, playerFromToken, validDevice } from "../http";
 import type { LeaderboardHandler } from "../http";
@@ -23,11 +25,12 @@ const REJECTED: Record<string, string> = {
 export const handleSubmitWin: LeaderboardHandler = (request, deps) =>
   guarded("submitWin", deps, async () => {
     if (request.method !== "POST") return fail(405, "method", "Method not allowed.");
-    const body = parseBody(request.body, MAX_BODY.submitWin, ["gameId", "level", "mode", "moves"]);
+    const body = parseBody(request.body, MAX_BODY.submitWin, ["gameId", "level", "mode", "colour", "moves"]);
     if (!body || !validDevice(request)) return invalid();
     const { gameId, mode, moves } = body;
     const level = body["level"] as AiLevel;
-    if (typeof gameId !== "string" || !GAME_ID_PATTERN.test(gameId) || !LEVELS.includes(level)) return invalid();
+    const colour = body["colour"] === undefined ? "black" : parseColour(body["colour"]);
+    if (typeof gameId !== "string" || !GAME_ID_PATTERN.test(gameId) || !LEVELS.includes(level) || !colour) return invalid();
     // Two player games never count; only games against the AI are accepted.
     if (mode !== "vs-ai") return fail(422, "notAi", "Only wins against the AI count.");
 
@@ -35,8 +38,10 @@ export const handleSubmitWin: LeaderboardHandler = (request, deps) =>
     if (limited) return limited;
     const player = await playerFromToken(request, deps.store);
     if (!player) return notSignedIn();
+    // A suspended account plays no games against the AI (D85).
+    if ((await deps.store.conduct(player.id)).suspendedUntil) return fail(403, "suspended", "This account is suspended.");
 
-    const replay = replayWin(moves);
+    const replay = replayWin(moves, colour);
     if (!replay.ok) return fail(422, replay.reason, REJECTED[replay.reason]!);
 
     const added = await deps.store.addWin({

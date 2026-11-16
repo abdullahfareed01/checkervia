@@ -9,9 +9,13 @@
 // - failed: the server refused the request (its code, and the username rules
 //   or the seconds to wait when it gives them).
 import type { AiLevel } from "../../ai/difficulty";
+import type { Player } from "../../engine";
 import type { Period } from "../../leaderboard/periods";
 import { DEVICE_HEADER } from "../../leaderboard/protocol";
 import type {
+  AbandonPhase,
+  AiStatsResponse,
+  ConductStatus,
   CheckUsernameResponse,
   ClaimResponse,
   CountryChoice,
@@ -117,11 +121,18 @@ export const leaderboardApi = {
     return result;
   },
 
-  submitWin: (gameId: string, level: AiLevel, moves: readonly EncodedMove[]) =>
-    call<SubmitWinResponse>("submit-win", { body: { gameId, level, mode: "vs-ai", moves } }),
+  submitWin: (gameId: string, level: AiLevel, moves: readonly EncodedMove[], colour: Player = "black") =>
+    call<SubmitWinResponse>("submit-win", { body: { gameId, level, mode: "vs-ai", colour, moves } }),
 
-  reportGame: (gameId: string, level: AiLevel, result: "win" | "loss") =>
-    call<{ recorded: boolean }>("report-game", { body: { gameId, level, result } }),
+  reportGame: (gameId: string, level: AiLevel, result: "win" | "loss", resigned = false) =>
+    call<{ recorded: boolean }>("report-game", { body: { gameId, level, result, ...(resigned ? { resigned: true } : {}) } }),
+
+  /** The AI reported the player for an abandoned game (D85); answers their reports and suspension. */
+  reportAbandon: (gameId: string, level: AiLevel, phase: AbandonPhase) =>
+    call<ConductStatus>("report-abandon", { body: { gameId, level, phase } }),
+
+  /** The AI's record over every player (D75). */
+  aiStats: (signal?: AbortSignal) => call<AiStatsResponse>("get-ai-stats", signal ? { signal } : {}),
 
   leaderboard: (level: AiLevel, period: Period, page: number, signal?: AbortSignal) =>
     call<LeaderboardResponse>("get-leaderboard", { query: { level: String(level), period, page: String(page) }, ...(signal ? { signal } : {}) }),

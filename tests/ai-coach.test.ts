@@ -112,7 +112,7 @@ describe("the game screen against the AI (D64)", () => {
 
   it("the AI card wears the same robot face", () => {
     expect(html).toMatch(/<section class="card card-top[\s\S]*?robot-face-wink/);
-    expect(html).toContain('class="coach-avatar coach-avatar-wink"');
+    expect(html).toContain('class="coach-avatar coach-avatar-wink');
   });
 
   it("no robot row in a two player game", () => {
@@ -154,9 +154,10 @@ describe("more reactions (D72)", () => {
     expect(aiMood(withHistory([start, crowned, { ...step("white"), board: crowned.board }]))).toBe("annoyed");
   });
 
-  it("dozes off after the second idle line (set by App, after the resign pressure)", () => {
+  it("dozes off at the second idle line and gets angry from the third (set by App, after the resign pressure; D73)", () => {
     const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
-    expect(source).toMatch(/personality\.idle && personality\.idle\.count >= 2\s*\? "sleepy"/);
+    expect(source).toMatch(/idleCount >= ANGRY_FROM_IDLE\s*\? "angry"\s*: idleCount === 2\s*\? "sleepy"/);
+    expect(source.indexOf("personality.pressure\n")).toBeLessThan(source.indexOf("idleCount >= ANGRY_FROM_IDLE"));
   });
 
   it("each new face has its own look", () => {

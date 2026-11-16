@@ -4,7 +4,7 @@
 // captures, looks pleased with a capture, gets angry when the player plays
 // well or takes its pieces, and is shocked (but still confident: one brow
 // up and a smirk) when the player takes two or more at once (D69).
-import { AI_PLAYER } from "../state/gameReducer";
+import { aiSideOf } from "../state/gameReducer";
 import type { GameState, HistoryEntry } from "../state/gameReducer";
 
 export type AiMood =
@@ -57,12 +57,14 @@ function crownedBy(entry: HistoryEntry | undefined, previous: HistoryEntry | und
  */
 export function aiMood(state: GameState, aiChance = 0.5): AiMood {
   if (state.mode !== "vs-ai" || state.viewIndex !== null) return "neutral";
-  if (state.winner) return state.winner === AI_PLAYER ? "laughing" : "defeated";
+  const ai = aiSideOf(state);
+  if (state.abandoned) return "angry"; // it reported the player (D85)
+  if (state.winner) return state.winner === ai ? "laughing" : "defeated";
   const calm = aiChance >= SMUG_FROM ? "smug" : aiChance < NERVOUS_UNDER ? "nervous" : "neutral";
 
   const last = state.history[state.history.length - 1];
   const before = state.history[state.history.length - 2];
-  const human = AI_PLAYER === "white" ? "black" : "white";
+  const human = state.humanSide;
   const earlier = state.history[state.history.length - 3];
   // The shock (D69) or the eye roll at the player's new King (D72) come at
   // once, while it thinks about its reply.
@@ -71,15 +73,15 @@ export function aiMood(state: GameState, aiChance = 0.5): AiMood {
     return crownedBy(last, before, human) ? "annoyed" : "thinking";
   }
   if (state.history.length === 1) return "wink"; // a new game (D72)
-  if (last?.player === AI_PLAYER) {
+  if (last?.player === ai) {
     const verdict = last.judgement?.verdict;
     if (verdict === "blunder") return "laughing";
     if (verdict === "great") return "angry";
-    const took = capturedBy(last, AI_PLAYER);
+    const took = capturedBy(last, ai);
     if (took >= 3) return "starstruck";
     if (took >= 2) return "laughing";
     if (capturedBy(before, human) >= 2) return "shocked";
-    if (crownedBy(last, before, AI_PLAYER)) return "proud";
+    if (crownedBy(last, before, ai)) return "proud";
     if (capturedBy(before, human) > 0) return "angry";
     if (crownedBy(before, earlier, human)) return "annoyed";
     if (took === 1) return "happy";

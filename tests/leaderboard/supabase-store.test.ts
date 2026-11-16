@@ -142,7 +142,13 @@ describe("the Supabase adapter", () => {
     }));
     const counts = await store.levelCounts("p1");
     expect(counts.map((count) => count.level)).toEqual([1, 2, 3, 4]);
-    expect(counts[3]).toEqual({ level: 4, wins: 4, bestMoves: 20, losses: 1, games: 5 });
+    // Before migration 3 the rows carry no resigned column: 0.
+    expect(counts[3]).toEqual({ level: 4, wins: 4, bestMoves: 20, losses: 1, games: 5, resigned: 0 });
+  });
+
+  it("reads the resignations in the level counts after migration 3", async () => {
+    const { store } = fakeDb(() => ({ status: 200, body: [{ level: 4, wins: 1, best_moves: 20, losses: "3", games: 4, resigned: "2" }] }));
+    expect((await store.levelCounts("p1"))[0]).toEqual({ level: 4, wins: 1, bestMoves: 20, losses: 3, games: 4, resigned: 2 });
   });
 
   it("renames through its SQL function and reads the outcome (D61)", async () => {

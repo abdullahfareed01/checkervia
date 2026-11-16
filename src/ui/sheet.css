@@ -557,6 +557,8 @@
 }
 
 .terms-section h3 {
+  min-width: 0;
+  overflow-wrap: anywhere; /* one long word at a large text size */
   margin: 0;
   font-size: 1.05rem;
   font-weight: 800;
@@ -666,18 +668,20 @@
 /* ---------- "Are you sure?" (D68) ----------
    A symbol in a well, the question as a heading, what happens under it in
    quieter words, and two buttons of the same width. */
+/* Compact (owner, 16 Nov 2026): the popup asks one short thing, so its
+   text and buttons are a step smaller than a sheet's. */
 .confirm-dialog {
-  width: min(400px, 100%);
-  padding: 26px 22px 20px;
-  border-radius: 20px;
+  width: min(340px, 100%);
+  padding: 20px 18px 16px;
+  border-radius: 18px;
   text-align: center;
 }
 
 .confirm-mark {
-  width: 58px;
-  height: 58px;
-  margin: 0 auto 14px;
-  border-radius: 16px;
+  width: 46px;
+  height: 46px;
+  margin: 0 auto 10px;
+  border-radius: 14px;
 }
 
 .app .confirm-question,
@@ -685,23 +689,31 @@
   margin: 0;
   font-family: "Fraunces", Georgia, "Times New Roman", serif;
   font-weight: 900;
-  font-size: 1.4rem;
-  line-height: 1.2;
+  font-size: 1.15rem;
+  line-height: 1.25;
   color: var(--sheet-title);
 }
 
 .confirm-detail {
-  margin: 8px 0 0;
-  font-size: 1rem;
-  line-height: 1.45;
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
   color: var(--sheet-soft);
 }
 
 .confirm-actions {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-top: 22px;
+  /* Side by side, or one over the other when the text is too large for two. */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7em), 1fr));
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.confirm-actions .confirm-button {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  font-size: 0.92rem;
 }
 
 /* Very narrow phones: one button over the other, the safe one on top. */
@@ -724,5 +736,280 @@
   .terms-progress span,
   .terms-fade {
     transition: none;
+  }
+}
+
+/* ---------- The AI level dialog and the 18+ question ----------
+   The same leather as the Menu sheet, where these four levels also appear
+   (.level-options-compact above): bronze rimmed rows, the chosen one with a
+   gold rim and a gold tick, gold signal bars, the Fraunces title, and a gold
+   Start game beside a leather Cancel. Scoped to .level-dialog, so the shared
+   level list and the other dialogs keep their own look. */
+
+.level-dialog,
+.consent-dialog {
+  --sheet-gold: #f4c55c;
+  --sheet-title: #fde3a6;
+  --sheet-cream: #fbedd2;
+  --sheet-soft: #ead6b4;
+  --sheet-rim: rgba(201, 146, 76, 0.45);
+  border-radius: 18px;
+  color: var(--sheet-cream);
+  background:
+    radial-gradient(120% 40% at 50% 0%, rgba(150, 86, 36, 0.3), transparent 70%),
+    linear-gradient(180deg, #3a2414 0%, #2e1c0e 55%, #26170b 100%);
+  box-shadow:
+    0 0 0 1px var(--sheet-rim),
+    inset 0 1px 0 rgba(255, 220, 160, 0.1),
+    0 22px 56px rgba(0, 0, 0, 0.6);
+}
+
+.level-dialog .dialog-title,
+.consent-dialog .dialog-title {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  font-size: 1.4rem;
+  line-height: 1.15;
+  color: var(--sheet-title);
+}
+
+.level-dialog .dialog-subtitle {
+  margin-top: 4px;
+  color: var(--sheet-soft);
+}
+
+.level-dialog .level-option {
+  min-height: 60px;
+  gap: 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  color: var(--sheet-cream);
+  background: linear-gradient(180deg, rgba(74, 44, 25, 0.6) 0%, rgba(50, 30, 14, 0.6) 100%);
+  box-shadow: inset 0 0 0 1px rgba(201, 146, 76, 0.3);
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.level-dialog .level-option:hover {
+  background: linear-gradient(180deg, rgba(88, 54, 30, 0.7) 0%, rgba(58, 35, 16, 0.7) 100%);
+  box-shadow: inset 0 0 0 1px rgba(244, 197, 92, 0.6);
+}
+
+.level-dialog .level-option-on,
+.level-dialog .level-option-on:hover {
+  background: linear-gradient(180deg, rgba(246, 201, 104, 0.17) 0%, rgba(220, 156, 56, 0.07) 100%);
+  box-shadow: inset 0 0 0 2px #e0a93e;
+}
+
+.level-dialog .level-option-on::after {
+  content: "\2713";
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  border-radius: 50%;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #3a2006;
+  background: linear-gradient(180deg, #ffe48e 0%, #f7c04a 48%, #e39a28 100%);
+}
+
+/* The signal bars sit in a dark well, like the home menu's symbols. */
+.level-dialog .level-steps {
+  box-sizing: content-box;
+  padding: 9px 9px 8px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #22140a 0%, #2c1a0d 100%);
+  box-shadow:
+    inset 0 0 0 1px rgba(201, 146, 76, 0.38),
+    inset 0 3px 8px rgba(0, 0, 0, 0.5);
+}
+
+.level-dialog .level-steps span {
+  background: rgba(201, 146, 76, 0.28);
+}
+
+.level-dialog .level-steps .level-step-on {
+  background: linear-gradient(180deg, #ffe48e 0%, #f6b733 55%, #e89a1c 100%);
+}
+
+.level-dialog .level-name {
+  font-weight: 800;
+}
+
+.level-dialog .level-description {
+  color: var(--sheet-soft);
+}
+
+/* Cancel and Start game: side by side and the same width, one over the
+   other when large text needs the room. */
+.level-dialog .dialog-actions,
+.consent-dialog .dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 7em), 1fr));
+  gap: 10px;
+}
+
+.level-dialog .dialog-actions .button,
+.consent-dialog .dialog-actions .button {
+  min-height: 48px;
+  border: 1px solid rgba(201, 146, 76, 0.5);
+  border-radius: 14px;
+  font-weight: 800;
+  color: var(--sheet-cream);
+  background: rgba(0, 0, 0, 0.22);
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.level-dialog .dialog-actions .button:hover,
+.consent-dialog .dialog-actions .button:hover {
+  border-color: rgba(244, 197, 92, 0.8);
+  background: rgba(244, 197, 92, 0.1);
+}
+
+.level-dialog .dialog-actions .button-primary,
+.consent-dialog .dialog-actions .button-primary {
+  border: 1.5px solid #ffe08a;
+  color: #2e1904;
+  background: linear-gradient(180deg, #ffd668 0%, #f6b733 55%, #e89a1c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.55),
+    0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+.level-dialog .dialog-actions .button-primary:hover,
+.consent-dialog .dialog-actions .button-primary:hover {
+  border-color: #fff0b8;
+  background: linear-gradient(180deg, #ffde80 0%, #f8c046 55%, #eca428 100%);
+}
+
+.level-dialog .level-option:focus-visible,
+.level-dialog .dialog-actions .button:focus-visible,
+.consent-dialog .dialog-actions .button:focus-visible,
+.consent-dialog .link-button:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-dialog .level-option,
+  .level-dialog .dialog-actions .button {
+    transition: none;
+  }
+}
+
+/* ---------- The 18+ popup (the badge on the AI's card) ----------
+   The "are you sure?" leather, with the badge's 18+ in gold in the well,
+   the rules in quieter words, a gold link to the Terms and one gold Close
+   across the width. Calm over the game screen: no glow (D41, D42). */
+.language-info {
+  width: min(380px, 100%);
+}
+
+.language-info-mark {
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 900;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+}
+
+.language-info-text {
+  margin: 10px 0 0;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  color: var(--sheet-soft);
+}
+
+.language-info-terms {
+  min-height: 44px; /* a full tap target, though it reads as a link */
+  margin-top: 6px;
+  padding: 6px 8px;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  color: var(--sheet-gold);
+  text-decoration: underline;
+  text-decoration-color: rgba(244, 197, 92, 0.55);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.language-info-terms:hover {
+  text-decoration-color: var(--sheet-gold);
+}
+
+.language-info-terms:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.language-info-actions {
+  margin-top: 14px;
+  grid-template-columns: 1fr;
+}
+
+/* Small phones: tighter, so the popup never needs a scroll. */
+@media (max-width: 360px) {
+  .language-info {
+    padding: 20px 16px 16px;
+  }
+
+  .language-info-text {
+    font-size: 0.92rem;
+  }
+}
+
+/* The 18+ question (D45) in the same leather: its text soft cream, the
+   Terms link gold. */
+.consent-dialog .consent-text {
+  color: var(--sheet-soft);
+}
+
+.consent-dialog .link-button {
+  color: var(--sheet-gold);
+}
+
+/* A step smaller than the level dialog: its title and the long Yes fit on
+   one line each on a phone. */
+.consent-dialog .dialog-title {
+  font-size: 1.2rem;
+}
+
+/* Compact buttons (owner, 16 Nov 2026): No as wide as its word, Yes the
+   rest, so "Yes, I am 18 or older" stays on one line; 44px tall. */
+.consent-dialog .dialog-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.consent-dialog .dialog-actions .button {
+  min-height: 44px;
+  padding: 6px 14px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.consent-dialog .dialog-actions .button:not(.button-primary) {
+  flex: none;
+  min-width: 72px;
+}
+
+.consent-dialog .dialog-actions .button-primary {
+  flex: 1 1 auto;
+}
+
+/* Under 340px wide, one over the other (Yes on top). */
+@media (max-width: 339px) {
+  .consent-dialog .dialog-actions {
+    flex-direction: column-reverse;
   }
 }

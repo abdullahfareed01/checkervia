@@ -53,7 +53,7 @@ export async function sendWin(win: QueuedWin): Promise<WinStatus> {
   sending.add(win.gameId);
   setStatus(win.gameId, { kind: "sending" });
   try {
-    const result = await leaderboardApi.submitWin(win.gameId, win.level, win.moves);
+    const result = await leaderboardApi.submitWin(win.gameId, win.level, win.moves, win.colour);
     const { status, keep } = outcomeOf(result, win.level);
     if (!keep) leaderboardStore.dequeue(win.gameId);
     setStatus(win.gameId, status);

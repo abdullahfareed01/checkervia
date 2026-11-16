@@ -28,8 +28,9 @@ export function useGameDuration(movesPlayed: number, winner: Player | null): num
 
 // Opens the result popup when the game is won (after the last move has been
 // animated), and lets the player close it to look at the board or open it
-// again. A new game closes it.
-export function useResultPopup(winner: Player | null, lastMove: Move | null) {
+// again. A new game closes it. `extraMs` waits longer (an abandoned game:
+// the AI's last line is read first, D85).
+export function useResultPopup(winner: Player | null, lastMove: Move | null, extraMs = 0) {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export function useResultPopup(winner: Player | null, lastMove: Move | null) {
       return undefined;
     }
     const animation = lastMove ? moveAnimationTime(lastMove, settingsStore().get().animation) : 0;
-    const timer = setTimeout(() => setOpen(true), animation + PAUSE_AFTER_LAST_MOVE_MS);
+    const timer = setTimeout(() => setOpen(true), animation + PAUSE_AFTER_LAST_MOVE_MS + extraMs);
     return () => clearTimeout(timer);
   }, [winner, lastMove]);
 

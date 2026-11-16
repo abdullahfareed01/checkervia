@@ -12,9 +12,10 @@
 import { useSyncExternalStore } from "react";
 import type { AiLevel } from "../../ai/difficulty";
 import { LEVELS } from "../../ai/difficulty";
+import type { Player } from "../../engine";
 import { isAvatarId } from "../../leaderboard/avatars";
 import { isCountryCode } from "../../leaderboard/countries";
-import { DEVICE_ID_PATTERN, GAME_ID_PATTERN, TOKEN_PATTERN } from "../../leaderboard/protocol";
+import { DEVICE_ID_PATTERN, GAME_ID_PATTERN, TOKEN_PATTERN, parseColour } from "../../leaderboard/protocol";
 import type { EncodedMove } from "../../leaderboard/protocol";
 import { isValidUsername } from "../../leaderboard/username";
 
@@ -34,6 +35,7 @@ export interface Profile {
 export interface QualifyingWin {
   readonly gameId: string;
   readonly level: AiLevel;
+  readonly colour: Player; // the player's colour (D81)
   readonly moves: readonly EncodedMove[];
 }
 
@@ -81,7 +83,10 @@ function asQueuedWin(value: unknown, now: number): QueuedWin | null {
   if (!data || typeof data.gameId !== "string" || !GAME_ID_PATTERN.test(data.gameId)) return null;
   if (!LEVELS.includes(data.level as AiLevel) || !Array.isArray(data.moves) || data.moves.length === 0) return null;
   if (typeof data.queuedAt !== "number" || now - data.queuedAt > QUEUE_MAX_AGE_MS || data.queuedAt > now + 60_000) return null;
-  return { gameId: data.gameId, level: data.level as AiLevel, moves: data.moves, queuedAt: data.queuedAt };
+  // Wins queued before random colours (D81) have no colour: they were Black.
+  const colour = data.colour === undefined ? "black" : parseColour(data.colour);
+  if (!colour) return null;
+  return { gameId: data.gameId, level: data.level as AiLevel, colour, moves: data.moves, queuedAt: data.queuedAt };
 }
 
 function asQueue(value: unknown, now: number): QueuedWin[] {

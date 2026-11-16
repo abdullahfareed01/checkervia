@@ -30,12 +30,31 @@ const bar = (end: EndAction, canBack = false, canForward = false) =>
   );
 
 describe("the action bar", () => {
-  it.each(["vs-ai", "two-player"] as const)("%s: Menu, Previous, Next, Resign, New game, in this order", (mode) => {
-    const html = renderToStaticMarkup(createElement(App, { initial: { mode } }));
-    expect(barLabels(html)).toEqual(["Menu", "Previous", "Next", "Resign", "New game"]);
+  it("with a menu (two columns): Menu, Previous, Next, Resign, New game, in this order", () => {
+    expect(barLabels(bar({ kind: "resign", question: "q", highlight: false, onResign: noop }))).toEqual(["Menu", "Previous", "Next", "Resign", "New game"]);
+    expect(bar({ kind: "resign", question: "q", highlight: false, onResign: noop })).toContain('class="action-bar-inner"');
   });
 
-  it("is the only place with Menu, Resign and New game (nothing in the header or the side panel)", () => {
+  // The tests have no window, so App renders the one column layout (D74).
+  it.each(["vs-ai", "two-player"] as const)("%s, one column: Menu at the top right, the bar has Previous, Next, Resign, New game", (mode) => {
+    const html = renderToStaticMarkup(createElement(App, { initial: { mode } }));
+    expect(barLabels(html)).toEqual(["Previous", "Next", "Resign", "New game"]);
+    expect(html).toContain('class="action-bar-inner action-bar-four"');
+    const top = html.match(/<div class="top-row">[\s\S]*?<\/header>/)![0];
+    expect(top).toMatch(/<h1>Checkervia<\/h1>[\s\S]*<div class="menu">[\s\S]*>Menu</);
+  });
+
+  it("Menu moves only where the bar is fixed to the bottom: the same query as layout.css's two columns", () => {
+    const media = readFileSync(new URL("../src/ui/useMediaQuery.ts", import.meta.url), "utf8");
+    expect(media).toContain("export const TWO_COLUMNS = `(min-width: 900px) and (min-height: 600px), ${LANDSCAPE_PHONE}`;");
+    expect(css("layout.css")).toContain("@media (min-width: 900px) and (min-height: 600px), (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {");
+    const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
+    // In focus mode (D87) there is no action bar, so the Menu is always in the top bar.
+    expect(source).toContain('action={twoColumns && !focus ? undefined : gameMenu}');
+    expect(source).toContain("menu={twoColumns ? gameMenu : undefined}");
+  });
+
+  it("is the only place with Menu, Resign and New game (nothing in the side panel)", () => {
     const html = renderToStaticMarkup(createElement(App, { onMenu: noop }));
     expect(html.match(/>Menu</g)).toHaveLength(1);
     expect(html.match(/>Resign</g)).toHaveLength(1);
@@ -123,8 +142,8 @@ describe("phone sizes (CSS)", () => {
     expect(layout).toMatch(/\.speech-why \{\r?\n  min-width: 44px;\r?\n  min-height: 44px;/);
   });
 
-  it("the chips' text is at least 11px", () => {
-    expect(layout).toMatch(/\.chip-level,\n\.chip-adult \{[^}]*font-size: 11px;/);
+  it("the chips' text is at least 12px", () => {
+    expect(layout).toMatch(/\.chip-level,\n\.chip-adult \{[^}]*font-size: 12px;/);
   });
 });
 
@@ -148,8 +167,8 @@ describe("the action bar never squeezes its labels (D67)", () => {
     expect(layout).toContain("grid-template-columns: repeat(4, minmax(min-content, 1fr)) minmax(min-content, 1.3fr);");
   });
 
-  it("labels on one line, sized by the bar's width, at least 11px", () => {
-    expect(layout).toMatch(/\.bar-label \{[^}]*font-size: clamp\(11px, [\d.]+cqi, 15px\);[^}]*white-space: nowrap;/);
+  it("labels on one line, sized by the bar's width, at least 12px", () => {
+    expect(layout).toMatch(/\.bar-label \{[^}]*font-size: clamp\(12px, [\d.]+cqi, 15px\);[^}]*white-space: nowrap;/);
     expect(layout).toMatch(/\.action-bar-inner \{[^}]*container-type: inline-size;/);
   });
 });

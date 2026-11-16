@@ -10,10 +10,13 @@ import "./ui/chrome.css";
 import "./ui/sheet.css";
 import "./ui/bubble.css";
 import "./ui/layout.css";
+import "./ui/aiRecord.css";
 import "./ui/result.css";
 import "./ui/motion.css";
 import "./ui/settings.css";
 import "./ui/leaderboard.css";
+import "./ui/focus.css";
+import "./ui/touch.css";
 
 async function start() {
   let initial: GameOptions | undefined;
@@ -37,11 +40,12 @@ async function start() {
   }
   // Development only: ?testwin=easy|medium|hard|strongest opens a game the
   // player has just won (a recorded game), with the real result panel and
-  // the real submit-win function. &game=1 to 20 picks the game (D60).
+  // the real submit-win function. &game=1 to 20 picks the game (D60), and
+  // &side=white a win as White, where the AI moved first (D81).
   if (import.meta.env.DEV) {
     const params = new URLSearchParams(window.location.search);
     const level = params.get("testwin");
-    if (level) initial = (await import("./ui/testWin/startTestWin")).testWinOptions(level, params.get("game"));
+    if (level) initial = (await import("./ui/testWin/startTestWin")).testWinOptions(level, params.get("game"), params.get("side"));
   }
   // Development only: ?lb=populated|long|few|empty|offline|error|limited|slow|new|renamed answers
   // the leaderboard in the browser with made up players (devServer.ts).

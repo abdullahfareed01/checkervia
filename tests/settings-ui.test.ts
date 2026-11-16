@@ -16,6 +16,7 @@ vi.mock("../src/ui/haptics", async (importOriginal) => {
 vi.mock("../src/ui/voice/voiceEngine", async (importOriginal) => {
   const real = await importOriginal<typeof import("../src/ui/voice/voiceEngine")>();
   const voices = [
+    { name: "Microsoft Hortense - French (France)", lang: "fr-FR", voiceURI: "hortense", localService: true, default: false },
     { name: "Microsoft Aria Online (Natural)", lang: "en-US", voiceURI: "aria", localService: false, default: false },
     { name: "Daniel", lang: "en-GB", voiceURI: "daniel", localService: true, default: true },
   ];
@@ -29,14 +30,15 @@ const { Home } = await import("../src/ui/Home");
 const { settingsStore } = await import("../src/ui/settings");
 
 const noop = () => {};
-const sheet = () => renderToStaticMarkup(createElement(SettingsSheet, { onClose: noop }));
+type Page = import("../src/ui/SettingsSheet").SettingsPage;
+const sheet = (initialPage: Page | null = null) => renderToStaticMarkup(createElement(SettingsSheet, { onClose: noop, initialPage }));
 // The radio inputs of a group, in order, each with whether it is chosen
 // (the server renderer may write `checked` before or after `value`).
 const radios = (html: string, name: string) =>
   [...html.matchAll(/<input type="radio"[^>]*>/g)]
     .map((m) => m[0])
     .filter((tag) => tag.includes(`name="${name}"`))
-    .map((tag) => [tag.match(/value="(\w+)"/)![1], tag.includes('checked=""')] as const);
+    .map((tag) => [tag.match(/value="([^"]*)"/)![1], tag.includes('checked=""')] as const);
 const css = (name: string) => readFileSync(new URL(`../src/ui/${name}`, import.meta.url), "utf8").replace(/\r\n/g, "\n");
 
 describe("Settings sheet", () => {
@@ -47,48 +49,86 @@ describe("Settings sheet", () => {
     expect(html).toContain('aria-label="Close"');
   });
 
-  it("has every section, in order, the first one open, and Reset to defaults", () => {
+  it("opens on tiles, in order, each saying what it is set to now, then Profile and Reset to defaults", () => {
     const html = sheet();
-    const titles = [...html.matchAll(/<summary>([^<]+)<\/summary>/g)].map((m) => m[1]);
-    expect(titles).toEqual(["Sound", "Haptics", "AI voice", "Animation", "Board and pieces", "AI chat", "Profile"]);
-    expect(html).toMatch(/<details class="settings-section" open=""><summary>Sound</);
+    const tiles = [...html.matchAll(/data-opens="(\w+)"[^]*?settings-tile-title">([^<]+)<\/span>[^]*?settings-tile-value">([^<]+)</g)].map((m) => [m[1], m[2], m[3]]);
+    expect(tiles).toEqual([
+      ["sound", "Sound", "On, 60 percent"],
+      ["haptics", "Haptics", "Standard"],
+      ["voice", "AI voice", "Off"],
+      ["animation", "Animation", "Standard"],
+      ["board", "Board and pieces", "Classic wood"],
+      ["chat", "AI chat", "Bubbles shown"],
+      ["profile", "Profile", "Not set up yet"],
+    ]);
     expect(html).toContain(">Reset to defaults<");
+    // No page is open yet: no Back button, and none of the controls.
+    expect(html).not.toContain("settings-back");
+    expect(html).not.toContain('role="switch"');
+  });
+
+  it("a page has Back to the tiles, its own title, and the close button", () => {
+    const html = sheet("sound");
+    expect(html).toContain('aria-label="Back to all settings"');
+    expect(html).toMatch(/<h2 id="settings-title"[^>]*>Sound<\/h2>/);
+    expect(html).toContain('aria-label="Close"');
+    expect(html).not.toContain(">Reset to defaults<");
   });
 
   it("sound: master switch, volume, game and interface sounds, and a test", () => {
-    const html = sheet();
+    const html = sheet("sound");
     expect(html).toMatch(/role="switch" aria-checked="true" class="settings-switch"><span class="settings-switch-label">Sound</);
     expect(html).toMatch(/Volume<output>60 percent<\/output>/);
     expect(html).toContain(">Game sounds<");
     expect(html).toContain(">Interface sounds<");
-    expect(html).toContain(">Test sound<");
+    expect(html).toContain("Test sound<");
   });
 
   it("haptics: Off, Light, Standard, Strong (Standard chosen) and a test", () => {
-    const html = sheet();
+    const html = sheet("haptics");
     expect(radios(html, "haptics")).toEqual([
       ["off", false],
       ["light", false],
       ["standard", true],
       ["strong", false],
     ]);
-    expect(html).toContain(">Test vibration<");
+    expect(html).toContain("Test vibration<");
   });
 
-  it("AI voice: off by default, the device's voices with an automatic best choice, reading switches, a test, and the screen reader advice", () => {
-    const html = sheet();
+  it("AI voice: off by default, a Voice row that opens the list, reading switches, a test, and the screen reader advice", () => {
+    const html = sheet("voice");
     expect(html).toMatch(/role="switch" aria-checked="false" class="settings-switch"><span class="settings-switch-label">AI voice</);
-    expect(html).toContain("Best English voice (automatic)");
-    expect(html).toContain("Microsoft Aria Online (Natural) (en-US)");
+    // The voice is chosen on a page of its own, not in a dropdown.
+    expect(html).not.toContain("<select");
+    expect(html).toMatch(/<button type="button" class="settings-row-link" data-opens="voices" disabled=""><span class="settings-row-label">Voice<\/span><span class="settings-row-value">Best English voice \(automatic\)</);
     for (const label of ["Speed", "Pitch", "Voice volume", "The AI&#x27;s reactions", "Greetings", "The game over line", "Lines while you wait", "Tips and Why"]) {
       expect(html).toContain(label);
     }
-    expect(html).toContain(">Test voice<");
+    expect(html).toContain("Test voice<");
     expect(html).toContain("If you use a screen reader, keep the AI voice off");
   });
 
+  it("the voice list: the automatic choice first, then English voices, then the rest, each with its language in words and a button to hear it", () => {
+    const html = sheet("voices");
+    expect(html).toContain('aria-label="Back to AI voice"');
+    expect(radios(html, "voice")).toEqual([
+      ["", true],
+      ["aria", false],
+      ["daniel", false],
+      ["hortense", false],
+    ]);
+    // The language some devices add to the name after a dash is dropped: it has its own line.
+    expect(html).toContain(">Microsoft Hortense<");
+    expect(html).toContain(">French (France)<");
+    expect(html).toContain(">Best English voice (automatic)<");
+    expect(html).toContain(">Microsoft Aria Online (Natural)<");
+    expect(html).toContain(">American English<");
+    expect(html).toContain(">British English<");
+    expect(html).toContain('aria-label="Hear Daniel"');
+  });
+
   it("animation: Off, Reduced, Standard, Cinematic and a speed from 0.75 to 1.5", () => {
-    const html = sheet();
+    const html = sheet("animation");
     expect(radios(html, "animation")).toEqual([
       ["off", false],
       ["reduced", false],
@@ -98,11 +138,13 @@ describe("Settings sheet", () => {
     expect(html).toMatch(/min="0.75" max="1.5" step="0.05"[^>]*value="1"/);
   });
 
-  it("board and pieces: themes, piece styles, coordinates, and the two highlights", () => {
-    const html = sheet();
+  it("board and pieces: picture cards for themes, piece styles and coordinates, and the two highlights", () => {
+    const html = sheet("board");
     expect(radios(html, "theme").map(([value]) => value)).toEqual(["classic", "slate", "felt", "minimal"]);
     expect(radios(html, "pieces").map(([value]) => value)).toEqual(["classic", "flat", "ringed"]);
     for (const label of ["Classic wood", "Dark slate", "Green felt", "Minimal light", "Flat", "Ringed", "Edge", "In squares"]) expect(html).toContain(`>${label}<`);
+    for (const theme of ["classic", "slate", "felt", "minimal"]) expect(html).toContain(`settings-swatch settings-swatch-${theme}`);
+    for (const style of ["classic", "flat", "ringed"]) expect(html).toContain(`settings-discs settings-discs-${style}`);
     expect(radios(html, "coordinates")).toEqual([
       ["off", false],
       ["edge", false],
@@ -113,19 +155,27 @@ describe("Settings sheet", () => {
   });
 
   it("AI chat: the bubble switch, and the note that the 18+ rules stay", () => {
-    const html = sheet();
+    const html = sheet("chat");
     expect(html).toContain(">Show chat bubbles<");
     expect(html).toContain("the 18+ badge and its consent stay the same");
   });
 
+  it("profile: says there is none yet, and how wins are added", () => {
+    const html = sheet("profile");
+    expect(html).toContain("No leaderboard profile on this device yet.");
+    expect(html).toContain("Wins against the AI are added to the leaderboard automatically.");
+  });
+
   it("every control is labelled: switches by their text, choices by a legend, sliders by a label", () => {
-    const html = sheet();
-    for (const sw of html.match(/<button type="button" role="switch"[^>]*>[\s\S]*?<\/button>/g)!) {
-      expect(sw).toMatch(/aria-checked="(true|false)"/);
-      expect(sw).toMatch(/settings-switch-label">[^<]+</);
+    for (const page of ["sound", "haptics", "voice", "voices", "animation", "board", "chat"] as const) {
+      const html = sheet(page);
+      for (const sw of html.match(/<button type="button" role="switch"[^>]*>[\s\S]*?<\/button>/g) ?? []) {
+        expect(sw).toMatch(/aria-checked="(true|false)"/);
+        expect(sw).toMatch(/settings-switch-label">[^<]+</);
+      }
+      expect((html.match(/<fieldset class="settings-(choice|group)"/g) ?? []).length).toBe((html.match(/<fieldset class="settings-(choice|group)"[^>]*><legend[^>]*>[^<]+<\/legend>/g) ?? []).length);
+      for (const slider of html.match(/<label class="settings-slider">[\s\S]*?<\/label>/g) ?? []) expect(slider).toMatch(/aria-valuetext="[^"]+"/);
     }
-    expect(html.match(/<fieldset class="settings-choice"/g)!.length).toBe(html.match(/<fieldset class="settings-choice"[^>]*><legend>[^<]+<\/legend>/g)!.length);
-    for (const slider of html.match(/<label class="settings-slider">[\s\S]*?<\/label>/g)!) expect(slider).toMatch(/aria-valuetext="[^"]+"/);
   });
 });
 
@@ -133,9 +183,9 @@ describe("Settings: sizes and the board options' CSS", () => {
   const sheetCss = css("settings.css");
 
   it("every control is at least 44px", () => {
-    for (const rule of [".settings-close", ".settings-switch", ".settings-segment span", ".settings-slider", ".settings-select select", ".settings-test,\n.settings-reset"]) {
+    for (const rule of [".settings-icon-button", ".settings-tile", ".settings-switch", ".settings-segment span", ".settings-pick-face", ".settings-slider", ".settings-row-link", ".settings-voice-pick", ".settings-voice-play", ".settings-test,\n.settings-reset"]) {
       const block = sheetCss.slice(sheetCss.indexOf(`${rule} {`));
-      expect(block.slice(0, block.indexOf("}"))).toMatch(/(min-height|height): 44px/);
+      expect(block.slice(0, block.indexOf("}"))).toMatch(/(min-height|height): (4[4-9]|[5-9]\d|1\d\d)px/);
     }
   });
 

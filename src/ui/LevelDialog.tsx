@@ -31,7 +31,7 @@ export function LevelDialog({ initial, onStart, onCancel }: LevelDialogProps) {
         <h2 id="level-title" className="dialog-title">
           Choose the AI level
         </h2>
-        <p className="dialog-subtitle">You play Black. The AI plays White.</p>
+        <p className="dialog-subtitle">Your colour is random each game. Black moves first.</p>
 
         <LevelOptions value={level} onSelect={setLevel} onConfirm={onStart} />
 

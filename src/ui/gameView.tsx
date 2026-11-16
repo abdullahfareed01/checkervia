@@ -1,9 +1,10 @@
+import type { ReactNode } from "react";
 // Small helpers that turn game state into what the game screen shows.
 import { AI_LEVELS } from "../ai";
 import { strongLanguage } from "../ai/language";
 import { opponentOf } from "../engine";
 import type { Board as BoardType, Player } from "../engine";
-import { AI_PLAYER, canHumanAct } from "../state/gameReducer";
+import { aiSideOf, canHumanAct } from "../state/gameReducer";
 import type { GameMode, GameState } from "../state/gameReducer";
 import type { DisplayedPosition } from "../state/history";
 import {
@@ -35,6 +36,8 @@ export function boardViewOf(state: GameState, shown: DisplayedPosition, moveKey:
     locked: !canHumanAct(state),
     previousBoard: shown.previousBoard,
     moveKey,
+    // You play White against the AI: White at the bottom (D81).
+    flipped: state.mode === "vs-ai" && state.humanSide === "white",
   };
 }
 
@@ -43,14 +46,16 @@ export function winReasonOf(state: GameState): string | null {
   if (!state.winner) return null;
   const loser = opponentOf(state.winner);
   const name = loser === "black" ? "Black" : "White";
+  if (state.abandoned) return "Game abandoned: you did not move."; // D85
   if (state.resignedBy) return state.mode === "vs-ai" ? "You resigned." : `${name} resigned.`;
   return pieceCounts(state.board)[loser] === 0
     ? `${name} has no pieces left.`
     : `${name} has no legal moves.`;
 }
 
-export function nameOf(mode: GameMode, player: Player): string {
-  if (mode === "vs-ai") return player === AI_PLAYER ? "AI" : "You";
+/** "You" or "AI" against the AI (`aiSide`: its colour, D81), else the colour. */
+export function nameOf(mode: GameMode, player: Player, aiSide: Player = "white"): string {
+  if (mode === "vs-ai") return player === aiSide ? "AI" : "You";
   return player === "black" ? "Black" : "White";
 }
 
@@ -64,15 +69,16 @@ export function cardFor(
   onAdultInfo?: () => void, // opens the language rules (Strongest's 18+ badge)
   mood: AiMood = "neutral", // the AI's face (D64)
   portrait: string | null = null, // the player's chosen avatar id (D65)
+  action?: ReactNode, // focus mode's small Resign, after the turn (D87)
 ) {
   const counts = pieceCounts(board);
-  const isAi = state.mode === "vs-ai" && player === AI_PLAYER;
+  const isAi = state.mode === "vs-ai" && player === aiSideOf(state);
   const toMove = state.winner === null && state.currentPlayer === player;
 
   return (
     <PlayerCard
       player={player}
-      name={nameOf(state.mode, player)}
+      name={nameOf(state.mode, player, aiSideOf(state))}
       robot={isAi}
       chips={
         isAi
@@ -91,6 +97,7 @@ export function cardFor(
       portrait={isAi ? null : portrait}
       winner={state.winner === player}
       placement={placement}
+      action={action}
     />
   );
 }

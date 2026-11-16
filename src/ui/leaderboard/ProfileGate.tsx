@@ -6,10 +6,13 @@
 // - Offline without one: play is never blocked. A short notice says wins are
 //   not recorded until a profile exists, and the game starts; the Profile
 //   screen comes the next time a game against the AI starts while online.
-// Two player games never come here.
+// Two player games never come here. A suspended account (D85) gets the
+// suspension popup here instead of a game: every way into a game against
+// the AI comes through this gate.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { GameMode } from "../../state/gameReducer";
+import { useSuspendedNotice } from "../ConductDialogs";
 import { ProfileScreen } from "./ProfileScreen";
 import { leaderboardStore } from "./profile";
 
@@ -37,7 +40,9 @@ const isOnline = () => typeof navigator === "undefined" || navigator.onLine !== 
  */
 export function useProfileGate(onBack: () => void, onTerms: () => void): [(run: () => void) => void, ReactNode] {
   const [gate, setGate] = useState<Gate>(null);
+  const [notifySuspended, suspendedNotice] = useSuspendedNotice();
   const request = useCallback((run: () => void) => {
+    if (notifySuspended()) return;
     const step = gateStep("vs-ai", leaderboardStore.get().profile !== null, isOnline());
     if (step === "board") run();
     else setGate({ kind: step, run });
@@ -73,7 +78,7 @@ export function useProfileGate(onBack: () => void, onTerms: () => void): [(run: 
       />
     );
   }
-  return [request, shown];
+  return [request, shown ?? suspendedNotice];
 }
 
 function OfflineFirstGame({ onContinue, onBack }: { onContinue: () => void; onBack: () => void }) {

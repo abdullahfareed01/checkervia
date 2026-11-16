@@ -1,7 +1,7 @@
 // What the browser and the leaderboard functions send each other. Shared, so
 // both sides agree on the shapes and the limits. Pure.
 import type { AiLevel } from "../ai/difficulty";
-import type { Move, Position } from "../engine";
+import type { Move, Player, Position } from "../engine";
 import type { Period } from "./periods";
 import type { UsernameRule } from "./username";
 
@@ -53,13 +53,45 @@ export interface SubmitWinRequest {
   readonly gameId: string;
   readonly level: AiLevel;
   readonly mode: "vs-ai";
+  // The player's colour (D81). Black moves first, so as White the first
+  // move in `moves` is the AI's. Left out by older clients: Black.
+  readonly colour?: Player;
   readonly moves: readonly EncodedMove[];
+}
+
+/** A colour as sent by the browser, or null when it is not one. */
+export function parseColour(value: unknown): Player | null {
+  return value === "black" || value === "white" ? value : null;
 }
 
 export interface ReportGameRequest {
   readonly gameId: string;
   readonly level: AiLevel;
   readonly result: "win" | "loss";
+}
+
+// Reports for abandoned games (D85): a game against the AI left without a
+// move for a minute is abandoned, and the AI reports the player. The fourth
+// report suspends the account for 30 days (no games against the AI); the
+// count then starts again from zero. The total is kept for the profile.
+export const REPORT_LIMIT = 4;
+export const SUSPENSION_DAYS = 30;
+export const CONTACT_EMAIL = "checkervia.games@gmail.com";
+
+/** Abandoned before the player's first move, or later in the game. */
+export type AbandonPhase = "start" | "middle";
+
+export interface ReportAbandonRequest {
+  readonly gameId: string;
+  readonly level: AiLevel;
+  readonly phase: AbandonPhase;
+}
+
+/** The player's reports and suspension, as the server counts them. */
+export interface ConductStatus {
+  readonly reports: number; // towards the next suspension, 0 to REPORT_LIMIT - 1
+  readonly totalReports: number; // every report ever
+  readonly suspendedUntil: string | null; // ISO time, null when not suspended now
 }
 
 /** Any of the three; the fields left out stay as they are. */
@@ -118,6 +150,20 @@ export interface LevelRecord {
   readonly level: AiLevel;
   readonly wins: number;
   readonly losses: number;
+  readonly resigned?: number; // of the losses; left out by servers from before it
+}
+
+/** GET get-ai-stats (D75): the AI's record over every player. */
+export interface AiStatsCounts {
+  readonly games: number;
+  readonly aiWins: number;
+  readonly aiLosses: number;
+  readonly resigned: number;
+}
+
+/** The AI's record over every player: the totals, and per level (D77). */
+export interface AiStatsResponse extends AiStatsCounts {
+  readonly levels: readonly (AiStatsCounts & { readonly level: AiLevel })[];
 }
 
 export interface ProfileResponse {
@@ -127,6 +173,7 @@ export interface ProfileResponse {
   readonly gamesPlayed: number;
   readonly wins: number;
   readonly losses: number;
+  readonly resigned?: number; // the losses that were resignations; left out by servers from before it
   readonly winRate: number | null; // 0 to 1, null before the first game
   readonly byLevel: readonly LevelRecord[]; // Easy to Strongest
   readonly bestWin: { readonly moves: number; readonly level: AiLevel } | null;
@@ -134,6 +181,8 @@ export interface ProfileResponse {
   // Only in the player's own profile (asked with their token): when the
   // username may change again, null when it may change now.
   readonly nextRenameAt?: string | null;
+  // Only in the player's own profile: their reports and suspension (D85).
+  readonly conduct?: ConductStatus;
 }
 
 export interface ErrorResponse {

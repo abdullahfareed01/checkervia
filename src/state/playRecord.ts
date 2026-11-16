@@ -4,11 +4,11 @@
 // its replies. Used by the development only ?testwin= helper (D60) and the
 // tests. No rule is bypassed: a move the reducer does not play is an error.
 import type { Move } from "../engine";
-import { AI_PLAYER, gameReducer } from "./gameReducer";
+import { aiSideOf, gameReducer } from "./gameReducer";
 import type { GameState } from "./gameReducer";
 
 function playOne(state: GameState, move: Move): GameState {
-  if (state.mode === "vs-ai" && state.currentPlayer === AI_PLAYER) {
+  if (state.mode === "vs-ai" && state.currentPlayer === aiSideOf(state)) {
     return gameReducer(state, { type: "aiMoved", requestId: state.aiRequestId, move });
   }
   let next = gameReducer(state, { type: "click", position: move.from });

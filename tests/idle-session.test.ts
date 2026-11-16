@@ -1,7 +1,10 @@
-// The idle timer with fake timers (a line every 30 seconds while idle, pause
-// and reset) and the tab's session record (Change 4).
+// The idle timer with fake timers (a first line after 30 seconds, then one
+// every 5 seconds while idle, D82; pause and reset) and the tab's session
+// record (Change 4).
+import { readFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createIdleTimer } from "../src/ui/idleTimer";
+import { idleContext } from "../src/ui/usePersonality";
 import { EMPTY_SESSION, SESSION_KEY, nextRound, readSession, withResult, writeSession } from "../src/ui/session";
 
 describe("idle timer", () => {
@@ -14,17 +17,19 @@ describe("idle timer", () => {
     return { lines, timer };
   }
 
-  it("speaks after 30 seconds and keeps speaking every 30 seconds while the player is idle", () => {
+  it("speaks after 30 seconds, then every 5 seconds until the player moves (D82)", () => {
     const { lines, timer } = setup();
     timer.update(true, 1);
     vi.advanceTimersByTime(29_999);
     expect(lines).toEqual([]);
     vi.advanceTimersByTime(1);
     expect(lines).toEqual([1]);
-    vi.advanceTimersByTime(30_000);
+    vi.advanceTimersByTime(4_999);
+    expect(lines).toEqual([1]);
+    vi.advanceTimersByTime(1);
     expect(lines).toEqual([1, 2]);
-    vi.advanceTimersByTime(90_000);
-    expect(lines).toEqual([1, 2, 3, 4, 5]);
+    vi.advanceTimersByTime(5_000 * 8);
+    expect(lines).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
   });
 
   it("re-renders with the same turn do not restart the clock", () => {
@@ -50,13 +55,13 @@ describe("idle timer", () => {
     expect(lines).toEqual([1]);
   });
 
-  it("after a reset, the count goes on in the same turn and the next line waits a full 30 seconds", () => {
+  it("after a reset, the count goes on in the same turn and the next line waits its full delay", () => {
     const { lines, timer } = setup();
     timer.update(true, 1);
     vi.advanceTimersByTime(30_000);
     timer.update(false, 1);
     timer.update(true, 1);
-    vi.advanceTimersByTime(29_000);
+    vi.advanceTimersByTime(4_000);
     expect(lines).toEqual([1]);
     vi.advanceTimersByTime(1_000);
     expect(lines).toEqual([1, 2]);
@@ -65,10 +70,10 @@ describe("idle timer", () => {
   it("a new turn starts the count again", () => {
     const { lines, timer } = setup();
     timer.update(true, 1);
-    vi.advanceTimersByTime(60_000);
+    vi.advanceTimersByTime(40_000); // lines at 30, 35 and 40 seconds
     timer.update(true, 2);
     vi.advanceTimersByTime(30_000);
-    expect(lines).toEqual([1, 2, 1]);
+    expect(lines).toEqual([1, 2, 3, 1]);
   });
 
   it("stop clears everything", () => {
@@ -107,5 +112,32 @@ describe("session record (this tab only)", () => {
     expect(readSession(store)).toEqual(EMPTY_SESSION);
     store.setItem(SESSION_KEY, '{"wins": -3, "losses": "x", "last": "maybe"}');
     expect(readSession(store)).toEqual(EMPTY_SESSION);
+  });
+});
+
+// D73 regression: tapping the board (picking up a piece) used to clear the
+// newest idle line, so the bubble showed the older line again. An idle line
+// now belongs to its turn only: nothing clears it when the board is touched.
+describe("an idle line stays until the move is played (D73)", () => {
+  const source = readFileSync(new URL("../src/ui/usePersonality.ts", import.meta.url), "utf8");
+
+  it("is not cleared when the player picks up a piece or a sheet opens", () => {
+    expect(source).not.toMatch(/if \(!idleAllowed\) setIdle\(null\)/);
+  });
+
+  it("is dropped only when its turn is over", () => {
+    expect(source).toMatch(/idle: idle && idle\.turn === turn \? idle : null/);
+  });
+
+  it("escalates: someone there?, then angry from the third line, then warnings from the sixth (D82)", () => {
+    expect(source).toMatch(/text: sayRef\.current\(idleContext\(count\)\)/);
+    expect([1, 2, 3, 4, 5, 6, 7, 20].map(idleContext)).toEqual(["idle", "idle", "idleAngry", "idleAngry", "idleAngry", "idleWarn", "idleWarn", "idleWarn"]);
+  });
+
+  it("tapping or picking up a piece does not stop the idle lines; only a move does; the resign pressure still waits (D82)", () => {
+    const app = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
+    expect(app).toMatch(/usePersonality\(state, playerTurn && !covered, startedMove\)/);
+    expect(source).toMatch(/const idleActive = ai && idleAllowed && pageVisible && !hintActive;/);
+    expect(source).toMatch(/const pressureActive = ai && hintActive && idleAllowed && !busy && pageVisible;/);
   });
 });

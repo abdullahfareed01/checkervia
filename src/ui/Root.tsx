@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AiLevel, AiStatus } from "../ai";
 import type { GameMode, GameOptions } from "../state/gameReducer";
+import { randomSide } from "../state/sides";
+import { syncConduct } from "./conduct";
+import { useSuspendedNotice } from "./ConductDialogs";
 import { App } from "./App";
 import { useStrongestGate } from "./ConsentDialog";
 import { Home } from "./Home";
@@ -70,15 +73,33 @@ export function Root({ initial, checkAi }: RootProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   // Queued wins are sent when the app opens and when the device is back online (D61).
   useEffect(() => startQueueRetries(), []);
+  // A suspended account (D85) is told so when the app opens, before Play vs
+  // AI and before the Profile. Waiting reports go to the server first, and
+  // its counts come back.
+  const [notifySuspended, suspendedNotice] = useSuspendedNotice();
+  useEffect(() => {
+    const already = notifySuspended();
+    void syncConduct()
+      .then(() => {
+        if (!already) notifySuspended();
+      })
+      .catch(() => {});
+  }, []);
 
-  const start = (mode: GameMode, level = aiLevel) =>
+  // Against the AI the person gets a random colour for every game (D81).
+  const start = (mode: GameMode, level = aiLevel) => {
+    const humanSide = randomSide();
     setScreen((current) => ({
       name: "game",
-      options: { mode, aiLevel: level },
+      options: { mode, aiLevel: level, humanSide },
       id: current.name === "game" ? current.id + 1 : 1,
     }));
+  };
   // Playing the AI first asks for its level; two players start at once.
-  const play = (mode: GameMode) => (mode === "vs-ai" ? setAskLevel(true) : start(mode));
+  const play = (mode: GameMode) => {
+    if (mode !== "vs-ai") start(mode);
+    else if (!notifySuspended()) setAskLevel(true);
+  };
   const startAt = useCallback(
     (level: AiLevel) => {
       setAiLevel(level);
@@ -112,7 +133,9 @@ export function Root({ initial, checkAi }: RootProps) {
           onTerms={() => setTermsOpen(true)}
           onSettings={() => setSettingsOpen(true)}
           onLeaderboard={() => setLeaderboardOpen(true)}
-          onProfile={() => setProfileOpen(true)}
+          onProfile={() => {
+            if (!notifySuspended(() => setProfileOpen(true))) setProfileOpen(true);
+          }}
         />
       )}
       {screen.name === "rules" && <HowToPlay onBack={home} onPlay={play} onLearn={() => setScreen({ name: "learn" })} />}
@@ -121,6 +144,7 @@ export function Root({ initial, checkAi }: RootProps) {
       {askLevel && <LevelDialog initial={aiLevel} onStart={startVsAi} onCancel={() => setAskLevel(false)} />}
       {consent}
       {profileGate}
+      {suspendedNotice}
       {leaderboardOpen && <LeaderboardScreen onClose={() => setLeaderboardOpen(false)} onOwnProfile={() => setProfileOpen(true)} />}
       {profileOpen && <ProfileScreen onClose={() => setProfileOpen(false)} onTerms={() => setTermsOpen(true)} />}
       {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}

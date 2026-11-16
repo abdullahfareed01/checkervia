@@ -167,6 +167,18 @@
   gap: 10px;
 }
 
+/* Phones: a little less padding and a smaller title, so dialogs fit
+   without scrolling more often. */
+@media (max-width: 599px) {
+  .dialog {
+    padding: 16px;
+  }
+
+  .dialog-title {
+    font-size: clamp(1.05rem, 5vw, 1.25rem);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .dialog {
     animation: none;

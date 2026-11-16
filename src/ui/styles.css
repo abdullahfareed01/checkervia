@@ -29,6 +29,9 @@ body {
   background: var(--page-bg);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* A word longer than its line (large text sizes) breaks instead of
+     pushing its box sideways. No dash is added. */
+  overflow-wrap: break-word;
 }
 
 /* ---------- Page layout ----------
@@ -405,7 +408,7 @@ h1 {
 .badge {
   padding: 1px 6px;
   border-radius: 6px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   color: #9fb8c8;
@@ -434,12 +437,16 @@ h1 {
   font-weight: 600;
 }
 
-/* "Thinking..." with three dots that appear one after another. */
+/* "Thinking..." with three dots that appear one after another. The dots
+   keep their full width and one line (D84): they are revealed by a clip, so
+   the card never changes size. (Animating the width let the dots wrap one
+   per line on narrow phones, and the board moved up and down.) */
 .dots::after {
   content: "...";
   display: inline-block;
   width: 1.2em;
   overflow: hidden;
+  white-space: nowrap;
   vertical-align: bottom;
   animation: dots 1.2s steps(4, end) infinite;
   color: var(--side);
@@ -447,10 +454,10 @@ h1 {
 
 @keyframes dots {
   from {
-    width: 0;
+    clip-path: inset(0 100% 0 0);
   }
   to {
-    width: 1.2em;
+    clip-path: inset(0 0 0 0);
   }
 }
 
@@ -1066,7 +1073,7 @@ button.square:focus-visible {
 .history-arrow {
   flex: none;
   width: 44px;
-  height: 40px;
+  height: 44px;
   display: grid;
   place-items: center;
   font: inherit;
@@ -1116,17 +1123,20 @@ button.square:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(122, 167, 199, 0.5);
 }
 
+/* One column (phones): the list grows with the page, which is the one
+   thing that scrolls. Two columns (desktop, phones held sideways,
+   layout.css): it fills what is left of the side panel and scrolls there. */
 .history-list {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 180px;
   overflow-y: auto;
   scrollbar-width: thin;
 }
 
 .history-item {
   width: 100%;
+  min-height: 44px; /* a finger's width, like every other button */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1300,4 +1310,26 @@ button.square:focus-visible {
   .route-capture {
     animation: none;
   }
+}
+
+/* ---------- One scroll at a time ----------
+   An open sheet, dialog or full screen panel locks everything behind it:
+   the page, the home frame, the game's sidebar, and a screen it opened
+   from (the leaderboard under a player's card, the profile under the
+   country list, Settings under the Terms). Only the open layer scrolls, and
+   its scroll never chains to the page under it. The :root in front lifts
+   these rules over the screens' own (later loaded) overflow rules. */
+html:has(:is(.splash, .result-backdrop, .lb-backdrop, .lb-sheet-backdrop, .lb-info-backdrop, .why-sheet-backdrop, .menu-backdrop, .cp-backdrop)),
+html:has(:is(.splash, .result-backdrop, .lb-backdrop, .lb-sheet-backdrop, .lb-info-backdrop, .why-sheet-backdrop, .menu-backdrop, .cp-backdrop)) body,
+html:has(:is(.splash, .result-backdrop, .lb-backdrop, .lb-sheet-backdrop, .lb-info-backdrop, .why-sheet-backdrop, .menu-backdrop, .cp-backdrop)) :is(.home-frame, .rules, .history-list),
+:root :is(.lb-backdrop, .lb-board, .lb-scroll, .lb-sheet-backdrop):has(:is(.lb-sheet-backdrop, .lb-info-backdrop, .cp-backdrop, .result-backdrop)),
+:root .lb-backdrop:has(:is(.lb-sheet-backdrop, .lb-info-backdrop, .cp-backdrop, .result-backdrop)) :is(.lb-board, .lb-scroll),
+:root .lb-backdrop:has(~ :is(.result-backdrop, .lb-backdrop, .lb-info-backdrop, .cp-backdrop)),
+:root .lb-backdrop:has(~ :is(.result-backdrop, .lb-backdrop, .lb-info-backdrop, .cp-backdrop)) :is(.lb-board, .lb-scroll),
+html:has(body > :is(.result-backdrop, .lb-backdrop, .why-sheet-backdrop)) #root :is(.settings-dialog, .terms-scroll, .lb-backdrop, .lb-board, .lb-scroll) {
+  overflow: hidden;
+}
+
+:is(.dialog, .terms-scroll, .why-sheet, .menu-sheet, .lb-backdrop, .lb-scroll, .lb-sheet-backdrop, .lb-info-body, .cp-list, .home-frame) {
+  overscroll-behavior: contain;
 }

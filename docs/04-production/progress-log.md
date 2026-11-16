@@ -324,3 +324,70 @@
 ## 15 Nov 2026: Five more robot reactions (D72)
 - Wink, starstruck, proud, annoyed and sleepy; fourteen faces in all, each checked side by side in the browser.
 - Tests: 1299 passing in 72 files (with the shell's SUPABASE variables unset).
+
+## 15 Nov 2026: Idle lines stay, come faster, the robot gets angry (D73)
+- Fixed: an idle line no longer disappears when the board is tapped. Idle lines after 30, 20, 12, then every 8 seconds; an angry bank and an angry face from the third.
+- Tests: 1306 passing in 72 files (with the shell's SUPABASE variables unset). Browser check on my own Vite (the dev server on 8888 was down).
+
+## 15 Nov 2026: Stats against the AI, and the robot's taunt (D75)
+- A compact stats panel under the robot: your games, wins, losses and resignations (this device) and the AI's record over every player (server, migration 3); tapping the AI's row makes the robot taunt with its number of wins.
+- Tests: 1331 passing in 74 files (with the shell's SUPABASE variables unset). Browser check on my own Vite (the dev server on 8888 was down).
+- Needs the owner: run `leaderboard-migration-3.sql` in Supabase before this goes live.
+
+## 15 Nov 2026: The AI's record popup (D76)
+- Tapping the AI's row in the stats now opens a popup with its full record and a taunt; the row has an arrow so it reads as a button.
+- The AI's numbers show before migration 3: the server counts the games from the table when the `ai_record` function is missing (resignations show 0 until the migration).
+- Tests: 1337 passing in 74 files (with the shell's SUPABASE variables unset). Browser check on the owner's `netlify dev` (8888) with the live database.
+
+## 15 Nov 2026: The AI's record from the robot's avatar (D77)
+- The stats panel is gone from the game screen. Tapping the robot's avatar under the board (gold chart badge) opens a popup: the robot typing then taunting in its bubble (a different line each time, tap for another), a win rate ring, the AI's totals and its record per level. The player's own stats are not shown.
+- The server returns the AI's record per level too; migration 3's `ai_record` now groups by level.
+- Tests: 1336 passing in 74 files (with the shell's SUPABASE variables unset). Browser check on the owner's `netlify dev` at four sizes.
+
+## 15 Nov 2026: Responsive and scroll fix for every screen (D78)
+- No sideways scrolling anywhere, one scroll at a time, the page locked behind sheets and dialogs, home fits every portrait phone, tighter phone sizes, text at least 12px and targets at least 44px.
+- `scripts/check-layout.mjs`: 32 screens and states at 16 sizes and three text and animation settings, 1536 checks, zero issues in the final run.
+- Tests: 1336 passing in 74 files (with the shell's SUPABASE variables unset). Two size tests in `tests/action-bar.test.ts` now expect 12px instead of 11px (an intended change).
+
+## 16 Nov 2026: The game screen on short phones, and touch polish (D80)
+- On every phone held upright, 320 by 568 to 430 by 932, the board, both cards, the turn pill, the AI's bubble and the action bar are on screen together without scrolling; the board takes the height that is left. Tall phones look as before.
+- A long press selects no text and opens no callout, except in text fields, the Terms and the rules; no tap highlight; every pressable thing has its own pressed state.
+- `scripts/check-layout.mjs`: 33 screens and states at 16 sizes and three text and animation settings, 1584 checks, zero issues in the final run (with the new game screen, text selection, tap highlight and pressed state checks).
+- Tests: 1343 passing in 75 files (with the shell's SUPABASE variables unset); new `tests/touch.test.ts`. No test changed.
+
+## 16 Nov 2026: Random colours against the AI (D81)
+- Every new game against the AI gives you Black or White at random; as White the AI moves first. Your pieces are always at the bottom (the board turns round, with its coordinates), and a banner says which colour you have and who moves first.
+- The server checks a win for either colour by replaying the whole game, the AI's first move included; a forged colour is refused, and both colours rank the same (only your own moves count).
+- Tests: `tests/random-colour.test.ts`, `tests/leaderboard/colour.test.ts`; four tests that check the exact win request now include the colour. Browser check in headless Edge on the owner's `netlify dev` at 320 by 568, 375 by 667 and 390 by 844, as White and as Black.
+
+## 16 Nov 2026: Idle lines every 5 seconds, escalating to warnings (D82)
+- After 30 seconds the AI speaks, then every 5 seconds until you play a move; picking up a piece no longer pauses it. First it asks if someone is there, from the third line it gets angry, from the sixth it warns that it will report the game. Every level.
+- Tests: `tests/idle-session.test.ts` (30 then 5 seconds, the stages, App passing the picked up piece only to the resign pressure); the new `idleWarn` bank in `src/ai/lines.test.ts`. Checked in the browser with `?idle=fast` while holding a piece.
+
+## 16 Nov 2026: The AI's record popup says only true things (D83)
+- Fixed the owner's two bugs: after the game nothing talks about a win still to come, and with a win rate under half the robot no longer brags.
+- Tests: `tests/ai-record-dialog.test.ts` reproduces both bugs.
+
+## 16 Nov 2026: Steady thinking dots, one piece bubble (D84)
+- The AI card's "Thinking..." dots no longer wrap on narrow phones, so the board no longer moves up and down while the AI thinks; the bubble and its tail are one shape.
+- Tests: 1382 passing in 77 files after D81 to D84 (with the shell's SUPABASE variables unset); typecheck and production build pass.
+
+## 16 Nov 2026: ?testwin side=white for testing a White win (D81)
+- Development only: `?testwin=easy&side=white` opens a game just won as White (the AI moved first), made by the engine's test win generator, and sends it through the real result panel and `submit-win` with its colour. Not in a production build.
+- Tests: `tests/test-win.test.ts` (every level: the AI's first move first, a submittable White win with its colour, the server's replay accepts it as White and refuses it as Black); `tests/production-build.test.ts` proves it is left out. Checked in headless Edge with `submit-win` answered in the page, so nothing reached the server.
+
+## 16 Nov 2026: Abandoned games, reports and suspensions; the AI's opening line (D85)
+- A minute without a move against the AI abandons the game (a tap restarts the minute): the AI says it reported you, and a small popup follows. Every abandoned game is a report; the fourth suspends the account for 30 days (no games against the AI, with checkervia.games@gmail.com for questions). Kept on the device and, for the profile, on the server (migration 4). Reports show in the own profile.
+- When the AI moves first, it now says something after its move. The old "You play Black" texts are gone.
+- Tests: new `tests/abandon.test.ts` and `tests/leaderboard/reports.test.ts`. Browser check in headless Edge on the owner's `netlify dev` at three phone sizes.
+- Needs the owner: run `leaderboard-migration-4.sql` in Supabase before this goes live.
+
+## 16 Nov 2026: Home menu gaps, bare Menu icon, action bar on the bottom edge (D86)
+- More room between the Home menu cards. The Menu button at the top right is just the hamburger lines. On one column screens the action bar has no rim and sits right on the bottom edge.
+- Browser check in headless Edge across phone, tablet, desktop and sideways sizes; typecheck and tests pass.
+
+## 16 Nov 2026: Resignations in the profile; abandoned games are not resignations (D87)
+- The profile's table by level has a Resigned column. Abandoned games now count as plain losses, not resignations, for the AI's record and this device's record. A verified win clears a resignation reported for the same game.
+- Found on the live database: migrations 3 and 4 are not run, so resigned games are not recorded at all yet.
+- Tests: 1445 passing in 79 files (with the shell's SUPABASE variables unset); typecheck passes.
+- Needs the owner: run `leaderboard-migration-3.sql` (now with the profile's resignations), then `leaderboard-migration-4.sql`, in Supabase.

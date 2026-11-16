@@ -178,7 +178,9 @@
   border-radius: 16px;
   color: var(--bubble-ink);
   background: var(--bubble-bg);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+  /* One shadow around the bubble and its tail together (D84), so they read
+     as one shape, not a box with an arrow beside it. */
+  filter: drop-shadow(0 6px 7px rgba(0, 0, 0, 0.28));
   animation: bubble-in 150ms ease-out both;
 }
 
@@ -187,16 +189,23 @@
   --bubble-ink: #112f1c;
 }
 
-/* The tail points left, at the robot's face, near the top (as chess.com). */
+/* The tail points left, at the robot's face, near the top (as chess.com).
+   A classic speech bubble tail: its top edge sweeps out of the bubble in a
+   curve and its bottom edge curves back in, so it reads as part of the
+   bubble, not an arrow on it. It starts 10px inside the bubble, so there is
+   no seam, and its tip stays at -9px, inside the bubble's margin, so the
+   bubble's size and layout do not change (D84). The polygon is a fallback
+   for a browser without path(). */
 .speech::before {
   content: "";
   position: absolute;
   top: 14px;
   left: -9px;
-  width: 10px;
+  width: 19px;
   height: 18px;
   background: var(--bubble-bg);
   clip-path: polygon(0 50%, 100% 0, 100% 100%);
+  clip-path: path("M 19 0 C 13 1.5 7 8.5 0 15 C 6 15.6 13 13.5 19 9.5 Z");
 }
 /* Up to 4 lines (3 on phones). Whole lines are clipped, so a long line is
    cut between words. AI text is plain text. */
@@ -663,7 +672,7 @@ html[data-anim="reduced"] .robot-face * {
 
 .why-section h3 {
   margin: 0 0 8px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;

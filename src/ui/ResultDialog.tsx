@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import type { GameTip } from "../ai/endgame";
 import type { Player } from "../engine";
 import type { GameMode, SideStats } from "../state/gameReducer";
-import { AI_PLAYER } from "../state/gameReducer";
 import { PieceArt, Ribbon, Scenery } from "./art";
 import type { RibbonTone } from "./art";
 import { toneClasses } from "./ChatBubble";
@@ -28,6 +27,7 @@ import type { EndLine } from "./usePersonality";
 interface ResultDialogProps {
   winner: Player;
   mode: GameMode;
+  aiSide?: Player; // the AI's colour against the person (D81); White if left out
   reason: string; // e.g. "White has no pieces left."
   stats: Readonly<Record<Player, SideStats>>;
   pieces: Record<Player, number>;
@@ -50,13 +50,13 @@ interface ResultDialogProps {
 type Outcome = "victory" | "defeat" | "winner";
 
 // victory: you beat the AI. defeat: the AI beat you. winner: two players.
-function outcomeOf(mode: GameMode, winner: Player): Outcome {
+function outcomeOf(mode: GameMode, winner: Player, aiSide: Player): Outcome {
   if (mode !== "vs-ai") return "winner";
-  return winner === AI_PLAYER ? "defeat" : "victory";
+  return winner === aiSide ? "defeat" : "victory";
 }
 
-function nameOf(mode: GameMode, player: Player): string {
-  if (mode === "vs-ai") return player === AI_PLAYER ? "AI" : "You";
+function nameOf(mode: GameMode, player: Player, aiSide: Player): string {
+  if (mode === "vs-ai") return player === aiSide ? "AI" : "You";
   return player === "black" ? "Black" : "White";
 }
 
@@ -128,7 +128,8 @@ interface StatRow {
 // AI's line, why the game ended, both sides' stats, and what to do next.
 export function ResultDialog(props: ResultDialogProps) {
   const { winner, mode, reason, stats, pieces, totalMoves, durationMs, onPlayAgain, onReview, onClose, aiLine, tips } = props;
-  const outcome = outcomeOf(mode, winner);
+  const aiSide = props.aiSide ?? "white";
+  const outcome = outcomeOf(mode, winner, aiSide);
   const tone = ribbonTone(outcome, winner);
   const playAgainRef = useRef<HTMLButtonElement>(null);
   // The tips fade in after about 5 seconds; "Show tips now" skips the wait.
@@ -182,7 +183,7 @@ export function ResultDialog(props: ResultDialogProps) {
           <div className="result-banner">
             <Ribbon tone={tone} />
             <h2 id="result-title" className={`result-title result-title-${tone}`}>
-              {TITLES[outcome](nameOf(mode, winner))}
+              {TITLES[outcome](nameOf(mode, winner, aiSide))}
             </h2>
           </div>
         </div>
@@ -205,7 +206,7 @@ export function ResultDialog(props: ResultDialogProps) {
               {sides.map((side) => (
                 <th key={side} scope="col" className={side === winner ? "result-col-winner" : undefined}>
                   <span className={`disc disc-${side}`} aria-hidden="true" />
-                  {nameOf(mode, side)}
+                  {nameOf(mode, side, aiSide)}
                 </th>
               ))}
             </tr>

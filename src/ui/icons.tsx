@@ -350,3 +350,84 @@ export function AlertIcon() {
     </svg>
   );
 }
+
+// ---------- The Settings sheet's tiles ----------
+
+// A speaker with two sound waves, for Sound.
+export function SpeakerIcon() {
+  return (
+    <svg className="icon icon-speaker" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M3 9h4l5.5-4.5v15L7 15H3z" fill="currentColor" />
+      <path d="M16 8.5a5 5 0 0 1 0 7M18.6 5.8a8.8 8.8 0 0 1 0 12.4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// A phone with shake marks either side, for Haptics.
+export function VibrateIcon() {
+  return (
+    <svg className="icon icon-vibrate" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M8.5 2.5h7a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2h-7a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM9 5v13.5h6V5z" fill="currentColor" fillRule="evenodd" />
+      <path d="M3.5 8.5l-1.5 1.75 1.5 1.75-1.5 1.75 1.5 1.75M20.5 8.5l1.5 1.75-1.5 1.75 1.5 1.75-1.5 1.75" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// A microphone, for the AI voice.
+export function MicIcon() {
+  return (
+    <svg className="icon icon-mic" viewBox="0 0 24 24" aria-hidden="true">
+      <rect x="8.5" y="2.5" width="7" height="12" rx="3.5" fill="currentColor" />
+      <path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// A small checkered board, for Board and pieces.
+export function BoardIcon() {
+  return (
+    <svg className="icon icon-board" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2zM5 5v4.7h4.7V5zm9.3 0v4.7H19V5zM9.7 9.7v4.6h4.6V9.7zM5 14.3V19h4.7v-4.7zm9.3 0V19H19v-4.7z" fill="currentColor" fillRule="evenodd" />
+    </svg>
+  );
+}
+
+// A speech bubble with three dots, for the AI chat.
+export function ChatIcon() {
+  return (
+    <svg className="icon icon-chat" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 3.5h14a2.5 2.5 0 0 1 2.5 2.5v9a2.5 2.5 0 0 1-2.5 2.5h-8l-5 4v-4H5A2.5 2.5 0 0 1 2.5 15V6A2.5 2.5 0 0 1 5 3.5zM7.5 9a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm4.5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3zm4.5 0a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="currentColor" fillRule="evenodd" />
+    </svg>
+  );
+}
+
+// ---------- Focus mode (D87) ----------
+
+// Four corners pointing out, for Focus mode.
+export function FocusIcon() {
+  return (
+    <svg className="icon icon-focus" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Four corners pointing in (the small screen), for leaving Focus mode: the
+// Focus mode symbol turned inside out, as a video player's exit full screen.
+export function FocusExitIcon() {
+  return (
+    <svg className="icon icon-focus-exit" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M9 4v5H4M15 4v5h5M20 15h-5v5M4 15h5v5" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// A speech bubble, crossed out while the AI's chat is muted.
+export function ChatMuteIcon({ muted }: { muted: boolean }) {
+  return (
+    <svg className="icon icon-chat-mute" viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 4.5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-7l-4.5 3.5v-3.5H5a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      {muted ? <path d="M4 3l16 17" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /> : <path d="M8 10.5h8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />}
+    </svg>
+  );
+}

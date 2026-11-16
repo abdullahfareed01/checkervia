@@ -15,6 +15,10 @@ export type LineContext =
   | "startAfterLoss" // a new game after the player lost the last one
   | "startAfterWin" // a new game after the player won the last one
   | "idle" // the player has not moved for a while
+  | "idleAngry" // the third to fifth idle line of a turn: losing patience (D73)
+  | "idleWarn" // the sixth idle line and after: warnings to report the game (D82)
+  | "aiOpens" // after the AI's first move, when it opens the game (the player is White, D85)
+  | "abandoned" // the game was abandoned: the AI reported the player (D85)
   | "resigned" // the player resigned
   | "aiWon" // the AI won, no verified blunder by the player
   | "aiWonBlunder" // the AI won after at least one verified blunder

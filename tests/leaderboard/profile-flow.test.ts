@@ -71,8 +71,8 @@ describe("the first game against the AI", () => {
     // The consent gate starts the game through the profile gate.
     expect(root).toMatch(/useStrongestGate\(gatedStart\)/);
     expect(root).toMatch(/const gatedStart = useCallback\(\(level: AiLevel\) => requireProfile\(\(\) => startAt\(level\)\)/);
-    // Two players start at once.
-    expect(root).toMatch(/mode === "vs-ai" \? setAskLevel\(true\) : start\(mode\)/);
+    // Two players start at once; the AI asks for its level, unless the account is suspended (D85).
+    expect(root).toMatch(/if \(mode !== "vs-ai"\) start\(mode\);\s*else if \(!notifySuspended\(\)\) setAskLevel\(true\);/);
     const app = source("src/ui/App.tsx");
     expect(app).toMatch(/useStrongestGate\(startAt\)/);
     expect(app).toMatch(/requireProfile\(\(\) => \{\s*playAi\(level\);/);
@@ -120,6 +120,29 @@ describe("the first game against the AI", () => {
     expect(html).not.toContain("pf-notice");
   });
 
+  // Compact like the Settings sheet: the username and the avatar grid are
+  // rows that open pages of their own, so the first page never scrolls.
+  it("making a profile starts on rows: username and avatar open their own pages, the country its picker", () => {
+    const html = renderToStaticMarkup(createElement(ProfileScreen, { firstGame: true, onClose: noop, onTerms: noop }));
+    expect(html).toMatch(/<button type="button" class="pf-row" data-opens="name"><span class="pf-row-label">Username<\/span><span class="pf-row-value">Choose one<\/span>/);
+    expect(html).toMatch(/<button type="button" class="pf-row" data-opens="avatar"><span class="pf-row-label">Avatar<\/span><span class="pf-row-value">Choose one<\/span>/);
+    expect(html).not.toContain('role="radiogroup"');
+    expect(html).not.toContain("<input id=");
+    // No Back arrow on the first page: only the screen's close.
+    expect(html).not.toContain("data-back");
+  });
+
+  it("the pencil is a small badge inside a 44px button", () => {
+    leaderboardStore.setProfile(PROFILE);
+    const html = renderToStaticMarkup(createElement(ProfileScreen, { onClose: noop, onTerms: noop }));
+    expect(html).toMatch(/aria-label="Edit your profile"><span class="pf-id-edit-badge"><svg/);
+    const css = source("src/ui/leaderboard.css");
+    const badge = css.slice(css.lastIndexOf("\n.pf-id-edit-badge {"));
+    expect(badge.slice(0, badge.indexOf("}"))).toMatch(/width: 24px;/);
+    const button = css.slice(css.lastIndexOf("\n.pf-id .pf-id-edit {"));
+    expect(button.slice(0, button.indexOf("}"))).toMatch(/width: 44px;[\s\S]*height: 44px;/);
+  });
+
   it("the rules behind the (i): the username, flag and avatar, readable and complete", () => {
     const text = renderToStaticMarkup(createElement(ProfileRules, { onTerms: noop }));
     for (const phrase of ["public on the leaderboard", "3 to 16 letters", "do not use your real name", "once every 7 days", "reserved for you for 30 days", "never guessed from your connection", "Prefer not to show a flag", "never sent or stored", "Clearing your browser data loses it", "Read the full Terms and notices"]) {
@@ -156,7 +179,7 @@ describe("the first game against the AI", () => {
 });
 
 describe("automatic wins and the queue", () => {
-  const win = (n: number, queuedAt?: number) => ({ gameId: gameId(n), level: 4 as const, moves: BLACK_WIN, ...(queuedAt === undefined ? {} : { queuedAt }) });
+  const win = (n: number, queuedAt?: number) => ({ gameId: gameId(n), level: 4 as const, colour: "black" as const, moves: BLACK_WIN, ...(queuedAt === undefined ? {} : { queuedAt }) });
 
   it("keeps each game once, survives a reload, and drops wins older than seven days", () => {
     let now = Date.parse("2026-11-18T12:00:00Z");
@@ -176,7 +199,7 @@ describe("automatic wins and the queue", () => {
     leaderboardStore.enqueue(win(3));
     const sent = answers([201, { moveCount: 20, weekRank: 12 }]);
     const status = await sendWin(leaderboardStore.get().queue[0]!);
-    expect(sent).toEqual([{ gameId: gameId(3), level: 4, mode: "vs-ai", moves: BLACK_WIN }]);
+    expect(sent).toEqual([{ gameId: gameId(3), level: 4, mode: "vs-ai", colour: "black", moves: BLACK_WIN }]);
     expect(status).toEqual({ kind: "added", rank: 12, level: 4 });
     expect(addedText(status as Extract<typeof status, { kind: "added" }>)).toBe("Added. You are number 12 this week on Strongest.");
     expect(leaderboardStore.get().queue).toEqual([]);

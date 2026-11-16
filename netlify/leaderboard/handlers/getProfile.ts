@@ -9,6 +9,7 @@ import type { LeaderboardHandler } from "../http";
 import type { LevelCounts } from "../store";
 import { LIMITS } from "./limits";
 import { nextRenameAt } from "./updateProfile";
+import { conductStatus } from "./reportAbandon";
 
 // The best win: fewest moves; on a tie, the one at the higher level.
 function bestWin(levels: readonly LevelCounts[]): ProfileResponse["bestWin"] {
@@ -43,12 +44,17 @@ export const handleGetProfile: LeaderboardHandler = (request, deps) =>
       gamesPlayed,
       wins,
       losses: sum((level) => level.losses),
+      resigned: sum((level) => level.resigned),
       winRate: gamesPlayed > 0 ? Math.min(1, wins / gamesPlayed) : null,
-      byLevel: levels.map(({ level, wins: levelWins, losses }) => ({ level, wins: levelWins, losses })),
+      byLevel: levels.map(({ level, wins: levelWins, losses, resigned }) => ({ level, wins: levelWins, losses, resigned })),
       bestWin: bestWin(levels),
       weeklyStrongestRank: week?.rank ?? null,
     };
     const asker = request.authorization ? await playerFromToken(request, deps.store) : null;
-    if (asker?.id === player.id) return ok({ ...body, nextRenameAt: nextRenameAt(player, deps.now()) });
+    if (asker?.id === player.id) {
+      // Only the player sees their own reports and suspension (D85).
+      const conduct = conductStatus(await deps.store.conduct(player.id));
+      return ok({ ...body, nextRenameAt: nextRenameAt(player, deps.now()), conduct });
+    }
     return ok(body);
   });

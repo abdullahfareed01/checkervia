@@ -18,8 +18,10 @@
 import { handleCheckUsername } from "../../../netlify/leaderboard/handlers/checkUsername";
 import { handleClaimUsername } from "../../../netlify/leaderboard/handlers/claimUsername";
 import { handleGetLeaderboard } from "../../../netlify/leaderboard/handlers/getLeaderboard";
+import { handleGetAiStats } from "../../../netlify/leaderboard/handlers/getAiStats";
 import { handleGetProfile } from "../../../netlify/leaderboard/handlers/getProfile";
 import { handleReportGame } from "../../../netlify/leaderboard/handlers/reportGame";
+import { handleReportAbandon } from "../../../netlify/leaderboard/handlers/reportAbandon";
 import { handleSubmitWin } from "../../../netlify/leaderboard/handlers/submitWin";
 import { handleUpdateProfile } from "../../../netlify/leaderboard/handlers/updateProfile";
 import type { LeaderboardHandler } from "../../../netlify/leaderboard/http";
@@ -37,8 +39,10 @@ const HANDLERS: Record<string, LeaderboardHandler> = {
   "claim-username": handleClaimUsername,
   "submit-win": handleSubmitWin,
   "report-game": handleReportGame,
+  "report-abandon": handleReportAbandon,
   "get-leaderboard": handleGetLeaderboard,
   "get-profile": handleGetProfile,
+  "get-ai-stats": handleGetAiStats,
   "update-profile": handleUpdateProfile,
 };
 
@@ -85,7 +89,8 @@ export async function startDevLeaderboard(mode: string): Promise<void> {
       await store.saveGameResult({ playerId: player.id, gameId: randomId(), level, result: "win" }, true);
     }
     for (let index = 0; index < (username.length % 4) + 1; index += 1) {
-      await store.saveGameResult({ playerId: player.id, gameId: randomId(), level, result: "loss" }, false);
+      // Every other loss a resignation, so the AI's record and the profile show some (D87).
+      await store.saveGameResult({ playerId: player.id, gameId: randomId(), level, result: "loss", resigned: index % 2 === 1 }, false);
     }
   }
 

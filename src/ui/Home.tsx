@@ -107,7 +107,7 @@ export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerm
               className="menu-card-ai"
               icon={<RobotFace mood="neutral" />}
               label="Play vs AI"
-              hint="You play Black. The AI plays White."
+              hint="Your colour is random each game. Black moves first."
               onClick={() => onPlay("vs-ai")}
               badge={<span className={`ai-badge ai-badge-${badge.tone}`}>{badge.text}</span>}
             />

@@ -47,7 +47,7 @@ export const ModeSelector = memo(function ModeSelector({ mode, needsConfirmation
       <p className="mode-note">
         {mode === "vs-ai" ? (
           <>
-            You play Black <span aria-hidden="true">•</span> AI plays White
+            Random colour each game <span aria-hidden="true">•</span> Black moves first
           </>
         ) : (
           <>

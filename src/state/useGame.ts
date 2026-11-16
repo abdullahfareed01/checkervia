@@ -4,6 +4,7 @@ import type { Position } from "../engine";
 import { startAiTurn } from "./aiController";
 import { createGameState, gameReducer } from "./gameReducer";
 import { playRecord } from "./playRecord";
+import { randomSide } from "./sides";
 import type { AiLevel } from "../ai/difficulty";
 import type { GameMode, GameOptions, HistoryTarget } from "./gameReducer";
 
@@ -29,14 +30,18 @@ export function useGame(initial?: GameOptions) {
     (position: Position) => dispatch({ type: "click", position }),
     [],
   );
-  const newGame = useCallback(() => dispatch({ type: "newGame" }), []);
-  const setMode = useCallback((mode: GameMode) => dispatch({ type: "setMode", mode }), []);
+  // Every new game against the AI gets a new random colour (D81); two
+  // player games ignore it.
+  const newGame = useCallback(() => dispatch({ type: "newGame", humanSide: randomSide() }), []);
+  const setMode = useCallback((mode: GameMode) => dispatch({ type: "setMode", mode, humanSide: randomSide() }), []);
   const retryAi = useCallback(() => dispatch({ type: "aiRetry" }), []);
   const goHistory = useCallback((to: HistoryTarget) => dispatch({ type: "history", to }), []);
   // A new game against the AI at `level` (a level is fixed for a game).
-  const playAi = useCallback((level: AiLevel) => dispatch({ type: "newGame", mode: "vs-ai", level }), []);
+  const playAi = useCallback((level: AiLevel) => dispatch({ type: "newGame", mode: "vs-ai", level, humanSide: randomSide() }), []);
 
   const resign = useCallback(() => dispatch({ type: "resign" }), []);
+  // The player did not move for a minute (D85).
+  const abandon = useCallback(() => dispatch({ type: "abandon" }), []);
 
-  return { state, click, newGame, setMode, retryAi, goHistory, playAi, resign };
+  return { state, click, newGame, setMode, retryAi, goHistory, playAi, resign, abandon };
 }
