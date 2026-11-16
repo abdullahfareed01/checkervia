@@ -62,3 +62,4 @@
   - [x] Redesign after the mockups, avatars and the profile icon (D62). Waiting for the owner's review.
   - [ ] Run `leaderboard-migration-2.sql` in Supabase before this version goes live (needs the owner)
   - [ ] Run `leaderboard-migration-3.sql` in Supabase (the AI's record, D75) before this version goes live (needs the owner)
+  - [ ] Run `leaderboard-migration-4.sql` in Supabase (reports and suspensions, D85) before this version goes live (needs the owner)

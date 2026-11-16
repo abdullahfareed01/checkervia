@@ -375,3 +375,19 @@
 ## 16 Nov 2026: ?testwin side=white for testing a White win (D81)
 - Development only: `?testwin=easy&side=white` opens a game just won as White (the AI moved first), made by the engine's test win generator, and sends it through the real result panel and `submit-win` with its colour. Not in a production build.
 - Tests: `tests/test-win.test.ts` (every level: the AI's first move first, a submittable White win with its colour, the server's replay accepts it as White and refuses it as Black); `tests/production-build.test.ts` proves it is left out. Checked in headless Edge with `submit-win` answered in the page, so nothing reached the server.
+
+## 16 Nov 2026: Abandoned games, reports and suspensions; the AI's opening line (D85)
+- A minute without a move against the AI abandons the game (a tap restarts the minute): the AI says it reported you, and a small popup follows. Every abandoned game is a report; the fourth suspends the account for 30 days (no games against the AI, with checkervia.games@gmail.com for questions). Kept on the device and, for the profile, on the server (migration 4). Reports show in the own profile.
+- When the AI moves first, it now says something after its move. The old "You play Black" texts are gone.
+- Tests: new `tests/abandon.test.ts` and `tests/leaderboard/reports.test.ts`. Browser check in headless Edge on the owner's `netlify dev` at three phone sizes.
+- Needs the owner: run `leaderboard-migration-4.sql` in Supabase before this goes live.
+
+## 16 Nov 2026: Home menu gaps, bare Menu icon, action bar on the bottom edge (D86)
+- More room between the Home menu cards. The Menu button at the top right is just the hamburger lines. On one column screens the action bar has no rim and sits right on the bottom edge.
+- Browser check in headless Edge across phone, tablet, desktop and sideways sizes; typecheck and tests pass.
+
+## 16 Nov 2026: Resignations in the profile; abandoned games are not resignations (D87)
+- The profile's table by level has a Resigned column. Abandoned games now count as plain losses, not resignations, for the AI's record and this device's record. A verified win clears a resignation reported for the same game.
+- Found on the live database: migrations 3 and 4 are not run, so resigned games are not recorded at all yet.
+- Tests: 1445 passing in 79 files (with the shell's SUPABASE variables unset); typecheck passes.
+- Needs the owner: run `leaderboard-migration-3.sql` (now with the profile's resignations), then `leaderboard-migration-4.sql`, in Supabase.
