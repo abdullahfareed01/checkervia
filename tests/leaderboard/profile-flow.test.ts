@@ -156,7 +156,7 @@ describe("the first game against the AI", () => {
 });
 
 describe("automatic wins and the queue", () => {
-  const win = (n: number, queuedAt?: number) => ({ gameId: gameId(n), level: 4 as const, moves: BLACK_WIN, ...(queuedAt === undefined ? {} : { queuedAt }) });
+  const win = (n: number, queuedAt?: number) => ({ gameId: gameId(n), level: 4 as const, colour: "black" as const, moves: BLACK_WIN, ...(queuedAt === undefined ? {} : { queuedAt }) });
 
   it("keeps each game once, survives a reload, and drops wins older than seven days", () => {
     let now = Date.parse("2026-11-18T12:00:00Z");
@@ -176,7 +176,7 @@ describe("automatic wins and the queue", () => {
     leaderboardStore.enqueue(win(3));
     const sent = answers([201, { moveCount: 20, weekRank: 12 }]);
     const status = await sendWin(leaderboardStore.get().queue[0]!);
-    expect(sent).toEqual([{ gameId: gameId(3), level: 4, mode: "vs-ai", moves: BLACK_WIN }]);
+    expect(sent).toEqual([{ gameId: gameId(3), level: 4, mode: "vs-ai", colour: "black", moves: BLACK_WIN }]);
     expect(status).toEqual({ kind: "added", rank: 12, level: 4 });
     expect(addedText(status as Extract<typeof status, { kind: "added" }>)).toBe("Added. You are number 12 this week on Strongest.");
     expect(leaderboardStore.get().queue).toEqual([]);

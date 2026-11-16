@@ -42,6 +42,7 @@ describe("the ?testwin= games", () => {
     expect(qualifyingWin(state, "00000000-0000-4000-8000-000000000001")).toEqual({
       gameId: "00000000-0000-4000-8000-000000000001",
       level,
+      colour: "black",
       moves: stored[level - 1],
     });
   });

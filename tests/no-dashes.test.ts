@@ -84,7 +84,7 @@ const screens: [string, ReactElement][] = [
       onPlayAgain: noop,
       onReview: noop,
       onClose: noop,
-      leaderboard: createElement(WinStatus, { win: { gameId: "g", level: 4, moves: [] } }),
+      leaderboard: createElement(WinStatus, { win: { gameId: "g", level: 4, colour: "black", moves: [] } }),
     }),
   ],
   [

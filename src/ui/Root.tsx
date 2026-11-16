@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { AiLevel, AiStatus } from "../ai";
 import type { GameMode, GameOptions } from "../state/gameReducer";
+import { randomSide } from "../state/sides";
 import { App } from "./App";
 import { useStrongestGate } from "./ConsentDialog";
 import { Home } from "./Home";
@@ -71,12 +72,15 @@ export function Root({ initial, checkAi }: RootProps) {
   // Queued wins are sent when the app opens and when the device is back online (D61).
   useEffect(() => startQueueRetries(), []);
 
-  const start = (mode: GameMode, level = aiLevel) =>
+  // Against the AI the person gets a random colour for every game (D81).
+  const start = (mode: GameMode, level = aiLevel) => {
+    const humanSide = randomSide();
     setScreen((current) => ({
       name: "game",
-      options: { mode, aiLevel: level },
+      options: { mode, aiLevel: level, humanSide },
       id: current.name === "game" ? current.id + 1 : 1,
     }));
+  };
   // Playing the AI first asks for its level; two players start at once.
   const play = (mode: GameMode) => (mode === "vs-ai" ? setAskLevel(true) : start(mode));
   const startAt = useCallback(

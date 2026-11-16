@@ -9,7 +9,7 @@ import { gameTips } from "../ai/endgame";
 import type { GameTip, PlayedPosition } from "../ai/endgame";
 import { fillLine, pickLine, rememberLine, withWinLaugh } from "../ai/lines";
 import type { LineContext } from "../ai/lines";
-import { AI_PLAYER } from "../state/gameReducer";
+import { aiSideOf } from "../state/gameReducer";
 import type { GameState } from "../state/gameReducer";
 import type { BubbleTone } from "./ChatBubble";
 import { createIdleTimer, createPressureTimer, idleDelay } from "./idleTimer";
@@ -24,7 +24,7 @@ export interface EndLine {
 /** Which bank the end of game line comes from. */
 export function endContext(state: GameState): LineContext {
   if (state.resignedBy) return "resigned";
-  if (state.winner !== AI_PLAYER) return "playerWon";
+  if (state.winner !== aiSideOf(state)) return "playerWon";
   // The engine proved it lost and the player played on anyway (D69).
   if (state.history.some((entry) => entry.provenLoss)) return "aiWonStubborn";
   const blundered = state.history.some((entry) => entry.judgement?.verdict === "blunder");
@@ -41,7 +41,7 @@ export function greetingContext(last: "won" | "lost" | null): LineContext {
  * playing. A resignation never counts, whoever resigned.
  */
 export function isSubmittableWin(state: GameState): boolean {
-  return state.mode === "vs-ai" && state.winner !== null && state.winner !== AI_PLAYER && state.resignedBy === null;
+  return state.mode === "vs-ai" && state.winner !== null && state.winner !== aiSideOf(state) && state.resignedBy === null;
 }
 
 /** The player's moves of the game, for the tips. */
@@ -119,7 +119,9 @@ export function usePersonality(state: GameState, idleAllowed: boolean, busy = fa
   // A: the greeting, fresh for every game against the AI.
   const [greeting, setGreeting] = useState<string | null>(null);
   useEffect(() => {
-    setGreeting(ai ? say(greetingContext(readSession().last)) : null);
+    // None when the AI opens (the player is White, D81): the greetings say
+    // "your move first".
+    setGreeting(ai && state.currentPlayer === state.humanSide ? say(greetingContext(readSession().last)) : null);
   }, [game, ai]);
 
   // B: idle lines, after 30 seconds and then every 5 until the player moves.
@@ -187,16 +189,17 @@ export function usePersonality(state: GameState, idleAllowed: boolean, busy = fa
     if (!ai || !state.winner) return setEnd(null);
     if (recordedFor.current !== game) {
       recordedFor.current = game;
-      writeSession(withResult(readSession(), state.winner !== AI_PLAYER));
+      writeSession(withResult(readSession(), state.winner !== aiSideOf(state)));
       // The player's own totals on this device (D75).
-      vsAiRecordStore.add(state.winner !== AI_PLAYER ? "win" : state.resignedBy ? "resigned" : "loss");
+      vsAiRecordStore.add(state.winner !== aiSideOf(state) ? "win" : state.resignedBy ? "resigned" : "loss");
     }
     const context = endContext(state);
     const text = AI_WINS.includes(context) ? withWinLaugh(say(context), state.aiLevel) : say(context);
     setEnd({ line: { text, tone: TONES[context] ?? "banter" }, tips: null });
-    if (state.winner !== AI_PLAYER) return undefined;
+    if (state.winner !== aiSideOf(state)) return undefined;
     let cancelled = false;
-    void gameTips(playedPositions(state), { player: state.stats.black.kingsMade, ai: state.stats.white.kingsMade }, analyze).then((tips) => {
+    const kingsMade = { player: state.stats[state.humanSide].kingsMade, ai: state.stats[aiSideOf(state)].kingsMade };
+    void gameTips(playedPositions(state), kingsMade, analyze, state.humanSide).then((tips) => {
       if (!cancelled) setEnd((current) => current && { ...current, tips });
     });
     return () => {

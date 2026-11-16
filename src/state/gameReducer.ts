@@ -39,8 +39,13 @@ function addToStats(stats: SideStats, move: Move, crowned: boolean): SideStats {
 
 export type GameMode = "two-player" | "vs-ai";
 
-// In "vs-ai" mode the human plays black and the AI plays white.
-export const AI_PLAYER: Player = "white";
+// In "vs-ai" mode the human plays `humanSide` (chosen at random for every
+// new game, D81) and the AI the other colour. Black always moves first, so
+// when the human is White the AI opens. In two player games `humanSide` is
+// Black and means nothing.
+
+/** The colour the AI plays in this game. */
+export const aiSideOf = (state: Pick<GameState, "humanSide">): Player => opponentOf(state.humanSide);
 
 // One position in the game's history and the move that led to it.
 export interface HistoryEntry {
@@ -113,13 +118,17 @@ export interface GameState {
   readonly aiLevel: AiLevel;
   // Who resigned, if the game ended that way (Change 4).
   readonly resignedBy: Player | null;
+  // The person's colour against the AI (D81); Black in two player games.
+  readonly humanSide: Player;
 }
 
 export type GameAction =
   | { type: "click"; position: Position }
   // A new game; `mode` and `level` change them for it (else they are kept).
-  | { type: "newGame"; mode?: GameMode; level?: AiLevel }
-  | { type: "setMode"; mode: GameMode }
+  // `humanSide` is the person's colour against the AI (Black if left out):
+  // the reducer stays pure, so the random pick is made by the caller (D81).
+  | { type: "newGame"; mode?: GameMode; level?: AiLevel; humanSide?: Player }
+  | { type: "setMode"; mode: GameMode; humanSide?: Player }
   | {
       type: "aiMoved";
       requestId: number;
@@ -141,14 +150,16 @@ export interface GameOptions {
   mode?: GameMode;
   aiRequestId?: number;
   aiLevel?: AiLevel;
+  humanSide?: Player; // the person's colour against the AI (Black if left out)
   // Moves to play through the reducer before the game is shown (the
   // development only ?testwin= helper, D60). See playRecord.ts.
   record?: readonly Move[];
 }
 
-// The AI is "thinking" whenever it is the AI's turn in a game that is not over.
-function aiPhaseFor(mode: GameMode, player: Player, winner: Player | null): AiPhase {
-  return mode === "vs-ai" && player === AI_PLAYER && winner === null ? "thinking" : "idle";
+// The AI is "thinking" whenever it is the AI's turn in a game that is not
+// over: from the very start when the person is White (D81).
+function aiPhaseFor(mode: GameMode, player: Player, winner: Player | null, humanSide: Player): AiPhase {
+  return mode === "vs-ai" && player !== humanSide && winner === null ? "thinking" : "idle";
 }
 
 // A fresh game: standard board, black to move. Options exist so tests can
@@ -158,6 +169,7 @@ export function createGameState(options: GameOptions = {}): GameState {
   const currentPlayer = options.currentPlayer ?? "black";
   const mode = options.mode ?? "two-player";
   const winner = getWinner(board, currentPlayer);
+  const humanSide = mode === "vs-ai" ? (options.humanSide ?? "black") : "black";
 
   return {
     mode,
@@ -172,11 +184,12 @@ export function createGameState(options: GameOptions = {}): GameState {
     viewIndex: null,
     movesPlayed: 0,
     stats: { black: NO_STATS, white: NO_STATS },
-    aiPhase: aiPhaseFor(mode, currentPlayer, winner),
+    aiPhase: aiPhaseFor(mode, currentPlayer, winner, humanSide),
     aiRequestId: options.aiRequestId ?? 0,
     aiFailureReasons: [],
     aiLevel: options.aiLevel ?? DEFAULT_AI_LEVEL,
     resignedBy: null,
+    humanSide,
   };
 }
 
@@ -210,7 +223,7 @@ function playMove(state: GameState, move: Move, ai: AiMoveDetails = {}): GameSta
   const board = applyMove(state.board, move);
   const nextPlayer = opponentOf(state.currentPlayer);
   const winner = getWinner(board, nextPlayer);
-  const aiPhase = aiPhaseFor(state.mode, nextPlayer, winner);
+  const aiPhase = aiPhaseFor(state.mode, nextPlayer, winner, state.humanSide);
   const crowned = pieceAt(state.board, move.from)?.kind === "man" && pieceAt(board, move.to)?.kind === "king";
   const mover = state.currentPlayer;
 
@@ -328,7 +341,7 @@ function handleAiMoved(state: GameState, requestId: number, move: Move, ai: AiMo
 // reply is dropped (new request id). Only while the game is still going.
 function handleResign(state: GameState): GameState {
   if (state.winner) return state;
-  const resignedBy = state.mode === "vs-ai" ? opponentOf(AI_PLAYER) : state.currentPlayer;
+  const resignedBy = state.mode === "vs-ai" ? state.humanSide : state.currentPlayer;
   return {
     ...state,
     winner: opponentOf(resignedBy),
@@ -394,11 +407,17 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         mode: action.mode ?? state.mode,
         aiRequestId: state.aiRequestId + 1,
         aiLevel: action.level ?? state.aiLevel,
+        ...(action.humanSide ? { humanSide: action.humanSide } : {}),
       });
     case "setMode":
       return action.mode === state.mode
         ? state
-        : createGameState({ mode: action.mode, aiRequestId: state.aiRequestId + 1, aiLevel: state.aiLevel });
+        : createGameState({
+            mode: action.mode,
+            aiRequestId: state.aiRequestId + 1,
+            aiLevel: state.aiLevel,
+            ...(action.humanSide ? { humanSide: action.humanSide } : {}),
+          });
     case "aiMoved":
       return handleAiMoved(state, action.requestId, action.move, action);
     case "aiFailed":

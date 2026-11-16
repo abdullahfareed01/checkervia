@@ -9,6 +9,7 @@ import { playPlan } from "./animation/player";
 import type { PlayerHandlers } from "./animation/player";
 import type { MoveBeat } from "./feedback";
 import { MoveAnimation } from "./MoveAnimation";
+import { flipBoard, flipMove, flipPosition } from "./moveGeometry";
 import { useSettings } from "./settings";
 import { RouteOverlay } from "./RouteOverlay";
 import { Square, sameMarks } from "./Square";
@@ -28,6 +29,8 @@ export interface BoardView {
   // changes with every move (so the same move is not animated twice).
   previousBoard?: BoardType | null;
   moveKey?: number;
+  // Turned round, so White is at the bottom (D81: you play White).
+  flipped?: boolean;
 }
 
 interface BoardProps {
@@ -74,7 +77,7 @@ interface Playback {
  * Reduced show the result at once but still sound each landing.
  */
 function useMovePlayback(
-  view: BoardView,
+  view: Pick<BoardView, "board" | "lastMove" | "previousBoard" | "moveKey">,
   options: AnimationOptions,
   onBeat: BoardProps["onMoveBeat"],
   onLock: BoardProps["onMoveLock"],
@@ -120,7 +123,8 @@ function useMovePlayback(
 }
 
 interface BoardRowProps {
-  row: number;
+  row: number; // the row on screen
+  flipped: boolean; // screen squares are the board's turned round
   pieces: readonly (Piece | null)[];
   marks: readonly SquareMarks[];
   locked: boolean;
@@ -131,7 +135,7 @@ interface BoardRowProps {
 // True when a row would look exactly the same: same pieces, same marks.
 // Compared by value, because every move builds new row arrays.
 function sameRow(a: BoardRowProps, b: BoardRowProps): boolean {
-  if (a.row !== b.row || a.locked !== b.locked || a.hiddenCol !== b.hiddenCol || a.onSquareClick !== b.onSquareClick) return false;
+  if (a.row !== b.row || a.flipped !== b.flipped || a.locked !== b.locked || a.hiddenCol !== b.hiddenCol || a.onSquareClick !== b.onSquareClick) return false;
   return a.pieces.every((piece, col) => {
     const other = b.pieces[col];
     return piece?.player === other?.player && piece?.kind === other?.kind && sameMarks(a.marks[col]!, b.marks[col]!);
@@ -141,22 +145,29 @@ function sameRow(a: BoardRowProps, b: BoardRowProps): boolean {
 // One row of eight squares. Memoised by value: in development, React records
 // a stack trace for every element it creates, so re-creating all 64 squares
 // on every click was the slowest part of a move. Now only changed rows do.
-const BoardRow = memo(function BoardRow({ row, pieces, marks, locked, hiddenCol, onSquareClick }: BoardRowProps) {
+// Squares know their board position (for clicks and screen readers) and
+// where they are on screen (for the coordinates in the edge squares).
+const BoardRow = memo(function BoardRow({ row, flipped, pieces, marks, locked, hiddenCol, onSquareClick }: BoardRowProps) {
   return (
     <div className="board-row">
-      {pieces.map((piece, col) => (
-        <Square
-          key={col}
-          row={row}
-          col={col}
-          dark={isDarkSquare(row, col)}
-          piece={piece}
-          marks={marks[col]!}
-          locked={locked}
-          hidePiece={hiddenCol === col}
-          onClick={onSquareClick}
-        />
-      ))}
+      {pieces.map((piece, col) => {
+        const square = flipped ? flipPosition({ row, col }) : { row, col };
+        return (
+          <Square
+            key={col}
+            row={square.row}
+            col={square.col}
+            rankEdge={col === 0}
+            fileEdge={row === 7}
+            dark={isDarkSquare(square.row, square.col)}
+            piece={piece}
+            marks={marks[col]!}
+            locked={locked}
+            hidePiece={hiddenCol === col}
+            onClick={onSquareClick}
+          />
+        );
+      })}
     </div>
   );
 }, sameRow);
@@ -170,10 +181,26 @@ function routeKey(move: Move, moveKey: number): string {
 // Draws the 8x8 grid. It only renders what it is given and reports clicks.
 export function Board({ view, onSquareClick, onMoveBeat, onMoveLock }: BoardProps) {
   const settings = useSettings();
-  const [playback, handlers] = useMovePlayback(view, settings.animation, onMoveBeat, onMoveLock);
+  // What is drawn: the board, the last move and the board before it, turned
+  // round when White is at the bottom (D81). Marks and clicks stay in the
+  // board's own squares.
+  const flipped = view.flipped === true;
+  const screen = useMemo(
+    () =>
+      flipped
+        ? {
+            board: flipBoard(view.board),
+            lastMove: view.lastMove && flipMove(view.lastMove),
+            previousBoard: view.previousBoard ? flipBoard(view.previousBoard) : null,
+          }
+        : { board: view.board, lastMove: view.lastMove, previousBoard: view.previousBoard ?? null },
+    [flipped, view.board, view.lastMove, view.previousBoard],
+  );
+  const [playback, handlers] = useMovePlayback({ ...screen, moveKey: view.moveKey ?? 0 }, settings.animation, onMoveBeat, onMoveLock);
   const animating = playback !== null;
-  const lastMove = view.lastMove;
-  const mover = lastMove ? pieceAt(view.board, lastMove.to) : null;
+  const lastMove = screen.lastMove;
+  const mover = lastMove ? pieceAt(screen.board, lastMove.to) : null;
+  const boardSquare = (row: number, col: number) => (flipped ? flipPosition({ row, col }) : { row, col });
 
   return (
     // A thin wooden frame; the coordinates are in the squares' corners.
@@ -184,12 +211,13 @@ export function Board({ view, onSquareClick, onMoveBeat, onMoveLock }: BoardProp
         // The last move highlight fades in once the piece has landed.
         style={{ "--land-delay": `${playback ? playback.plan.landing : 0}ms` } as React.CSSProperties}
       >
-        {view.board.map((rowSquares, row) => (
+        {screen.board.map((rowSquares, row) => (
           <BoardRow
             key={row}
             row={row}
+            flipped={flipped}
             pieces={rowSquares}
-            marks={rowSquares.map((_, col) => marksFor(view, { row, col }))}
+            marks={rowSquares.map((_, col) => marksFor(view, boardSquare(row, col)))}
             locked={view.locked}
             hiddenCol={animating && lastMove !== null && lastMove.to.row === row ? lastMove.to.col : null}
             onSquareClick={onSquareClick}
@@ -200,8 +228,8 @@ export function Board({ view, onSquareClick, onMoveBeat, onMoveLock }: BoardProp
           // animation plays again for every move.
           <RouteOverlay key={routeKey(lastMove, view.moveKey ?? 0)} move={lastMove} player={mover.player} />
         )}
-        {playback && lastMove && view.previousBoard && (
-          <MoveAnimation move={lastMove} before={view.previousBoard} plan={playback.plan} handlers={handlers} />
+        {playback && lastMove && screen.previousBoard && (
+          <MoveAnimation move={lastMove} before={screen.previousBoard} plan={playback.plan} handlers={handlers} />
         )}
       </div>
     </div>

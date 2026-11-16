@@ -3,7 +3,7 @@
 // shows, so the state layer stays pure and instant.
 import { useEffect, useRef } from "react";
 import type { GameState } from "../state/gameReducer";
-import { AI_PLAYER } from "../state/gameReducer";
+import { aiSideOf } from "../state/gameReducer";
 import type { BubbleMessage } from "./ChatBubble";
 import { playFeedback } from "./feedback";
 import { markInteracted } from "./interaction";
@@ -72,7 +72,7 @@ export function useGameFeedback({ state, resultOpen, sheets, bubble }: GameFeedb
   const wasOpen = useRef(resultOpen);
   useEffect(() => {
     if (resultOpen && !wasOpen.current && state.winner) {
-      playFeedback(state.mode === "vs-ai" && state.winner === AI_PLAYER ? "loss" : "win");
+      playFeedback(state.mode === "vs-ai" && state.winner === aiSideOf(state) ? "loss" : "win");
     }
     wasOpen.current = resultOpen;
   }, [resultOpen]);

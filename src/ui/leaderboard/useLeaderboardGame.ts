@@ -13,7 +13,7 @@ import { initialBoard } from "../../engine";
 import type { Board } from "../../engine";
 import { encodeMove } from "../../leaderboard/protocol";
 import type { GameState } from "../../state/gameReducer";
-import { AI_PLAYER } from "../../state/gameReducer";
+import { aiSideOf } from "../../state/gameReducer";
 import { isSubmittableWin } from "../usePersonality";
 import { leaderboardApi } from "./api";
 import { leaderboardStore, randomId, useLeaderboardProfile } from "./profile";
@@ -31,7 +31,7 @@ export function isLeaderboardGame(state: GameState): boolean {
 export function qualifyingWin(state: GameState, gameId: string): QualifyingWin | null {
   if (!isLeaderboardGame(state) || !isSubmittableWin(state)) return null;
   const moves = state.history.slice(1).map((entry) => encodeMove(entry.move!));
-  return { gameId, level: state.aiLevel, moves };
+  return { gameId, level: state.aiLevel, colour: state.humanSide, moves };
 }
 
 /**
@@ -54,7 +54,7 @@ export function useLeaderboardGame(state: GameState): QualifyingWin | null {
     if (!leaderboardStore.get().profile) return;
     if (win) leaderboardStore.enqueue(win);
     // Fire and forget: a lost report only means one game fewer in the counters.
-    void leaderboardApi.reportGame(gameId, state.aiLevel, state.winner === AI_PLAYER || state.resignedBy ? "loss" : "win", state.resignedBy !== null).catch(() => {});
+    void leaderboardApi.reportGame(gameId, state.aiLevel, state.winner === aiSideOf(state) || state.resignedBy ? "loss" : "win", state.resignedBy !== null).catch(() => {});
   }, [state.winner, gameId]);
   return profile ? win : null;
 }

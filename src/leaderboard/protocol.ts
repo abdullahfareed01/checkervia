@@ -1,7 +1,7 @@
 // What the browser and the leaderboard functions send each other. Shared, so
 // both sides agree on the shapes and the limits. Pure.
 import type { AiLevel } from "../ai/difficulty";
-import type { Move, Position } from "../engine";
+import type { Move, Player, Position } from "../engine";
 import type { Period } from "./periods";
 import type { UsernameRule } from "./username";
 
@@ -53,7 +53,15 @@ export interface SubmitWinRequest {
   readonly gameId: string;
   readonly level: AiLevel;
   readonly mode: "vs-ai";
+  // The player's colour (D81). Black moves first, so as White the first
+  // move in `moves` is the AI's. Left out by older clients: Black.
+  readonly colour?: Player;
   readonly moves: readonly EncodedMove[];
+}
+
+/** A colour as sent by the browser, or null when it is not one. */
+export function parseColour(value: unknown): Player | null {
+  return value === "black" || value === "white" ? value : null;
 }
 
 export interface ReportGameRequest {

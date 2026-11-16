@@ -5,7 +5,7 @@ import { useGame } from "../state/useGame";
 import { isGameInProgress, pieceCounts } from "../state/selectors";
 import { canGoBack, canGoForward, displayedPosition, moveList } from "../state/history";
 import type { MoveListItem } from "../state/history";
-import { AI_PLAYER, gameReducer } from "../state/gameReducer";
+import { aiSideOf, gameReducer } from "../state/gameReducer";
 import type { GameMode, GameOptions } from "../state/gameReducer";
 import { opponentOf } from "../engine";
 import type { Move, Position } from "../engine";
@@ -53,6 +53,7 @@ import { useLeaderboardGame } from "./leaderboard/useLeaderboardGame";
 import { WinStatus } from "./leaderboard/WinStatus";
 import { useLeaderboardProfile } from "./leaderboard/profile";
 import { WinChanceBar } from "./WinChanceBar";
+import { SideIntro, useGameNumber } from "./SideIntro";
 import { AiRecordDialog, useAiStats } from "./AiRecordDialog";
 import { useVsAiRecord } from "./vsAiRecord";
 
@@ -140,6 +141,11 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const durationMs = useGameDuration(state.movesPlayed, state.winner);
   const result = useResultPopup(state.winner, state.lastMove);
   const shown = displayedPosition(state);
+  // Your pieces are always at the bottom (D81): the AI's colour on top
+  // against the AI, White on top in two player games.
+  const topSide = state.mode === "vs-ai" ? aiSideOf(state) : "white";
+  // A new number for every new game, for the colour banner (D81).
+  const gameKey = useGameNumber(state.history[0]!);
   const moveKey = useAnimationKey(shown.index);
   // Each side's chance of winning in the position on screen (D65): the side
   // to move there, and 100% once the game is won on the board shown.
@@ -153,11 +159,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const { profile } = useLeaderboardProfile();
   const portrait = state.mode === "vs-ai" ? (profile?.avatar ?? null) : null;
   shownKey.current = moveKey;
-  const why = useAiExplanation(state.mode, shown);
+  // The AI's colour in this game: random against the AI (D81).
+  const aiSide = aiSideOf(state);
+  const why = useAiExplanation(state.mode, shown, aiSide);
   const [askLevel, setAskLevel] = useState(false);
   // The move list only changes when the history does (DEV-010).
   const moves = useMemo(() => moveList(state), [state.history]);
-  const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player), [state.mode]);
+  const moveNameOf = useCallback((item: MoveListItem) => nameOf(state.mode, item.player, aiSide), [state.mode, aiSide]);
   const [rulesOpen, setRulesOpen] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -240,7 +248,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // Greeting, idle lines, the resign hint and the end of the game (Change 4).
   // Idle lines wait while anything covers the board or the player is busy.
   const covered = menuOpen || consent !== null || termsOpen || rulesOpen || askLevel || languageOpen || result.open || why.open || leaderboardOpen || profileOpen || gating;
-  const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === "black";
+  const playerTurn = state.aiPhase === "idle" && state.winner === null && state.viewIndex === null && state.currentPlayer === state.humanSide;
   // Idle lines keep coming while the player taps or picks up a piece; only
   // their move stops them (D82). The resign pressure still waits.
   const personality = usePersonality(state, playerTurn && !covered, startedMove);
@@ -253,7 +261,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const aiLanding =
     state.mode === "vs-ai" &&
     state.viewIndex === null &&
-    state.history[state.history.length - 1]?.player === AI_PLAYER &&
+    state.history[state.history.length - 1]?.player === aiSide &&
     moveKey > 0 &&
     state.lastMove !== null &&
     state.lastMove !== landedMove &&
@@ -318,7 +326,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
         ? "angry"
         : idleCount === 2
           ? "sleepy"
-          : aiMood(state, 1 - chance);
+          : aiMood(state, aiSide === "white" ? 1 - chance : chance);
 
   // One column (phones, tablets, narrow windows): the action bar is fixed to
   // the bottom and Menu moves to the top right. Two columns keep it in the bar.
@@ -333,12 +341,13 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
       </header>
 
       <section className="game" aria-label="Game">
-        {cardFor(state, shown.board, "white", "top", openLanguage, mood)}
+        {cardFor(state, shown.board, topSide, "top", topSide === aiSide ? openLanguage : undefined, mood)}
         <div className="board-area">
           <Board view={boardViewOf(state, shown, moveKey)} onSquareClick={click} onMoveBeat={onMoveBeat} onMoveLock={onMoveLock} />
-          <WinChanceBar chance={chance} black={nameOf(state.mode, "black")} white={nameOf(state.mode, "white")} />
+          <WinChanceBar chance={chance} black={nameOf(state.mode, "black", aiSide)} white={nameOf(state.mode, "white", aiSide)} bottom={opponentOf(topSide)} />
+          {state.mode === "vs-ai" && <SideIntro key={gameKey} side={state.humanSide} played={state.history.some((entry) => entry.player === state.humanSide)} />}
         </div>
-        {cardFor(state, shown.board, "black", "bottom", undefined, undefined, portrait)}
+        {cardFor(state, shown.board, opponentOf(topSide), "bottom", undefined, undefined, portrait)}
       </section>
 
       <aside className="sidebar">
@@ -369,6 +378,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
         <ResultDialog
           winner={state.winner}
           mode={state.mode}
+          aiSide={aiSide}
           reason={winReasonOf(state) ?? ""}
           stats={state.stats}
           pieces={pieceCounts(state.board)}
@@ -381,7 +391,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           }}
           onClose={result.close}
           aiLine={personality.end?.line}
-          tips={state.mode === "vs-ai" && state.winner !== "black" ? (personality.end?.tips ?? null) : undefined}
+          tips={state.mode === "vs-ai" && state.winner !== state.humanSide ? (personality.end?.tips ?? null) : undefined}
           onTipsShown={speakTips}
           leaderboard={
             leaderboardWin && (

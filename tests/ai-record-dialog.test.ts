@@ -41,7 +41,7 @@ describe("your totals against the AI (kept, never shown)", () => {
 
   it("each finished game against the AI is added once, with the session record", () => {
     const source = readFileSync(new URL("../src/ui/usePersonality.ts", import.meta.url), "utf8");
-    expect(source).toMatch(/recordedFor\.current = game;[\s\S]{0,300}vsAiRecordStore\.add\(state\.winner !== AI_PLAYER \? "win" : state\.resignedBy \? "resigned" : "loss"\)/);
+    expect(source).toMatch(/recordedFor\.current = game;[\s\S]{0,300}vsAiRecordStore\.add\(state\.winner !== aiSideOf\(state\) \? "win" : state\.resignedBy \? "resigned" : "loss"\)/);
   });
 });
 

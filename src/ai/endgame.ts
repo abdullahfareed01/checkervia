@@ -90,7 +90,7 @@ async function grade(position: PlayedPosition, analyze: Analyze): Promise<Graded
 }
 
 // The tip that matches how the game went, from engine counts.
-function generalTip(graded: readonly Graded[], kingsMade: { player: number; ai: number }, positions: readonly PlayedPosition[]): string {
+function generalTip(graded: readonly Graded[], kingsMade: { player: number; ai: number }, positions: readonly PlayedPosition[], player: Player): string {
   const hanging = graded.filter((entry) => entry.leftPieceHanging).length;
   if (hanging >= 2) {
     return `${hanging} of your moves put the piece where it could be jumped next turn. Before you move, check the square behind the landing square.`;
@@ -99,7 +99,8 @@ function generalTip(graded: readonly Graded[], kingsMade: { player: number; ai: 
     return `The AI made ${kingsMade.ai} ${kingsMade.ai === 1 ? "King" : "Kings"} and you made ${kingsMade.player}. Guard your back row and race for the far row.`;
   }
   const early = positions.slice(0, 10);
-  const backRow = early.filter((position) => position.player === "black" && position.move.from.row === 7).length;
+  const home = player === "black" ? 7 : 0; // the player's back row
+  const backRow = early.filter((position) => position.player === player && position.move.from.row === home).length;
   if (backRow >= 3) {
     return `You moved ${backRow} pieces off your back row in your first 10 moves. Keeping some there stops the AI from crowning.`;
   }
@@ -116,10 +117,11 @@ export async function gameTips(
   positions: readonly PlayedPosition[],
   kingsMade: { player: number; ai: number },
   analyze: Analyze = analyzeHere,
+  player: Player = "black", // the person's colour (D81)
 ): Promise<GameTip[]> {
   const graded: Graded[] = [];
   for (const position of positions) {
-    if (position.player !== "black") continue;
+    if (position.player !== player) continue;
     try {
       const entry = await grade(position, analyze);
       if (entry) graded.push(entry);
@@ -142,6 +144,6 @@ export async function gameTips(
       text: `Move ${missed.position.number}: ${label(missed.best)} won by force in ${turnsToResult(missed.bestScore)} turns. You played ${label(missed.position.move)}.`,
     });
   }
-  tips.push({ kind: "general", text: generalTip(graded, kingsMade, positions) });
+  tips.push({ kind: "general", text: generalTip(graded, kingsMade, positions, player) });
   return tips.slice(0, 3);
 }

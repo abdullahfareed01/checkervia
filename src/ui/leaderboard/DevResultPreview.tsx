@@ -13,7 +13,7 @@ import { WinStatus } from "./WinStatus";
 
 export function DevResultPreview() {
   const [win] = useState(() => {
-    const made = { gameId: randomId(), level: 4 as const, moves: (games as EncodedMove[][])[0]! };
+    const made = { gameId: randomId(), level: 4 as const, colour: "black" as const, moves: (games as EncodedMove[][])[0]! };
     leaderboardStore.enqueue(made);
     return made;
   });
