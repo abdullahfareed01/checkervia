@@ -1,4 +1,5 @@
 import { memo } from "react";
+import type { ReactNode } from "react";
 import { BackIcon, CrownIcon, LaurelIcon } from "./icons";
 
 // The title. Large (the home screen): a crown above it and a laurel branch
@@ -34,12 +35,13 @@ export const GameTitle = memo(function GameTitle({ text, large = false }: { text
 interface TopBarProps {
   title: string;
   onBack?: (() => void) | undefined; // a back arrow, where it is the only way out (Learn)
+  action?: ReactNode; // the game's Menu, top right, on one column screens
 }
 
 // The bar at the top of the game and Learn screens: the title, and on Learn
-// a back arrow to the main menu. The game has no back arrow: its Menu (in
-// the action bar) has "Main menu" (D50).
-export const TopBar = memo(function TopBar({ title, onBack }: TopBarProps) {
+// a back arrow to the main menu. The game has no back arrow: its Menu has
+// "Main menu" (D50); on one column screens that Menu sits at the top right.
+export const TopBar = memo(function TopBar({ title, onBack, action }: TopBarProps) {
   return (
     <div className="top-row">
       {onBack ? (
@@ -50,7 +52,7 @@ export const TopBar = memo(function TopBar({ title, onBack }: TopBarProps) {
         <span className="icon-button-space" aria-hidden="true" />
       )}
       <GameTitle text={title} />
-      <span className="icon-button-space" aria-hidden="true" />
+      {action ?? <span className="icon-button-space" aria-hidden="true" />}
     </div>
   );
 });

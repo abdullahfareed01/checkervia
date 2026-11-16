@@ -178,7 +178,9 @@
   border-radius: 16px;
   color: var(--bubble-ink);
   background: var(--bubble-bg);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.28);
+  /* One shadow around the bubble and its tail together (D84), so they read
+     as one shape, not a box with an arrow beside it. */
+  filter: drop-shadow(0 6px 7px rgba(0, 0, 0, 0.28));
   animation: bubble-in 150ms ease-out both;
 }
 
@@ -187,13 +189,15 @@
   --bubble-ink: #112f1c;
 }
 
-/* The tail points left, at the robot's face, near the top (as chess.com). */
+/* The tail points left, at the robot's face, near the top (as chess.com).
+   It grows out of the bubble: it overlaps the bubble's edge, so there is no
+   seam between them (D84). */
 .speech::before {
   content: "";
   position: absolute;
   top: 14px;
   left: -9px;
-  width: 10px;
+  width: 13px;
   height: 18px;
   background: var(--bubble-bg);
   clip-path: polygon(0 50%, 100% 0, 100% 100%);

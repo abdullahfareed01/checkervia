@@ -12,7 +12,7 @@ export type EndAction =
   | { kind: "result"; onShow: () => void };
 
 interface ActionBarProps {
-  menu: ReactNode; // the Menu button and its sheet
+  menu?: ReactNode; // the Menu button and its sheet; on one column screens it sits in the top bar (D74)
   canBack: boolean;
   canForward: boolean;
   onGo: (to: HistoryTarget) => void;
@@ -25,11 +25,13 @@ interface ActionBarProps {
 // Result) and New game, always in this order and the same size. On narrow
 // screens it is fixed to the bottom of the screen, within reach of a thumb;
 // on wide screens it is the bottom of the side panel. Nothing else on the
-// page offers these buttons, so they never move between places.
+// page offers these buttons, so they never move between places. The one
+// exception: where the bar is fixed to the bottom (one column), Menu sits at
+// the top right instead and the bar keeps four buttons (owner, 15 Nov 2026).
 export const ActionBar = memo(function ActionBar({ menu, canBack, canForward, onGo, end, needsConfirmation, onNewGame }: ActionBarProps) {
   return (
     <nav className="action-bar" aria-label="Game actions">
-      <div className="action-bar-inner">
+      <div className={`action-bar-inner${menu ? "" : " action-bar-four"}`}>
         {menu}
         <button type="button" className="bar-button" aria-label="Previous move" disabled={!canBack} onClick={() => onGo("back")}>
           <ChevronIcon direction="left" />

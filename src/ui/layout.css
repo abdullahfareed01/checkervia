@@ -44,6 +44,32 @@
     0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
+/* One column screens: Menu is in the top bar (D74), so the bar has four
+   buttons; New game stays a little wider. */
+.action-bar-four {
+  grid-template-columns: repeat(3, minmax(min-content, 1fr)) minmax(min-content, 1.3fr);
+}
+
+/* Menu at the top right (D74): the bar's tile, as wide as the empty space
+   on the title's left (.icon-button-space), so the title stays centred. */
+.topbar .menu .bar-button {
+  width: 52px;
+  height: 46px;
+  min-height: 44px;
+  gap: 2px;
+  padding: 2px;
+  border-color: rgba(201, 146, 76, 0.45);
+}
+
+.topbar .menu .bar-label {
+  font-size: 12px;
+}
+
+.topbar .menu .bar-button .icon {
+  width: 20px;
+  height: 20px;
+}
+
 /* The Menu wrapper is one of the five cells. */
 .action-bar .menu {
   display: grid;
@@ -523,6 +549,16 @@
   .bar-button {
     padding: 2px 4px;
     border-radius: 12px;
+  }
+
+  .topbar .menu .bar-button {
+    width: 44px;
+    height: 44px;
+    padding: 2px;
+  }
+
+  .topbar .menu .bar-label {
+    font-size: 12px;
   }
 }
 

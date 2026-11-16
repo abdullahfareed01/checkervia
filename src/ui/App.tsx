@@ -32,6 +32,7 @@ import { TopBar } from "./TopBar";
 import { ActionBar } from "./ActionBar";
 import type { EndAction } from "./ActionBar";
 import { GameMenu } from "./GameMenu";
+import { TWO_COLUMNS, useMediaQuery } from "./useMediaQuery";
 import { DocumentIcon, GearIcon, HomeIcon } from "./icons";
 import { LbCrown, LbTrophy, PersonIcon } from "./leaderboard/lbIcons";
 import type { MenuRun } from "./GameMenu";
@@ -319,10 +320,15 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
           ? "sleepy"
           : aiMood(state, 1 - chance);
 
+  // One column (phones, tablets, narrow windows): the action bar is fixed to
+  // the bottom and Menu moves to the top right. Two columns keep it in the bar.
+  const twoColumns = useMediaQuery(TWO_COLUMNS);
+  const gameMenu = <GameMenu items={menuItems} setup={setup} onOpenChange={setMenuOpen} />;
+
   return (
     <main className={`app${state.mode === "vs-ai" ? " app-ai" : ""}`}>
       <header className="topbar">
-        <TopBar title="Checkervia" />
+        <TopBar title="Checkervia" action={twoColumns ? undefined : gameMenu} />
         <ModeSelector mode={state.mode} needsConfirmation={inProgress} onChange={chooseMode} />
       </header>
 
@@ -349,7 +355,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
         {state.mode === "vs-ai" && recordOpen && <AiRecordDialog ai={aiStats} mine={myRecord} level={state.aiLevel} gameOver={state.winner !== null} onClose={closeRecord} />}
         <HistoryControls index={shown.index} total={shown.total} live={shown.live} moves={moves} nameOf={moveNameOf} onGo={goHistory} />
         <ActionBar
-          menu={<GameMenu items={menuItems} setup={setup} onOpenChange={setMenuOpen} />}
+          menu={twoColumns ? gameMenu : undefined}
           canBack={canGoBack(state)}
           canForward={canGoForward(state)}
           onGo={goHistory}

@@ -160,13 +160,15 @@ describe("HowToPlay", () => {
 });
 
 describe("Menu button in the game (D50)", () => {
-  it("is on the action bar, and there is no back arrow (the Menu has Main menu)", () => {
+  it("one column: at the top right, not on the action bar, and there is no back arrow (the Menu has Main menu, D74)", () => {
+    // The tests have no window, so App renders the one column layout; two
+    // columns keep Menu on the bar (tests/action-bar.test.ts).
     const html = renderToStaticMarkup(createElement(App, { onMenu: noop }));
     expect(html).not.toContain("Back to the main menu");
-    expect(html).toMatch(/<nav class="action-bar" aria-label="Game actions">[\s\S]*aria-haspopup="dialog"[\s\S]*>Menu</);
     const header = html.match(/<header class="topbar">([\s\S]*?)<\/header>/)![1]!;
-    expect(header).not.toContain("bar-button");
-    expect(header).not.toContain(">Menu<");
+    expect(header).toMatch(/aria-haspopup="dialog"[\s\S]*>Menu</);
+    const nav = html.match(/<nav class="action-bar"[\s\S]*?<\/nav>/)![0];
+    expect(nav).not.toContain(">Menu<");
   });
 
   it("uses a hamburger icon, not the dotted grid", () => {

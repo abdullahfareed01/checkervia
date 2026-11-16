@@ -437,12 +437,16 @@ h1 {
   font-weight: 600;
 }
 
-/* "Thinking..." with three dots that appear one after another. */
+/* "Thinking..." with three dots that appear one after another. The dots
+   keep their full width and one line (D84): they are revealed by a clip, so
+   the card never changes size. (Animating the width let the dots wrap one
+   per line on narrow phones, and the board moved up and down.) */
 .dots::after {
   content: "...";
   display: inline-block;
   width: 1.2em;
   overflow: hidden;
+  white-space: nowrap;
   vertical-align: bottom;
   animation: dots 1.2s steps(4, end) infinite;
   color: var(--side);
@@ -450,10 +454,10 @@ h1 {
 
 @keyframes dots {
   from {
-    width: 0;
+    clip-path: inset(0 100% 0 0);
   }
   to {
-    width: 1.2em;
+    clip-path: inset(0 0 0 0);
   }
 }
 

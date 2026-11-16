@@ -3,6 +3,10 @@ import { useEffect, useState } from "react";
 // Phones held sideways only: the two column layout.
 export const LANDSCAPE_PHONE = "(orientation: landscape) and (max-height: 599px) and (min-width: 560px)";
 
+// The game's two column layout (desktop, and phones held sideways): the
+// action bar is the bottom of the side panel. The same query as layout.css.
+export const TWO_COLUMNS = `(min-width: 900px) and (min-height: 600px), ${LANDSCAPE_PHONE}`;
+
 // The query's current answer; false where there is no browser (tests).
 function matches(query: string): boolean {
   return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(query).matches;
