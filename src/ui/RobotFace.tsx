@@ -1,4 +1,4 @@
-// The AI's robot with a face that shows its mood (D64, more moods D71), on the AI card and
+// The AI's robot with a face that shows its mood (D64b, more moods D71), on the AI card and
 // next to its chat bubble. The same white robot as before (dark visor, blue
 // eyes); the eyes, the mouth and the antenna light change with the mood,
 // and the head bounces when it laughs (with a tear) and shakes when it is

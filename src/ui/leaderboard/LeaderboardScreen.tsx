@@ -67,7 +67,7 @@ const MIN_ROWS_HEIGHT = 170;
 
 /**
  * Whether the screen is too short to keep the top fixed with a rows box
- * of its own (D64). Measured, not guessed from the window: the room left
+ * of its own (D64a). Measured, not guessed from the window: the room left
  * for the rows is the same in both layouts (the top above them does not
  * change), so the choice never flips back and forth.
  */
@@ -112,7 +112,7 @@ export function LeaderboardScreen({ onClose, onOwnProfile }: LeaderboardScreenPr
   const [level, setLevel] = useState<AiLevel>(4);
   const [period, setPeriod] = useState<Period>("week");
   const [openProfile, setOpenProfile] = useState<{ username: string; rank: number } | null>(null);
-  // The ranking rules, behind the (i) beside the reset line (D64).
+  // The ranking rules, behind the (i) beside the reset line (D64a).
   const [rulesOpen, setRulesOpen] = useState(false);
   const { state, retry, loadMore } = useLeaderboardPage(level, period);
   const { profile } = useLeaderboardProfile();

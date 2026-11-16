@@ -212,7 +212,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   // Resign (Change 4): the player against the AI, otherwise the side to move.
   const resignQuestion =
     state.mode === "vs-ai" ? "Resign this game? The AI wins." : `Resign this game? ${state.currentPlayer === "black" ? "White" : "Black"} wins.`;
-  // Focus mode (D87): the big board, the cards and the AI only; remembered
+  // Focus mode (D88): the big board, the cards and the AI only; remembered
   // on this device. Its action bar is gone, so New game and Resign (Result
   // once the game is over) move to the top of the Menu, with the same
   // questions as on the bar.
@@ -324,7 +324,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
     why.open && why.explanation ? [...why.explanation.facts.map((fact) => fact.text), why.explanation.reason ?? ""].join(" ") : null;
   useVoice({ bubble: result.open ? null : bubble, level: state.aiLevel, startedMove, endLine, why: whyText });
   const speakTips = useSpeakTips(state.aiLevel);
-  // The AI under the board (D64): its robot with its mood and its bubble.
+  // The AI under the board (D64b): its robot with its mood and its bubble.
   // Chat lines can be hidden (Settings; the AI's voice says the same either
   // way), and then only the robot shows.
   const showBubbles = settings.chat.bubbles;

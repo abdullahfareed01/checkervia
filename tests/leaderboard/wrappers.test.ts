@@ -1,6 +1,6 @@
 // The Netlify wrappers before the owner has set the Supabase variables:
 // every function answers the calm 503, and the log names the variables, never values.
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import checkUsername from "../../netlify/functions/check-username";
 import claimUsername from "../../netlify/functions/claim-username";
 import getLeaderboard from "../../netlify/functions/get-leaderboard";
@@ -10,7 +10,14 @@ import submitWin from "../../netlify/functions/submit-win";
 import updateProfile from "../../netlify/functions/update-profile";
 import getAiStats from "../../netlify/functions/get-ai-stats";
 
-afterEach(() => vi.restoreAllMocks());
+// Unset here, whatever the shell has, so these tests never reach a real database.
+beforeEach(() => {
+  for (const name of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "LEADERBOARD_HASH_SALT"]) vi.stubEnv(name, undefined);
+});
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 describe("leaderboard functions without configuration", () => {
   it.each([

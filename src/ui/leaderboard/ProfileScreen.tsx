@@ -9,7 +9,7 @@
 // for the player), the public notice with its required "I understand", then
 // Save. There is no Skip: Back leaves.
 //
-// The own profile (D64) opens as a view: the avatar, flag and the stats in
+// The own profile (D64a) opens as a view: the avatar, flag and the stats in
 // little room. A pencil on the avatar opens the edit page, with an (i) that
 // shows the rules for the username, flag and avatar; Cancel or Save returns
 // to the view.
@@ -540,7 +540,7 @@ function Saved({ profile, firstGame, onDone }: { profile: Profile; firstGame: bo
 
 // ---------- The own profile ----------
 
-/** The compact card at the top of the own profile: avatar with its flag, name, country (D64). */
+/** The compact card at the top of the own profile: avatar with its flag, name, country (D64a). */
 function IdentityCard({ profile, onEdit, titleId }: { profile: Profile; onEdit: (() => void) | undefined; titleId: string }) {
   return (
     <section className="pf-id" aria-labelledby={titleId}>
@@ -688,7 +688,7 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
   const [stats, setStats] = useState<Stats>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [nextRename, setNextRename] = useState<string | null>(null);
-  // D64: the profile opens as a view; the pencil on the avatar opens the
+  // D64a: the profile opens as a view; the pencil on the avatar opens the
   // edit page, whose username and avatar rows open pages of their own.
   const { page, open, back, onKeyDown } = usePages<OwnPage>({ name: "edit", avatar: "edit" });
   const [rulesOpen, setRulesOpen] = useState(false);

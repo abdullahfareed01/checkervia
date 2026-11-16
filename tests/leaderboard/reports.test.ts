@@ -5,7 +5,7 @@
 // Supabase adapter and migration 4 (in PGlite) do the same.
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { handleClaimUsername } from "../../netlify/leaderboard/handlers/claimUsername";
 import { handleGetProfile } from "../../netlify/leaderboard/handlers/getProfile";
 import { handleReportAbandon } from "../../netlify/leaderboard/handlers/reportAbandon";
@@ -87,6 +87,8 @@ describe("report-abandon", () => {
   });
 
   it("the Netlify wrapper answers the calm 503 before the Supabase variables are set", async () => {
+    // Unset here, whatever the shell has, so the test never reaches a real database.
+    for (const name of ["SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "LEADERBOARD_HASH_SALT"]) vi.stubEnv(name, undefined);
     const original = console.error;
     console.error = () => {};
     try {
@@ -94,6 +96,7 @@ describe("report-abandon", () => {
       expect(response.status).toBe(503);
     } finally {
       console.error = original;
+      vi.unstubAllEnvs();
     }
   });
 });

@@ -1,4 +1,4 @@
-// Focus mode (D87): the title, the two cards, a big board and the AI with
+// Focus mode (D88): the title, the two cards, a big board and the AI with
 // its bubble; New game and Resign in the Menu; a small mute button that
 // hides and silences the AI's lines while its face keeps reacting.
 import { readFileSync } from "node:fs";

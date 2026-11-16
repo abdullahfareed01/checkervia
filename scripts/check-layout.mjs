@@ -145,7 +145,7 @@ const SCREENS = {
   "game-confirm": { query: "?lb=populated&scenario=react", steps: until(".board") + playMove + `await new Promise(r => setTimeout(r, 1500));` + click(".menu > .bar-button") + clickText(".menu-tile", "Main menu") + until(".confirm-dialog"), layer: ".confirm-dialog" },
   "game-language": { query: "?lb=populated&scenario=react-strong", steps: click(".chip-adult") + until(".language-info"), layer: ".language-info" },
   "game-ai-record": { query: "?lb=populated&scenario=react", steps: click(".coach-avatar-button") + until(".airec"), layer: ".airec" },
-  // Focus mode (D87): the big board while playing, and once the game is over
+  // Focus mode (D88): the big board while playing, and once the game is over
   // (result panel closed) the hint beside the button that leaves it.
   "game-focus": { query: "?lb=populated&scenario=react", focus: true, steps: until(".app-focus .board"), layer: ".app" },
   "game-focus-over": { query: "?lb=populated&testwin=strongest", focus: true, steps: until(".result-backdrop") + `document.querySelector(".result-backdrop").click(); await new Promise(r => setTimeout(r, 500));` + until(".focus-hint"), layer: ".app" },
@@ -196,7 +196,7 @@ const CHECK = (layerSelector, touch) => `(() => {
     window.scrollTo(0, 0);
     const bar = document.querySelector('.action-bar-inner');
     const barTop = bar ? bar.getBoundingClientRect().top : vh;
-    // Focus mode (D87) has no turn pill (the cards say whose turn it is) and no action bar.
+    // Focus mode (D88) has no turn pill (the cards say whose turn it is) and no action bar.
     const parts = layer.matches('.app-focus') ? ['.card-top', '.board-frame', '.card-bottom'] : ['.card-top', '.board-frame', '.card-bottom', '.status-pill', '.action-bar-inner'];
     if (layer.matches('.app-ai')) parts.push('.coach', '.speech');
     for (const sel of parts) {

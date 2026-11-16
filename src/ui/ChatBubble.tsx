@@ -28,7 +28,7 @@ interface ChatBubbleProps {
 }
 
 // The AI's chat bubble in a slot of fixed size beside its robot under the
-// board (D64), with a tail pointing at the robot. The slot is always there
+// board (D64b), with a tail pointing at the robot. The slot is always there
 // in a game against the AI, so nothing moves when a line comes or goes.
 // Long lines are clipped to whole lines (3 on phones, 4 on larger screens)
 // by CSS. A separate screen reader live region announces each new line once.

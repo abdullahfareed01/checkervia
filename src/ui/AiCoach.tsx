@@ -11,12 +11,12 @@ interface AiCoachProps {
   whyOpen: boolean;
   onWhy: () => void;
   onAvatar?: () => void; // opens the AI's record (D77)
-  // Focus mode's small mute button (D87): hides and silences the AI's lines;
+  // Focus mode's small mute button (D88): hides and silences the AI's lines;
   // its face keeps reacting.
   mute?: { muted: boolean; onToggle: () => void } | undefined;
 }
 
-// The AI under the board (D64), as on chess.com: its robot on the left,
+// The AI under the board (D64b), as on chess.com: its robot on the left,
 // showing its mood, and its chat bubble beside it with the tail pointing at
 // it. It replaces the bubble that sat between the AI card and the board,
 // and the "AI played ... Why?" note. The row keeps one height, so nothing

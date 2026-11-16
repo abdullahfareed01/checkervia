@@ -7,7 +7,7 @@
    - Phones: squares of at least 44px at 375px wide (coordinates in the
      squares, a 3px frame), and the title, both cards, the board, the status
      line and the bar all on screen at 375x650 (the AI and its bubble come
-     under the status line, D64). */
+     under the status line, D64b). */
 
 :root {
   --bar-h: 56px; /* the action bar's buttons */
@@ -462,7 +462,7 @@
    The board also shrinks with the height, so the status line stays above
    the fixed bar: the title block (about 141px), two cards, the chance to
    win bar (D65), the status line, the bar (D67) and the gaps take about 488px,
-   plus the AI card's extra height (--slot-space, D64). */
+   plus the AI card's extra height (--slot-space, D64b). */
 
 @media (min-width: 600px) and (not ((min-width: 900px) and (min-height: 600px))) and (not ((orientation: landscape) and (max-height: 599px))) {
   .app {
@@ -491,7 +491,7 @@
        wide screens the height decides instead: the title (as on the splash
        screen, D65), two cards, the chance to win bar, the status line, the
        action bar (floating, D67) and the gaps take 278px, plus the AI
-       card's extra height (--slot-space, D64). */
+       card's extra height (--slot-space, D64b). */
     --board-size: min(calc(100vw - 16px), 560px, max(240px, calc(100dvh - 278px - var(--slot-space, 0px))));
   }
 

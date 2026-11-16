@@ -2236,7 +2236,7 @@
   }
 }
 
-/* ---------- The leaderboard screen's frame (D63, D64) ----------
+/* ---------- The leaderboard screen's frame (D63, D64a) ----------
    The screen fills the window and never scrolls as a whole: the title,
    filters, podium and "Your place" stay put, and only the rows (4, 5, 6 and
    on, with Load more) scroll, in their own box with a gold scroll bar. On a
@@ -2359,7 +2359,7 @@
   background: linear-gradient(180deg, #f2c25a, #b8782a);
 }
 
-/* ---------- The (i) buttons and their popup (D64) ---------- */
+/* ---------- The (i) buttons and their popup (D64a) ---------- */
 
 .lb-info-button {
   display: inline-grid;
@@ -2500,7 +2500,7 @@
   margin: 12px 20px 18px;
 }
 
-/* ---------- The own Profile screen: view first, a pencil to edit (D64) ---------- */
+/* ---------- The own Profile screen: view first, a pencil to edit (D64a) ---------- */
 
 .lb-hero-edit {
   position: absolute;
@@ -2534,7 +2534,7 @@
   margin: 0 0 10px;
 }
 
-/* ---------- The compact own profile (after "Compact Profile Editor Mockup", D64) ----------
+/* ---------- The compact own profile (after "Compact Profile Editor Mockup", D64a) ----------
    Made to fit a 390 by 844 phone without scrolling: a short identity card,
    then the stats, or the edit card with three lean panels. */
 

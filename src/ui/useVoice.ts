@@ -23,7 +23,7 @@ export function bubbleKind(message: BubbleMessage | null): SpokenKind | null {
 
 /**
  * Speaks `text` if the voice and this kind of message are switched on.
- * Muted chat (D87: Show chat bubbles off, or the mute button in focus mode)
+ * Muted chat (D88: Show chat bubbles off, or the mute button in focus mode)
  * silences the AI's own lines too; the Why card and the tips, which the
  * player asks for, are still read.
  */
