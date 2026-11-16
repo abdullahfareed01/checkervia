@@ -401,7 +401,7 @@ export function ChatIcon() {
   );
 }
 
-// ---------- Focus mode (D87) ----------
+// ---------- Focus mode (D88) ----------
 
 // Four corners pointing out, for Focus mode.
 export function FocusIcon() {

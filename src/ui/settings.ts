@@ -48,10 +48,10 @@ export interface Settings {
     readonly lastMove: boolean;
   };
   readonly chat: {
-    readonly bubbles: boolean; // off: the AI's lines are neither shown nor spoken (D87)
+    readonly bubbles: boolean; // off: the AI's lines are neither shown nor spoken (D88)
   };
   readonly view: {
-    readonly focus: boolean; // focus mode: the big board, the cards and the AI only (D87)
+    readonly focus: boolean; // focus mode: the big board, the cards and the AI only (D88)
   };
 }
 

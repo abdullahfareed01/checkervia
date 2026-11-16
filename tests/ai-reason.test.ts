@@ -1,4 +1,4 @@
-// Render checks for the AI's move line in its bubble under the board (D64)
+// Render checks for the AI's move line in its bubble under the board (D64b)
 // and what "Why?" shows (Change 2; the look is checked by eye in the browser).
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
@@ -25,7 +25,7 @@ function afterAiMove(reason: string | null): GameState {
 }
 
 // The AI row under the board with a reaction to the AI move on screen, and
-// Why? when that move has something to explain (D64, D65).
+// Why? when that move has something to explain (D64b, D65).
 const note = (state: GameState, open = false) => {
   const explanation = explainShown(state.mode, displayedPosition(state));
   if (!hasWhy(explanation)) return "";
@@ -47,7 +47,7 @@ describe("explainShown", () => {
   });
 });
 
-describe("Why? in the bubble (D64, D65)", () => {
+describe("Why? in the bubble (D64b, D65)", () => {
   it("shows only the line and a collapsed Why? after an AI move, beside the robot", () => {
     const html = note(afterAiMove("Keeps the centre."));
     expect(html).toContain("Nice try.");

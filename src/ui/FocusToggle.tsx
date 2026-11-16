@@ -9,7 +9,7 @@ interface FocusToggleProps {
   gameKey: number; // a new game brings the hint back after the next result
 }
 
-// The top bar's left slot (D87): the big screen symbol turns focus mode on,
+// The top bar's left slot (D88): the big screen symbol turns focus mode on,
 // the small screen symbol turns it off. Once a game in focus mode is over, a
 // hint points at the small screen symbol, as the way back to the move list
 // and the action bar; it stays until used or closed, and comes back after
@@ -45,7 +45,7 @@ export function FocusToggle({ focus, onChange, gameOver, gameKey }: FocusToggleP
 }
 
 /**
- * The offer of focus mode (D87): at the start of a game outside focus mode,
+ * The offer of focus mode (D88): at the start of a game outside focus mode,
  * a slim pill until the player's first move, a tap on it or Close; it comes
  * back with the next game. It floats where nothing is lost: over the chance
  * bar, which shows 50 to 50 at the start (one column), or in the empty move

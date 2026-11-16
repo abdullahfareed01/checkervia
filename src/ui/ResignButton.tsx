@@ -6,7 +6,7 @@ interface ResignButtonProps {
   question: string; // e.g. "Resign this game? The AI wins."
   highlight: boolean; // the engine proved the position lost (the resign hint)
   onResign: () => void;
-  compact?: boolean; // focus mode (D87): a small flag only, beside the mute button
+  compact?: boolean; // focus mode (D88): a small flag only, beside the mute button
 }
 
 // Resign (Change 4), on the action bar: asks in a confirmation sheet first.

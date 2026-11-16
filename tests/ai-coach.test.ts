@@ -1,4 +1,4 @@
-// The AI under the board (D64): the robot's mood, its faces, and where the
+// The AI under the board (D64b): the robot's mood, its faces, and where the
 // robot and its bubble sit on the game screen.
 import { readFileSync } from "node:fs";
 import { createElement } from "react";
@@ -94,7 +94,7 @@ describe("the robot's faces", () => {
   });
 });
 
-describe("the game screen against the AI (D64)", () => {
+describe("the game screen against the AI (D64b)", () => {
   const html = renderToStaticMarkup(createElement(App, { initial: { mode: "vs-ai", aiLevel: 2 } }));
 
   it("the board comes right after the AI card: no bubble between them", () => {

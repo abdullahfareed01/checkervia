@@ -279,12 +279,12 @@
 - Tests: 1233 passing in 68 files (`wrappers.test.ts` needs the shell's SUPABASE variables unset, since it checks the unconfigured answer). Typecheck clean.
 - Browser check (headless Edge, `?lb=` previews): 320 by 568, 375 by 667, 375 by 812, 390 by 844, 430 by 932 and 800 by 1000, populated, long names and few players; no sideways overflow; ranks 4 to 7 fully visible at 390 by 844.
 
-## 15 Nov 2026: Profile view first, rules behind (i), clean circles, the rows scroll (D64)
+## 15 Nov 2026: Profile view first, rules behind (i), clean circles, the rows scroll (D64a)
 - The own Profile opens as a view with a pencil on the avatar; the edit form opens on the same screen with an (i) for the username, flag and avatar rules. The ranking tie line is replaced by an (i) popup, "How the ranking works", with the full order and an example. Avatars are clean circles; leaderboard flags are round badges. Only the rows box scrolls; the screen never scrolls as a whole.
 - Tests: 1235 passing in 68 files. Typecheck clean.
 - Browser check (headless Edge): 320 by 568, 375 by 667, 375 by 812, 390 by 844, 1280 by 900 and 844 by 390; wheel, touch and Load more on the rows box.
 
-## 15 Nov 2026: The AI under the board, with a face (D64)
+## 15 Nov 2026: The AI under the board, with a face (D64b)
 - The bubble between the AI card and the board is gone; the robot and its bubble sit under the status line as on chess.com, replacing the "AI played ... Why?" note; the robot laughs, gets angry, smiles and thinks; the AI card is a little taller with a larger robot.
 - Tests: 1247 passing in 69 files (with the shell's SUPABASE variables unset). Typecheck clean.
 - Browser check (headless Edge, `?scenario=react`, playing the planted blunder against the real AI): 320 by 568, 375 by 667, 390 by 844, 1280 by 800 and 844 by 390; the face went neutral, thinking, laughing; no sideways overflow; the status line above the action bar on phones.
@@ -391,3 +391,9 @@
 - Found on the live database: migrations 3 and 4 are not run, so resigned games are not recorded at all yet.
 - Tests: 1445 passing in 79 files (with the shell's SUPABASE variables unset); typecheck passes.
 - Needs the owner: run `leaderboard-migration-3.sql` (now with the profile's resignations), then `leaderboard-migration-4.sql`, in Supabase.
+
+## 16 Nov 2026: Focus mode and the AI's mute button (D88)
+- Focus mode shows only the title, the two cards, a big board and the AI with its bubble; New game and Resign move to the Menu. It is offered at the start of a game and remembered on this device. A small mute button hides and silences the AI's lines.
+- The leaderboard wrapper tests now unset the Supabase variables themselves, so they pass with the shell's variables set and never reach the live database.
+- Housekeeping: D64 split into D64a and D64b; focus mode, first labelled D87, is D88.
+- Tests: 1465 passing in 80 files; typecheck and build pass.

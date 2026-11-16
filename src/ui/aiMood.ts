@@ -1,4 +1,4 @@
-// The AI's face (D64): how the robot looks right now, worked out from the
+// The AI's face (D64b): how the robot looks right now, worked out from the
 // game state alone, so it can be tested without a browser. The robot is a
 // cocky rival (D43): it laughs at the player's slips and at its own big
 // captures, looks pleased with a capture, gets angry when the player plays

@@ -1,4 +1,4 @@
-/* The AI under the board (D64): its robot with its mood and its chat
+/* The AI under the board (D64b): its robot with its mood and its chat
    bubble, as on chess.com, and what "Why?" shows (Change 2). The bubble no
    longer sits between the AI card and the board: the board is right under
    the card, and the AI card is a little taller instead. Flat, no glow. */
@@ -326,7 +326,7 @@
   }
 }
 
-/* ---------- The robot's moods (D64) ----------
+/* ---------- The robot's moods (D64b) ----------
    A new face pops in; a laugh bounces the head and sheds a tear, anger
    shakes it and turns the antenna light red, a capture gets
    a small nod. Only at the Standard and Cinematic animation levels. */

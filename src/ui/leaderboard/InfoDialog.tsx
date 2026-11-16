@@ -1,4 +1,4 @@
-// The rules behind an (i) button (D64), in a calm popup over the screen:
+// The rules behind an (i) button (D64a), in a calm popup over the screen:
 // how the ranking works on the leaderboard, and the rules for the username,
 // flag and avatar on the Profile screen. Escape, the close button or a tap
 // outside close it, and the focus goes back to the (i) button.

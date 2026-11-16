@@ -23,11 +23,11 @@ interface PlayerCardProps {
   captured: number; // opponent pieces this side has taken
   toMove: boolean;
   thinking: boolean;
-  mood?: AiMood | undefined; // the robot's face (D64); thinking when unset and thinking
+  mood?: AiMood | undefined; // the robot's face (D64b); thinking when unset and thinking
   portrait?: string | null | undefined; // the player's chosen avatar id (D65); a person icon without one
   winner: boolean;
   placement: "top" | "bottom";
-  action?: ReactNode; // focus mode's small Resign, after the turn (D87)
+  action?: ReactNode; // focus mode's small Resign, after the turn (D88)
 }
 
 function sideName(player: Player): string {

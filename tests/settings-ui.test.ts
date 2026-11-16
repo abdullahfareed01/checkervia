@@ -217,7 +217,7 @@ describe("Settings: where it opens, and the chat bubble switch", () => {
     expect(source).toMatch(/\{ label: "Settings", icon: <GearIcon \/>, onSelect: \(\) => setSettingsOpen\(true\) \}/);
   });
 
-  it("chat bubbles off: the AI keeps its robot under the board but says no chat lines (D64)", () => {
+  it("chat bubbles off: the AI keeps its robot under the board but says no chat lines (D64b)", () => {
     const chat = { key: "move-2", text: "Oops, my piece now.", tone: "roast" as const, why: true };
     const lastWords = { key: "end-9", text: "Game over. Hahaha!", tone: "banter" as const, why: false, announce: false };
     expect(coachMessage(chat, true, null)).toBe(chat);

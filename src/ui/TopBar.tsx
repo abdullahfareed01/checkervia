@@ -35,7 +35,7 @@ export const GameTitle = memo(function GameTitle({ text, large = false }: { text
 interface TopBarProps {
   title: string;
   onBack?: (() => void) | undefined; // a back arrow, where it is the only way out (Learn)
-  lead?: ReactNode; // the game's focus mode button, in the left slot (D87)
+  lead?: ReactNode; // the game's focus mode button, in the left slot (D88)
   action?: ReactNode; // the game's Menu, top right, on one column screens
 }
 

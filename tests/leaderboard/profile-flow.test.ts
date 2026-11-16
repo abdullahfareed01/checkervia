@@ -104,7 +104,7 @@ describe("the first game against the AI", () => {
     expect(PUBLIC_NOTICE).toBe("Your username, flag and wins are public on the leaderboard.");
   });
 
-  // D64: the own profile opens as a view; a pencil on the avatar opens the form.
+  // D64a: the own profile opens as a view; a pencil on the avatar opens the form.
   it("with a profile the screen opens as a view, with a pencil on the avatar and no form", () => {
     leaderboardStore.setProfile(PROFILE);
     const html = renderToStaticMarkup(createElement(ProfileScreen, { onClose: noop, onTerms: noop }));

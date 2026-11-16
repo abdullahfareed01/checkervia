@@ -49,7 +49,7 @@ describe("the action bar", () => {
     expect(media).toContain("export const TWO_COLUMNS = `(min-width: 900px) and (min-height: 600px), ${LANDSCAPE_PHONE}`;");
     expect(css("layout.css")).toContain("@media (min-width: 900px) and (min-height: 600px), (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {");
     const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
-    // In focus mode (D87) there is no action bar, so the Menu is always in the top bar.
+    // In focus mode (D88) there is no action bar, so the Menu is always in the top bar.
     expect(source).toContain('action={twoColumns && !focus ? undefined : gameMenu}');
     expect(source).toContain("menu={twoColumns ? gameMenu : undefined}");
   });
@@ -138,7 +138,7 @@ describe("phone sizes (CSS)", () => {
 
   it("every bar button and Why? is at least 44 x 44", () => {
     expect(layout).toMatch(/\.bar-button \{[^}]*min-width: 44px;[^}]*min-height: 44px;/);
-    // D64: Why? lives only in the bubble now (the separate note is gone).
+    // D64b: Why? lives only in the bubble now (the separate note is gone).
     expect(layout).toMatch(/\.speech-why \{\r?\n  min-width: 44px;\r?\n  min-height: 44px;/);
   });
 

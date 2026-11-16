@@ -67,9 +67,9 @@ export function cardFor(
   player: Player,
   placement: "top" | "bottom",
   onAdultInfo?: () => void, // opens the language rules (Strongest's 18+ badge)
-  mood: AiMood = "neutral", // the AI's face (D64)
+  mood: AiMood = "neutral", // the AI's face (D64b)
   portrait: string | null = null, // the player's chosen avatar id (D65)
-  action?: ReactNode, // focus mode's small Resign, after the turn (D87)
+  action?: ReactNode, // focus mode's small Resign, after the turn (D88)
 ) {
   const counts = pieceCounts(board);
   const isAi = state.mode === "vs-ai" && player === aiSideOf(state);
