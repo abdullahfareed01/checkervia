@@ -15,6 +15,7 @@ import type { BubbleTone } from "./ChatBubble";
 import { createIdleTimer, createPressureTimer, idleDelay } from "./idleTimer";
 import { nextRound, readSession, withResult, writeSession } from "./session";
 import { vsAiRecordStore } from "./vsAiRecord";
+import type { VsAiOutcome } from "./vsAiRecord";
 
 export interface EndLine {
   readonly text: string;
@@ -23,6 +24,7 @@ export interface EndLine {
 
 /** Which bank the end of game line comes from. */
 export function endContext(state: GameState): LineContext {
+  if (state.abandoned) return "abandoned"; // the AI reported the player (D85)
   if (state.resignedBy) return "resigned";
   if (state.winner !== aiSideOf(state)) return "playerWon";
   // The engine proved it lost and the player played on anyway (D69).
@@ -42,6 +44,16 @@ export function greetingContext(last: "won" | "lost" | null): LineContext {
  */
 export function isSubmittableWin(state: GameState): boolean {
   return state.mode === "vs-ai" && state.winner !== null && state.winner !== aiSideOf(state) && state.resignedBy === null;
+}
+
+/**
+ * A finished game against the AI for this device's record: a win, a loss,
+ * or a resignation when the player pressed Resign. An abandoned game (D85)
+ * ends like a resignation but is a plain loss.
+ */
+export function vsAiOutcomeOf(state: GameState): VsAiOutcome {
+  if (state.winner !== aiSideOf(state)) return "win";
+  return state.resignedBy !== null && !state.abandoned ? "resigned" : "loss";
 }
 
 /** The player's moves of the game, for the tips. */
@@ -82,8 +94,9 @@ function pressurePart(now: { count: number; showing: boolean; text: string | nul
 // The AI's wins, whose last line ends with a random laugh (D69).
 const AI_WINS: readonly LineContext[] = ["aiWon", "aiWonBlunder", "aiWonStubborn"];
 
-// True while the page is on screen (the idle timer pauses otherwise).
-function usePageVisible(): boolean {
+// True while the page is on screen (the idle timer pauses otherwise; so
+// does the abandon timer, D85).
+export function usePageVisible(): boolean {
   const [visible, setVisible] = useState(() => typeof document === "undefined" || document.visibilityState !== "hidden");
   useEffect(() => {
     if (typeof document === "undefined") return undefined;
@@ -119,9 +132,10 @@ export function usePersonality(state: GameState, idleAllowed: boolean, busy = fa
   // A: the greeting, fresh for every game against the AI.
   const [greeting, setGreeting] = useState<string | null>(null);
   useEffect(() => {
-    // None when the AI opens (the player is White, D81): the greetings say
-    // "your move first".
-    setGreeting(ai && state.currentPlayer === state.humanSide ? say(greetingContext(readSession().last)) : null);
+    // When the AI opens (the player is White, D81) its first line comes
+    // after its first move, from its own bank: the greetings say "your move
+    // first" (D85).
+    setGreeting(ai ? say(state.currentPlayer === state.humanSide ? greetingContext(readSession().last) : "aiOpens") : null);
   }, [game, ai]);
 
   // B: idle lines, after 30 seconds and then every 5 until the player moves.
@@ -191,12 +205,13 @@ export function usePersonality(state: GameState, idleAllowed: boolean, busy = fa
       recordedFor.current = game;
       writeSession(withResult(readSession(), state.winner !== aiSideOf(state)));
       // The player's own totals on this device (D75).
-      vsAiRecordStore.add(state.winner !== aiSideOf(state) ? "win" : state.resignedBy ? "resigned" : "loss");
+      vsAiRecordStore.add(vsAiOutcomeOf(state));
     }
     const context = endContext(state);
     const text = AI_WINS.includes(context) ? withWinLaugh(say(context), state.aiLevel) : say(context);
     setEnd({ line: { text, tone: TONES[context] ?? "banter" }, tips: null });
-    if (state.winner !== aiSideOf(state)) return undefined;
+    // No tips after a win by the AI, nor after an abandoned game (D85).
+    if (state.winner !== aiSideOf(state) || state.abandoned) return undefined;
     let cancelled = false;
     const kingsMade = { player: state.stats[state.humanSide].kingsMade, ai: state.stats[aiSideOf(state)].kingsMade };
     void gameTips(playedPositions(state), kingsMade, analyze, state.humanSide).then((tips) => {

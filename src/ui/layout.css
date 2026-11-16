@@ -12,7 +12,6 @@
 :root {
   --bar-h: 56px; /* the action bar's buttons */
   --bar-pad: 6px;
-  --bar-float: 0px; /* the gap under the bar where it floats (phones, D67) */
 }
 
 /* ---------- The action bar (D67, after the owner's mockup "Polished
@@ -50,24 +49,33 @@
   grid-template-columns: repeat(3, minmax(min-content, 1fr)) minmax(min-content, 1.3fr);
 }
 
-/* Menu at the top right (D74): the bar's tile, as wide as the empty space
-   on the title's left (.icon-button-space), so the title stays centred. */
-.topbar .menu .bar-button {
+/* Menu at the top right (D74): only the hamburger lines, with no tile, rim
+   or label on screen (owner, D86); the label stays for screen readers. As
+   wide as the empty space on the title's left (.icon-button-space), so the
+   title stays centred, and 44px or more to tap. */
+.topbar .menu .bar-button,
+.topbar .menu .bar-button:hover:not(:disabled) {
   width: 52px;
   height: 46px;
   min-height: 44px;
-  gap: 2px;
   padding: 2px;
-  border-color: rgba(201, 146, 76, 0.45);
+  border-color: transparent;
+  background: none;
+  box-shadow: none;
 }
 
 .topbar .menu .bar-label {
-  font-size: 12px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .topbar .menu .bar-button .icon {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
 }
 
 /* The Menu wrapper is one of the five cells. */
@@ -184,7 +192,9 @@
 
 /* One column (phones upright, tablets, narrow windows): the bar is fixed to
    the bottom of the screen and the page keeps room for it, so nothing
-   hides behind it. */
+   hides behind it. It sits right on the bottom edge with no gold rim and
+   square bottom corners (owner, D86); the phone's home bar space is inside
+   the bar, so nothing shows under it. */
 .action-bar {
   position: fixed;
   left: 0;
@@ -192,19 +202,23 @@
   bottom: 0;
   display: flex;
   justify-content: center;
-  padding: 0 8px max(var(--bar-float), env(safe-area-inset-bottom));
+  padding: 0 8px;
   pointer-events: none; /* only the bar itself takes taps, not the gutters */
 }
 
 .action-bar-inner {
   width: 100%;
   max-width: var(--board-size);
+  padding-bottom: calc(var(--bar-pad) + env(safe-area-inset-bottom));
+  border: none;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
   pointer-events: auto;
 }
 
 /* (Learn has no action bar, so no room is kept for one.) */
 .app:not(.learn) {
-  padding-bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 3px + 8px + max(var(--bar-float), env(safe-area-inset-bottom)));
+  padding-bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 8px + env(safe-area-inset-bottom));
 }
 
 /* Two columns (desktop, and phones held sideways): the bar is the bottom of
@@ -244,8 +258,12 @@
     padding: 0;
   }
 
+  /* Here the bar keeps its gold rim and round corners. */
   .action-bar-inner {
     max-width: none;
+    padding-bottom: var(--bar-pad);
+    border: 1.5px solid #c9953f;
+    border-radius: 22px;
   }
 }
 
@@ -462,7 +480,6 @@
     --bar-pad: 4px;
     --bar-gap: 4px;
     --bar-icon: 21px;
-    --bar-float: 6px;
   }
 
   .app {
@@ -543,7 +560,7 @@
   }
 
   .action-bar-inner {
-    border-radius: 18px;
+    border-radius: 18px 18px 0 0;
   }
 
   .bar-button {
@@ -551,14 +568,14 @@
     border-radius: 12px;
   }
 
-  .topbar .menu .bar-button {
+  /* Hover too: the wide screen size above also holds for :hover, and a tap
+     on a phone leaves the button hovered, so without it the button grew to
+     52 by 46 on every tap and shook the title row. */
+  .topbar .menu .bar-button,
+  .topbar .menu .bar-button:hover:not(:disabled) {
     width: 44px;
     height: 44px;
     padding: 2px;
-  }
-
-  .topbar .menu .bar-label {
-    font-size: 12px;
   }
 }
 
@@ -1018,7 +1035,6 @@ html[data-anim="off"] .winbar-part {
 @media (max-width: 599px) and (max-height: 739px) and (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
   :root {
     --bar-h: 44px;
-    --bar-float: 4px;
   }
 
   .app {

@@ -126,8 +126,9 @@ const SCREENS = {
   "board-empty": { query: "?lb=empty", steps: click(".menu-card-leaderboard") + until(".lb-board"), layer: ".lb-backdrop" },
   "board-error": { query: "?lb=error", steps: click(".menu-card-leaderboard") + until(".lb-board .lb-button, .lb-board .lb-state"), layer: ".lb-backdrop" },
   "board-info": { query: "?lb=populated", steps: click(".menu-card-leaderboard") + until(".lb-row") + click(".lb-board .lb-info-button") + until(".lb-info-backdrop"), layer: ".lb-info-backdrop" },
-  "player-sheet": { query: "?lb=populated", steps: click(".menu-card-leaderboard") + click(".lb-scroll .lb-row:not(.lb-mine)") + until(".lb-sheet-backdrop"), layer: ".lb-sheet-backdrop" },
+  "player-sheet": { query: "?lb=populated", steps: click(".menu-card-leaderboard") + clickText(".lb-period", "All time") + until(".lb-scroll .lb-row:not(.lb-mine)") + click(".lb-scroll .lb-row:not(.lb-mine)") + until(".lb-sheet-backdrop"), layer: ".lb-sheet-backdrop" },
   "profile-view": { query: "?lb=populated", steps: click(".home-profile") + until(".pf-id-edit"), layer: ".pf-backdrop" },
+  "profile-levels": { query: "?lb=populated", steps: click(".home-profile") + until('.pf-row[data-opens="levels"]') + click('.pf-row[data-opens="levels"]') + until(".pf-levels"), layer: ".pf-backdrop" },
   "profile-edit": { query: "?lb=populated", steps: click(".home-profile") + click(".pf-id-edit") + until(".pf-edit-card"), layer: ".pf-backdrop" },
   "profile-rules": { query: "?lb=populated", steps: click(".home-profile") + click(".pf-id-edit") + click(".pf-edit-card .lb-info-button") + until(".lb-info-backdrop"), layer: ".lb-info-backdrop" },
   "country-picker": { query: "?lb=populated", steps: click(".home-profile") + click(".pf-id-edit") + click(".pf-edit-card .cp-button") + until(".cp-panel"), layer: ".cp-panel" },
@@ -144,6 +145,10 @@ const SCREENS = {
   "game-confirm": { query: "?lb=populated&scenario=react", steps: until(".board") + playMove + `await new Promise(r => setTimeout(r, 1500));` + click(".menu > .bar-button") + clickText(".menu-tile", "Main menu") + until(".confirm-dialog"), layer: ".confirm-dialog" },
   "game-language": { query: "?lb=populated&scenario=react-strong", steps: click(".chip-adult") + until(".language-info"), layer: ".language-info" },
   "game-ai-record": { query: "?lb=populated&scenario=react", steps: click(".coach-avatar-button") + until(".airec"), layer: ".airec" },
+  // Focus mode (D87): the big board while playing, and once the game is over
+  // (result panel closed) the hint beside the button that leaves it.
+  "game-focus": { query: "?lb=populated&scenario=react", focus: true, steps: until(".app-focus .board"), layer: ".app" },
+  "game-focus-over": { query: "?lb=populated&testwin=strongest", focus: true, steps: until(".result-backdrop") + `document.querySelector(".result-backdrop").click(); await new Promise(r => setTimeout(r, 500));` + until(".focus-hint"), layer: ".app" },
   "game-rules": { query: "?lb=populated&scenario=duel", steps: click(".menu > .bar-button") + clickText(".menu-tile", "How to play") + until(".rules-dialog"), layer: ".rules-dialog" },
 };
 // --part 1/2 or 2/2: the first or second half of the screens (smaller runs).
@@ -173,8 +178,9 @@ const CHECK = (layerSelector, touch) => `(() => {
     const r = el.getBoundingClientRect();
     return r.width > 0 && r.height > 0;
   };
-  // Screen reader only text (the usual 1px clip).
-  const srOnly = (el) => { const r = el.getBoundingClientRect(); return r.width <= 1 && r.height <= 1; };
+  // Screen reader only text (the usual 1px clip), or text inside it.
+  const tiny = (el) => { const r = el.getBoundingClientRect(); return r.width <= 1 && r.height <= 1; };
+  const srOnly = (el) => { for (let a = el; a && a !== document.body; a = a.parentElement) if (tiny(a)) return true; return false; };
   // Decoration: hidden from assistive tech and holding no text.
   const decorative = (el) => !!el.closest('[aria-hidden="true"]') && !(el.textContent || '').trim();
 
@@ -190,7 +196,8 @@ const CHECK = (layerSelector, touch) => `(() => {
     window.scrollTo(0, 0);
     const bar = document.querySelector('.action-bar-inner');
     const barTop = bar ? bar.getBoundingClientRect().top : vh;
-    const parts = ['.card-top', '.board-frame', '.card-bottom', '.status-pill', '.action-bar-inner'];
+    // Focus mode (D87) has no turn pill (the cards say whose turn it is) and no action bar.
+    const parts = layer.matches('.app-focus') ? ['.card-top', '.board-frame', '.card-bottom'] : ['.card-top', '.board-frame', '.card-bottom', '.status-pill', '.action-bar-inner'];
     if (layer.matches('.app-ai')) parts.push('.coach', '.speech');
     for (const sel of parts) {
       const el = document.querySelector(sel);
@@ -469,9 +476,12 @@ async function checkState(browser, [width, height], variantName, screenName) {
   await s("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: touch, screenWidth: width, screenHeight: height });
   await s("Emulation.setTouchEmulationEnabled", { enabled: touch, maxTouchPoints: touch ? 5 : 0 });
   if (variant.anim === "reduced") await s("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
-  // Before the app runs: the animation level, the text size, the consent state.
+  // Before the app runs: the settings (the animation level, focus mode on
+  // only for the focus screens: one browser serves every screen of a size),
+  // the text size, the consent state.
+  const settings = { version: 1, ...(variant.anim ? { animation: { level: variant.anim, speed: 1 } } : {}), view: { focus: !!screen.focus } };
   const setup = [
-    variant.anim ? `localStorage.setItem("checkervia.settings", JSON.stringify({ version: 1, animation: { level: ${JSON.stringify(variant.anim)}, speed: 1 } }));` : "",
+    `localStorage.setItem("checkervia.settings", ${JSON.stringify(JSON.stringify(settings))});`,
     screenName === "consent" ? `for (const key of Object.keys(localStorage)) if (/consent/i.test(key)) localStorage.removeItem(key);` : "",
     variant.text !== 100 ? `document.addEventListener("DOMContentLoaded", () => { const st = document.createElement("style"); st.textContent = "html{font-size:${variant.text}%}"; document.head.prepend(st); });` : "",
   ].join("\n");

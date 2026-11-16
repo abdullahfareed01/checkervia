@@ -28,6 +28,9 @@ import {
   LevelCrown,
 } from "./lbIcons";
 import type { Tone } from "./lbIcons";
+import { longDate } from "../ConductDialogs";
+import { useShownConduct } from "../conduct";
+import { FlagIcon } from "../icons";
 import { useLeaderboardProfile } from "./profile";
 import { ProblemPanel, problemOf } from "./Problem";
 import type { Problem } from "./Problem";
@@ -193,6 +196,27 @@ export function ProfileSheet({ username, rank = null, onClose }: { username: str
 }
 
 /** The stats cards and the table by level (the profile sheet and the Profile screen). */
+// The player's own reports for abandoned games, and the suspension when
+// there is one (D85). Only in their own profile: the server sends it only
+// with their token.
+function ReportsStat({ conduct: server }: { conduct: NonNullable<ProfileResponse["conduct"]> }) {
+  // The server's count with this device's (reports it has not taken yet).
+  const conduct = useShownConduct(server);
+  const until = conduct.suspendedUntil === null ? null : Date.parse(conduct.suspendedUntil);
+  return (
+    <div className="lb-stat lb-stat-wide lb-stat-reports">
+      <span className="lb-stat-icon" aria-hidden="true">
+        <FlagIcon />
+      </span>
+      <dt>Reports</dt>
+      <dd>
+        <span className="lb-stat-number">{conduct.totalReports}</span>
+        {until !== null && !Number.isNaN(until) && <span className="lb-stat-words lb-stat-suspended">Suspended until {longDate(until)}</span>}
+      </dd>
+    </div>
+  );
+}
+
 export function ProfileStats({ profile, tone = "gold" }: { profile: ProfileResponse; tone?: Tone }) {
   const cards = [
     { key: "games", label: "Games played", value: String(profile.gamesPlayed), icon: <LbGamepad tone={tone} /> },
@@ -245,6 +269,7 @@ export function ProfileStats({ profile, tone = "gold" }: { profile: ProfileRespo
           </dd>
           <LbMountains />
         </div>
+        {profile.conduct && <ReportsStat conduct={profile.conduct} />}
       </dl>
 
       <div className="lb-levels-title" aria-hidden="true">
@@ -261,6 +286,7 @@ export function ProfileStats({ profile, tone = "gold" }: { profile: ProfileRespo
             <th scope="col">Level</th>
             <th scope="col">Wins</th>
             <th scope="col">Losses</th>
+            <th scope="col">Resigned</th>
           </tr>
         </thead>
         <tbody>
@@ -272,6 +298,7 @@ export function ProfileStats({ profile, tone = "gold" }: { profile: ProfileRespo
               </th>
               <td>{record.wins}</td>
               <td>{record.losses}</td>
+              <td>{record.resigned ?? 0}</td>
             </tr>
           ))}
         </tbody>

@@ -1,4 +1,5 @@
 -- Checkervia leaderboard, migration 3 (D75): the AI's record.
+-- Also the player's own resignations in their profile's counts.
 -- Run once in the Supabase SQL editor, after leaderboard-migration.sql and
 -- leaderboard-migration-2.sql, and before the version of the site that
 -- needs it goes live (see deployment-guide.md). Never run it twice, and
@@ -35,5 +36,25 @@ as $$
   order by g.level;
 $$;
 
+-- One player's counts for each level now also say how many of their losses
+-- were resignations, for the profile. Its result type changes, so the
+-- function is dropped and made again (the same counts as migration 1).
+drop function public.player_level_stats(uuid);
+create function public.player_level_stats(p_player uuid)
+returns table (level integer, wins bigint, best_moves integer, losses bigint, games bigint, resigned bigint)
+language sql stable
+set search_path = public
+as $$
+  select l.level,
+    (select count(*) from wins w where w.player_id = p_player and w.level = l.level and not w.hidden),
+    (select min(w.move_count) from wins w where w.player_id = p_player and w.level = l.level and not w.hidden),
+    (select count(*) from game_results g where g.player_id = p_player and g.level = l.level and g.result = 'loss'),
+    (select count(*) from game_results g where g.player_id = p_player and g.level = l.level),
+    (select count(*) from game_results g where g.player_id = p_player and g.level = l.level and g.resigned)
+  from generate_series(1, 4) as l(level);
+$$;
+
 revoke execute on function public.ai_record() from public, anon, authenticated;
+revoke execute on function public.player_level_stats(uuid) from public, anon, authenticated;
 grant execute on function public.ai_record() to service_role;
+grant execute on function public.player_level_stats(uuid) to service_role;

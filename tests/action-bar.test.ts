@@ -49,7 +49,8 @@ describe("the action bar", () => {
     expect(media).toContain("export const TWO_COLUMNS = `(min-width: 900px) and (min-height: 600px), ${LANDSCAPE_PHONE}`;");
     expect(css("layout.css")).toContain("@media (min-width: 900px) and (min-height: 600px), (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {");
     const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
-    expect(source).toContain('action={twoColumns ? undefined : gameMenu}');
+    // In focus mode (D87) there is no action bar, so the Menu is always in the top bar.
+    expect(source).toContain('action={twoColumns && !focus ? undefined : gameMenu}');
     expect(source).toContain("menu={twoColumns ? gameMenu : undefined}");
   });
 

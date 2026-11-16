@@ -164,6 +164,32 @@ export const EASY: Bank = {
     "Please move. I would hate to report my favourite player, haha.",
     "Report button warming up. One move cools it down, hehe.",
   ],
+  // D85: after the AI's first move, when it opens (the player is White)
+  aiOpens: [
+    "I went first this time. Your turn, take your time!",
+    "There, my first move is done. Now it is your go, hehe.",
+    "I opened the game. Your move, friend.",
+    "First move from me. Let us have a fun game, haha.",
+    "My move is in. Have a look and take your turn.",
+    "I started us off. Your turn now, lol.",
+    "Hello! I moved first. Tip: think about the centre squares.",
+    "I made my opening move. Good luck, have fun!",
+    "Your turn! I already made my first move, hehe.",
+    "I opened gently. Now show me your first move, haha.",
+  ],
+  // D85: the AI's last, angry line when the game is abandoned and it reports the player
+  abandoned: [
+    "That is it. I reported you. Please only start a game when you are ready.",
+    "I had to report you. You started the game and did not play.",
+    "Reported. I waited and waited. Next time, play or do not start.",
+    "Okay, I reported you. I really wanted to play, you know.",
+    "I reported you for not playing. Come back when you are ready.",
+    "Game over. I reported you, friend. Please do not do that again.",
+    "I gave you a whole minute. Nothing. So I reported you.",
+    "Reported! Starting a game means playing it.",
+    "I am sad and a little angry. I reported you.",
+    "No moves, no game. I reported you.",
+  ],
 };
 
 export const MEDIUM: Bank = {
@@ -326,5 +352,31 @@ export const MEDIUM: Bank = {
     "Starting a game and not playing it? That goes in my report, hehe.",
     "Final warning: move, or I report this game and you in it, haha.",
     "I report stalling. You are stalling. You see the problem, lol?",
+  ],
+  // D85: after the AI's first move, when it opens (the player is White)
+  aiOpens: [
+    "I moved first. Your turn, let us see what you have got, haha.",
+    "Opening move done. The ball is in your court, lol.",
+    "I started things off. Try to keep up, hehe.",
+    "First move is mine. Your turn to answer, haha.",
+    "My opening is on the board. Your move, lol.",
+    "I went first, just how I like it. Your turn now, hehe.",
+    "There we go, game on. Your move, haha.",
+    "I opened. Now it gets interesting. Your turn, lol.",
+    "My first move is down. Do not keep me waiting, hehe.",
+    "I set the pace. Your move, haha.",
+  ],
+  // D85: the AI's last, angry line when the game is abandoned and it reports the player
+  abandoned: [
+    "That is it. I reported you. Enjoy that, haha.",
+    "Reported. Do not start games you do not play.",
+    "I warned you. Now I reported you. Bye, lol.",
+    "Game abandoned, and yes, I reported you, hehe.",
+    "You wasted my time, so I reported you. Fair is fair.",
+    "Reported! Maybe next time you actually move, haha.",
+    "I am done. Reported. Go think about what you did, lol.",
+    "No move for a whole minute? Reported, hehe.",
+    "I reported you. Starting a game is a promise to play it.",
+    "Enough waiting. Reported. Goodbye, haha.",
   ],
 };

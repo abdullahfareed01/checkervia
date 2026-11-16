@@ -58,6 +58,7 @@ function crownedBy(entry: HistoryEntry | undefined, previous: HistoryEntry | und
 export function aiMood(state: GameState, aiChance = 0.5): AiMood {
   if (state.mode !== "vs-ai" || state.viewIndex !== null) return "neutral";
   const ai = aiSideOf(state);
+  if (state.abandoned) return "angry"; // it reported the player (D85)
   if (state.winner) return state.winner === ai ? "laughing" : "defeated";
   const calm = aiChance >= SMUG_FROM ? "smug" : aiChance < NERVOUS_UNDER ? "nervous" : "neutral";
 

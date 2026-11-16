@@ -21,9 +21,15 @@ export function bubbleKind(message: BubbleMessage | null): SpokenKind | null {
   return "reactions"; // a line after an AI move, or the resign hint
 }
 
-/** Speaks `text` if the voice and this kind of message are switched on. */
+/**
+ * Speaks `text` if the voice and this kind of message are switched on.
+ * Muted chat (D87: Show chat bubbles off, or the mute button in focus mode)
+ * silences the AI's own lines too; the Why card and the tips, which the
+ * player asks for, are still read.
+ */
 export function speakIf(kind: SpokenKind, text: string, level: AiLevel): boolean {
-  const voice = settingsStore().get().voice;
+  const { voice, chat } = settingsStore().get();
+  if (!chat.bubbles && kind !== "tips") return false;
   return voice.read[kind] ? voiceEngine().speak(text, level, voice) : false;
 }
 
@@ -36,7 +42,9 @@ interface VoiceInput {
 }
 
 export function useVoice({ bubble, level, startedMove, endLine, why }: VoiceInput): void {
-  const enabled = useSettings().voice.enabled;
+  const settings = useSettings();
+  const enabled = settings.voice.enabled;
+  const muted = !settings.chat.bubbles;
 
   // A new line in the bubble (not the typing dots: the line only appears
   // once the AI's piece has landed, so the voice never talks over a move).
@@ -58,10 +66,10 @@ export function useVoice({ bubble, level, startedMove, endLine, why }: VoiceInpu
     if (why) speakIf("tips", why, level);
   }, [why]);
 
-  // The player's next move, the voice switched off: stop at once.
+  // The player's next move, the voice switched off or the chat muted: stop at once.
   useEffect(() => {
-    if (startedMove || !enabled) voiceEngine().cancel();
-  }, [startedMove, enabled]);
+    if (startedMove || !enabled || muted) voiceEngine().cancel();
+  }, [startedMove, enabled, muted]);
 
   // Hiding the page stops the voice; leaving the game too.
   useEffect(() => {

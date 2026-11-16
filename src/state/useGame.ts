@@ -40,6 +40,8 @@ export function useGame(initial?: GameOptions) {
   const playAi = useCallback((level: AiLevel) => dispatch({ type: "newGame", mode: "vs-ai", level, humanSide: randomSide() }), []);
 
   const resign = useCallback(() => dispatch({ type: "resign" }), []);
+  // The player did not move for a minute (D85).
+  const abandon = useCallback(() => dispatch({ type: "abandon" }), []);
 
-  return { state, click, newGame, setMode, retryAi, goHistory, playAi, resign };
+  return { state, click, newGame, setMode, retryAi, goHistory, playAi, resign, abandon };
 }

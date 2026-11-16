@@ -66,9 +66,10 @@ describe("ModeSelector", () => {
     expect(html.match(/aria-pressed="true"/g)).toHaveLength(1);
   });
 
-  it("says the human plays Black in AI mode", () => {
-    expect(render("vs-ai")).toContain("You play Black");
-    expect(render("two-player")).not.toContain("You play Black");
+  it("says the colour is random each game in AI mode (D81), and no longer that you play Black", () => {
+    expect(render("vs-ai")).toContain("Random colour each game");
+    expect(render("vs-ai")).not.toContain("You play Black");
+    expect(render("two-player")).not.toContain("Random colour");
   });
 });
 

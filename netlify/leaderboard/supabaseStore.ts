@@ -2,7 +2,8 @@
 // service_role JWT or a new sb_secret key, D58), used only in the Netlify
 // functions (never in the browser bundle). Tables and functions
 // come from docs/07-deployment/leaderboard-migration.sql and
-// leaderboard-migration-2.sql (avatars, renames and reserved names, D61, D62). Row Level Security
+// leaderboard-migration-2.sql (avatars, renames and reserved names, D61, D62),
+// migration 3 (the AI's record, D75) and migration 4 (reports, D85). Row Level Security
 // is on with no policies, so only this key can read or write.
 //
 // Every failure is thrown as an error carrying only its Postgres code;
@@ -12,11 +13,24 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { LEVELS, toAiLevel } from "../../src/ai/difficulty";
 import type { AiLevel } from "../../src/ai/difficulty";
 import { aiRecordOf } from "./store";
-import type { LeaderboardStore, LevelCounts, PlayerRecord, RankedRow } from "./store";
+import type { Conduct, LeaderboardStore, LevelCounts, PlayerRecord, RankedRow } from "./store";
 
 const UNIQUE_VIOLATION = "23505";
 // PostgREST's "no such function" (PGRST202) and Postgres's (42883).
 const MISSING_FUNCTION = new Set(["PGRST202", "42883"]);
+// PostgREST's "no such column" (PGRST204) and Postgres's (42703).
+const MISSING_COLUMN = new Set(["PGRST204", "42703"]);
+const NO_CONDUCT: Conduct = { reports: 0, totalReports: 0, suspendedUntil: null };
+
+interface ConductRow {
+  reports: number;
+  total_reports: number;
+  suspended_until: string | null;
+}
+const toConduct = (row: ConductRow | null): Conduct =>
+  row
+    ? { reports: Number(row.reports), totalReports: Number(row.total_reports), suspendedUntil: row.suspended_until === null ? null : new Date(row.suspended_until) }
+    : NO_CONDUCT;
 const PLAYER_COLUMNS = "id, username, username_key, country, avatar, hidden, username_changed_at";
 
 class StoreError extends Error {
@@ -191,7 +205,13 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
         ...(result.resigned ? { resigned: true } : {}),
       };
       if (replace) {
-        check(await db.from("game_results").upsert(row, { onConflict: "player_id,game_id" }));
+        // A verified win overwrites a resigned loss reported for the same
+        // game, so the flag is cleared too (a resigned win breaks the check).
+        // Before migration 3 there is no such column: the row goes without it.
+        const upsert = (values: object) => db.from("game_results").upsert(values, { onConflict: "player_id,game_id" });
+        const cleared = await upsert({ ...row, resigned: false });
+        if (cleared.error && MISSING_COLUMN.has(cleared.error.code ?? "")) check(await upsert(row));
+        else check(cleared);
         return "added";
       }
       const inserted = await db.from("game_results").insert(row);
@@ -216,7 +236,7 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
 
     async levelCounts(playerId): Promise<LevelCounts[]> {
       const rows = check(await db.rpc("player_level_stats", { p_player: playerId })) as
-        | { level: number; wins: number; best_moves: number | null; losses: number; games: number }[]
+        | { level: number; wins: number; best_moves: number | null; losses: number; games: number; resigned?: number }[]
         | null;
       return (rows ?? [])
         .map((row) => ({
@@ -225,6 +245,8 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
           bestMoves: row.best_moves === null ? null : Number(row.best_moves),
           losses: Number(row.losses),
           games: Number(row.games),
+          // Before migration 3 the function has no resigned column.
+          resigned: Number(row.resigned ?? 0),
         }))
         .sort((a, b) => a.level - b.level);
     },
@@ -267,6 +289,24 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
           };
         }),
       );
+    },
+
+    async addReport(report, limit, days) {
+      // Before migration 4 this fails (a calm 503): the browser keeps the
+      // report and sends it again later.
+      const row = check(
+        await db
+          .rpc("add_report", { p_player: report.playerId, p_game: report.gameId, p_level: report.level, p_phase: report.phase, p_limit: limit, p_days: days })
+          .maybeSingle<ConductRow>(),
+      );
+      return toConduct(row);
+    },
+
+    async conduct(playerId) {
+      const answer = await db.rpc("player_conduct", { p_player: playerId }).maybeSingle<ConductRow>();
+      // Before migration 4: no reports anywhere, nobody suspended.
+      if (answer.error && MISSING_FUNCTION.has(answer.error.code ?? "")) return NO_CONDUCT;
+      return toConduct(check(answer));
     },
 
     async hitRateLimit(key, windowSeconds, limit) {

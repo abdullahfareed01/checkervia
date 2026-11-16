@@ -1,4 +1,5 @@
 import { memo } from "react";
+import type { ReactNode } from "react";
 import type { Player } from "../engine";
 import type { AiMood } from "./aiMood";
 import { CrownIcon, HumanIcon, InfoIcon } from "./icons";
@@ -26,6 +27,7 @@ interface PlayerCardProps {
   portrait?: string | null | undefined; // the player's chosen avatar id (D65); a person icon without one
   winner: boolean;
   placement: "top" | "bottom";
+  action?: ReactNode; // focus mode's small Resign, after the turn (D87)
 }
 
 function sideName(player: Player): string {
@@ -75,6 +77,7 @@ export const PlayerCard = memo(function PlayerCard({
   portrait,
   winner,
   placement,
+  action,
 }: PlayerCardProps) {
   const state = stateOf({ winner, thinking, toMove });
   const text = stateText(state, name);
@@ -134,6 +137,7 @@ export const PlayerCard = memo(function PlayerCard({
             {text}
             {state === "thinking" && <span className="dots" aria-hidden="true" />}
           </span>
+          {action}
 
         </p>
       </div>

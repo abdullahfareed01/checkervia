@@ -1,0 +1,424 @@
+/* Focus mode (D87), after the owner's mockup "Checkervia Focus Mode
+   Checkers Board": the title, the AI's card, a big board, your card and the
+   AI with its bubble; no chance bar, turn pill, move list or action bar
+   (New game and Resign are in the Menu). The page never scrolls: the board
+   is the smaller of the column's width and the height left after the rest
+   (--focus-chrome). Loaded just before touch.css (the pressed states). */
+
+/* The small mute button at the end of the AI's row: a 30px circle to the
+   eye, a 44px target to the finger. */
+.coach-mute,
+.coach-resign {
+  position: relative;
+  flex: none;
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  margin-right: 7px; /* room for its 44px target (below), so nothing overflows */
+  padding: 0;
+  border: 1px solid rgba(201, 146, 76, 0.45);
+  border-radius: 50%;
+  color: #e3cfac;
+  background: rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.coach-mute::after,
+.coach-resign::after {
+  content: "";
+  position: absolute;
+  inset: -7px;
+}
+
+.coach-mute .icon,
+.coach-resign .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.coach-mute-on {
+  border-color: #e0a93e;
+  color: #f4c55c;
+  background: rgba(244, 197, 92, 0.12);
+}
+
+.coach-mute:hover,
+.coach-resign:hover {
+  border-color: rgba(244, 197, 92, 0.8);
+}
+
+.coach-mute:focus-visible,
+.coach-resign:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 2px;
+}
+
+/* Resign in focus mode: a small flag in your card, right after "Your
+   turn" (the owner's choice). 24px to the eye, 44px to the finger; the
+   resign hint (the position is lost) rings it in gold. */
+.card .coach-resign {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: -4px 0 -4px 2px; /* taller than the text: the card keeps its height */
+}
+
+.card .coach-resign::after {
+  inset: -10px;
+}
+
+.card .coach-resign .icon {
+  width: 13px;
+  height: 13px;
+}
+
+.coach-resign.button-resign-hint {
+  border-color: #f4c55c;
+  color: #f4c55c;
+}
+
+/* The offer of focus mode (FocusToggle.tsx): a slim pill floating over the
+   chance bar (one column) or in the empty move list (two columns). 30px to
+   the eye, 44px to the finger. */
+.board-area,
+.sidebar {
+  position: relative;
+}
+
+.focus-offer {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 7px; /* the middle of the chance bar under the board */
+  display: flex;
+  align-items: center;
+  height: 30px;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: linear-gradient(180deg, #3a2414 0%, #2a190c 100%);
+  box-shadow:
+    0 0 0 1px rgba(201, 146, 76, 0.65),
+    0 6px 16px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, 50%);
+  animation: focus-offer-in 0.25s ease-out both;
+}
+
+.focus-offer-go,
+.focus-offer-close {
+  position: relative;
+  height: 30px;
+  border: none;
+  font: inherit;
+  background: none;
+  cursor: pointer;
+}
+
+.focus-offer-go::after,
+.focus-offer-close::after {
+  content: "";
+  position: absolute;
+  inset: -7px 0;
+}
+
+.focus-offer-go {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px 0 12px;
+  border-radius: 999px 0 0 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #f4c55c;
+}
+
+.focus-offer-go .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.focus-offer-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  padding: 0 2px 0 0;
+  border-left: 1px solid rgba(201, 146, 76, 0.35);
+  border-radius: 0 999px 999px 0;
+  color: #ead6b4;
+}
+
+.focus-offer-close .lb-svg {
+  width: 11px;
+  height: 11px;
+}
+
+.focus-offer-go:hover,
+.focus-offer-close:hover {
+  background: rgba(244, 197, 92, 0.1);
+}
+
+.focus-offer-go:focus-visible,
+.focus-offer-close:focus-visible {
+  outline: 2px solid #ffe08a;
+  outline-offset: -2px;
+}
+
+/* Two columns: low in the side panel, over the move list (empty at the
+   start), just above the action bar. */
+.sidebar > .focus-offer {
+  bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 30px);
+  transform: translateX(-50%);
+}
+
+@keyframes focus-offer-in {
+  from {
+    opacity: 0;
+    translate: 0 4px;
+  }
+}
+
+html:is([data-anim="off"], [data-anim="reduced"]) .focus-offer {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-offer {
+    animation: none;
+  }
+}
+
+/* The focus button in the top bar's left slot: like the Menu's lines, no tile. */
+.topbar .focus-toggle,
+.topbar .focus-toggle:hover {
+  border-color: transparent;
+  background: none;
+  color: var(--gold-text, #f2cf86);
+}
+
+.topbar .focus-toggle .icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Once a game in focus mode is over: a hint under the small screen symbol,
+   its arrow pointing at it, with Leave focus mode and a close button. The
+   leather and bronze rim of the game's popups; calm, no glow (D41, D42). */
+.focus-lead {
+  position: relative;
+  display: grid;
+}
+
+.focus-hint {
+  --hint-bg: #3a2414;
+  --hint-rim: rgba(201, 146, 76, 0.65);
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  border-radius: 14px;
+  white-space: nowrap;
+  background: linear-gradient(180deg, var(--hint-bg) 0%, #2a190c 100%);
+  box-shadow:
+    0 0 0 1px var(--hint-rim),
+    0 10px 28px rgba(0, 0, 0, 0.55);
+  animation: focus-hint-in 0.25s ease-out both;
+}
+
+/* The arrow, under the middle of the 52px button. */
+.focus-hint::before {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 20px;
+  width: 11px;
+  height: 11px;
+  border-top: 1px solid var(--hint-rim);
+  border-left: 1px solid var(--hint-rim);
+  background: var(--hint-bg);
+  transform: rotate(45deg);
+}
+
+.focus-hint-leave {
+  min-height: 44px;
+  padding: 0 10px 0 14px;
+  border: none;
+  border-radius: 14px 0 0 14px;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f4c55c;
+  background: none;
+  cursor: pointer;
+}
+
+.focus-hint-close {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-left: 1px solid rgba(201, 146, 76, 0.35);
+  border-radius: 0 14px 14px 0;
+  color: #ead6b4;
+  background: none;
+  cursor: pointer;
+}
+
+.focus-hint-close .lb-svg {
+  width: 14px;
+  height: 14px;
+}
+
+.focus-hint-leave:hover,
+.focus-hint-close:hover {
+  background: rgba(244, 197, 92, 0.1);
+}
+
+.focus-hint-leave:focus-visible,
+.focus-hint-close:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: -3px;
+}
+
+/* Wide screens and landscape tablets have room beside the board: the hint
+   goes left of the symbol, its arrow pointing right, and covers nothing.
+   (With the window at least 5:4 the board is sized from the height, which
+   leaves 250px or more on each side.) */
+@media (min-width: 1200px) and (min-height: 600px), (min-width: 900px) and (min-height: 600px) and (min-aspect-ratio: 5/4) {
+  .focus-hint {
+    top: 50%;
+    left: auto;
+    right: calc(100% + 12px);
+    transform: translateY(-50%);
+  }
+
+  .focus-hint::before {
+    top: 50%;
+    left: auto;
+    right: -6px;
+    margin-top: -6px;
+    border-left: none;
+    border-right: 1px solid var(--hint-rim);
+  }
+}
+
+/* `translate`, so the placement's `transform` stays as it is. */
+@keyframes focus-hint-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+html:is([data-anim="off"], [data-anim="reduced"]) .focus-hint {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-hint {
+    animation: none;
+  }
+}
+
+/* The mode switch under the title is in the Menu too. */
+.app-focus .topbar .mode {
+  display: none;
+}
+
+/* The turn line stays for screen readers only; the cards say whose turn it
+   is. If the AI fails, its message and Retry still show. */
+.app-focus .status:not(.status-failed) {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- One column: phones held upright, tablets ---------- */
+
+@media (not ((orientation: landscape) and (max-height: 599px) and (min-width: 560px))) {
+  .app.app-focus {
+    --focus-w: min(calc(100vw - 16px), 760px);
+    --focus-top: 52px; /* the title row */
+    --focus-chrome: calc(var(--focus-top) + 2 * var(--card-h) + var(--ai-card-extra, 0px) + var(--coach-h, 0px) + 5 * var(--focus-gap) + 16px);
+    --focus-gap: 8px;
+    --board-size: min(var(--focus-w), max(200px, calc(100dvh - var(--focus-chrome))));
+    min-height: 100dvh;
+    grid-template-columns: minmax(0, 1fr);
+    /* The title stays at the top; the cards, the board and the AI sit in
+       the middle of the height below it (an empty row above and below
+       them shares what is left). The rows have no gap, so the empty ones
+       take no room: the space is the margin above the game and the AI. */
+    grid-template-rows: auto minmax(0, 1fr) auto auto minmax(0, 1fr);
+    grid-template-areas:
+      "header"
+      "."
+      "game"
+      "side"
+      ".";
+    row-gap: 0;
+    padding: 4px 8px calc(4px + env(safe-area-inset-bottom));
+  }
+
+  .app.app-focus .game,
+  .app.app-focus .sidebar {
+    margin-top: var(--focus-gap);
+  }
+
+  .app.app-focus .topbar,
+  .app.app-focus .game,
+  .app.app-focus .sidebar {
+    width: var(--board-size);
+    max-width: none;
+  }
+
+  .app.app-focus .sidebar {
+    gap: 0;
+  }
+}
+
+/* Wide screens: the board in the middle; the AI and its bubble beside it,
+   at its foot, as on chess.com. (From 900 to 1199px the one column gives
+   the bigger board.) */
+@media (min-width: 1200px) and (min-height: 600px) {
+  .app.app-focus {
+    --focus-top: 64px;
+    --focus-chrome: calc(var(--focus-top) + 2 * var(--card-h) + var(--ai-card-extra, 0px) + 3 * var(--focus-gap) + 32px);
+    --board-size: min(calc(100vw - 2 * 320px - 64px), 820px, max(260px, calc(100dvh - var(--focus-chrome))));
+    height: 100dvh;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    /* The title at the top, the board in the middle of the height below. */
+    grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas:
+      ". header ."
+      ". . ."
+      ". game side"
+      ". . .";
+    column-gap: 24px;
+    padding: 16px 24px;
+  }
+
+  .app.app-focus .sidebar {
+    justify-self: start;
+    align-self: end; /* at the board's foot */
+    margin-top: 0;
+    width: min(100%, 320px);
+    max-height: none;
+    overflow: visible;
+  }
+}
+
+/* Phones held sideways: the usual two columns (the board from the height),
+   the side panel now only the title, the Menu and the AI. */
+@media (orientation: landscape) and (max-height: 599px) and (min-width: 560px) {
+  .app.app-focus .sidebar {
+    justify-content: flex-end;
+  }
+}

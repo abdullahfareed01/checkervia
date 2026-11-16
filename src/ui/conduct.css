@@ -1,0 +1,84 @@
+/* The abandon and suspension popups (D85): the confirm dialog's leather
+   panel, smaller, with short lines and one OK button. */
+.conduct-dialog {
+  width: min(340px, 100%);
+  padding: 20px 18px 16px;
+}
+
+.conduct-dialog .confirm-mark {
+  width: 46px;
+  height: 46px;
+  margin-bottom: 10px;
+  border-radius: 13px;
+}
+
+.app .conduct-title,
+.conduct-title {
+  font-size: 1.2rem;
+}
+
+.conduct-body {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--sheet-soft);
+}
+
+.conduct-body p {
+  margin: 0;
+}
+
+.conduct-body p + p {
+  margin-top: 8px;
+}
+
+.conduct-lead {
+  color: var(--sheet-cream);
+  font-weight: 600;
+}
+
+.conduct-warning {
+  color: var(--sheet-gold);
+}
+
+.conduct-contact {
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.conduct-contact a {
+  color: var(--sheet-gold);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.conduct-actions {
+  margin-top: 16px;
+  grid-template-columns: 1fr;
+}
+
+/* Small phones: tighter still, so the popup never needs a scroll. */
+@media (max-width: 360px) {
+  .conduct-dialog {
+    padding: 16px 14px 14px;
+  }
+
+  .conduct-body {
+    font-size: 0.9rem;
+  }
+}
+
+/* The Reports row in the player's own profile stats. */
+.lb-stat-reports .lb-stat-icon svg {
+  width: 70%;
+  height: 70%;
+  color: #f6c445;
+}
+
+.lb-stat-suspended {
+  display: block;
+  margin-top: 2px;
+  color: #ffb4a8;
+  font-size: 0.85em;
+}

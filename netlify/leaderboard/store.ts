@@ -2,7 +2,7 @@
 // supabaseStore.ts (the real one, Postgres through the service role key) and
 // memoryStore.ts (for tests and local work without a database).
 import type { AiLevel } from "../../src/ai/difficulty";
-import type { EncodedMove } from "../../src/leaderboard/protocol";
+import type { AbandonPhase, EncodedMove } from "../../src/leaderboard/protocol";
 
 export interface PlayerRecord {
   readonly id: string;
@@ -73,6 +73,21 @@ export function aiRecordOf(levels: readonly (AiCounts & { readonly level: AiLeve
   return { games: sum("games"), aiWins: sum("aiWins"), aiLosses: sum("aiLosses"), resigned: sum("resigned"), levels };
 }
 
+/** A report for an abandoned game (D85). */
+export interface NewReport {
+  readonly playerId: string;
+  readonly gameId: string;
+  readonly level: AiLevel;
+  readonly phase: AbandonPhase;
+}
+
+/** A player's reports and suspension (D85). */
+export interface Conduct {
+  readonly reports: number; // towards the next suspension
+  readonly totalReports: number;
+  readonly suspendedUntil: Date | null; // null when not suspended now
+}
+
 export interface RankedRow {
   readonly rank: number;
   readonly playerId: string;
@@ -89,6 +104,7 @@ export interface LevelCounts {
   readonly bestMoves: number | null;
   readonly losses: number; // reported
   readonly games: number; // reported, plus every verified win
+  readonly resigned: number; // the losses that were resignations; 0 before migration 3
 }
 
 export interface RateLimitResult {
@@ -128,6 +144,15 @@ export interface LeaderboardStore {
   levelCounts(playerId: string): Promise<LevelCounts[]>;
   /** The AI's record over every player (D75). */
   aiRecord(): Promise<AiRecord>;
+  /**
+   * Records a report once per game (a repeat changes nothing). Not
+   * suspended: the count goes up, and at `limit` the player is suspended for
+   * `days` and the count starts again from zero. While suspended a report
+   * only adds to the total.
+   */
+  addReport(report: NewReport, limit: number, days: number): Promise<Conduct>;
+  /** The player's reports and suspension now; zeros before migration 4 is run. */
+  conduct(playerId: string): Promise<Conduct>;
   /** Counts a request against a fixed window and says whether it may go ahead. */
   hitRateLimit(key: string, windowSeconds: number, limit: number): Promise<RateLimitResult>;
 }

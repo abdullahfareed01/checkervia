@@ -202,7 +202,7 @@
   max-width: 400px;
   display: flex;
   flex-direction: column;
-  gap: calc(var(--u) * 14);
+  gap: calc(var(--u) * 20); /* room between the cards (owner, D86) */
   margin-top: calc(var(--u) * 26);
 }
 
@@ -525,7 +525,7 @@
   }
 
   .home-menu {
-    gap: calc(var(--u) * 10);
+    gap: calc(var(--u) * 16);
     margin-top: calc(var(--u) * 18);
   }
 

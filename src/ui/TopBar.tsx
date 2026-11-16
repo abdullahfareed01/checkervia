@@ -35,22 +35,23 @@ export const GameTitle = memo(function GameTitle({ text, large = false }: { text
 interface TopBarProps {
   title: string;
   onBack?: (() => void) | undefined; // a back arrow, where it is the only way out (Learn)
+  lead?: ReactNode; // the game's focus mode button, in the left slot (D87)
   action?: ReactNode; // the game's Menu, top right, on one column screens
 }
 
 // The bar at the top of the game and Learn screens: the title, and on Learn
 // a back arrow to the main menu. The game has no back arrow: its Menu has
 // "Main menu" (D50); on one column screens that Menu sits at the top right.
-export const TopBar = memo(function TopBar({ title, onBack, action }: TopBarProps) {
+export const TopBar = memo(function TopBar({ title, onBack, lead, action }: TopBarProps) {
   return (
     <div className="top-row">
-      {onBack ? (
+      {lead ?? (onBack ? (
         <button type="button" className="icon-button" aria-label="Back to the main menu" onClick={onBack}>
           <BackIcon />
         </button>
       ) : (
         <span className="icon-button-space" aria-hidden="true" />
-      )}
+      ))}
       <GameTitle text={title} />
       {action ?? <span className="icon-button-space" aria-hidden="true" />}
     </div>

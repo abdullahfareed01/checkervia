@@ -166,6 +166,24 @@ describe("the Supabase adapter (D75)", () => {
     expect(seen[0]!.body).toMatchObject({ resigned: true });
     expect(seen[1]!.body).not.toHaveProperty("resigned");
   });
+
+  it("a verified win clears the resignation flag, and still saves before migration 3", async () => {
+    const { seen, store } = fakeSupabase(null);
+    await store.saveGameResult({ playerId: "p1", gameId: "g1", level: 4, result: "win" }, true);
+    expect(seen[0]!.body).toMatchObject({ result: "win", resigned: false });
+
+    const bodies: unknown[] = [];
+    const before = createSupabaseStore("https://project.supabase.co", "service-key-for-tests", async (_input, init) => {
+      const body = JSON.parse(String(init?.body));
+      bodies.push(body);
+      return "resigned" in body
+        ? new Response(JSON.stringify({ code: "PGRST204", message: "Could not find the 'resigned' column" }), { status: 400, headers: { "content-type": "application/json" } })
+        : new Response(null, { status: 201 });
+    });
+    expect(await before.saveGameResult({ playerId: "p1", gameId: "g1", level: 4, result: "win" }, true)).toBe("added");
+    expect(bodies).toHaveLength(2);
+    expect(bodies[1]).not.toHaveProperty("resigned");
+  });
 });
 
 describe("migration 3 in PGlite (D75)", () => {
@@ -202,6 +220,24 @@ describe("migration 3 in PGlite (D75)", () => {
 
     const error = (run: Promise<unknown>) => run.then(() => "no error", (caught: unknown) => String((caught as Error).message));
     expect(await error(result(a, "00000000-0000-4000-8000-000000000005", "win", true))).toMatch(/check constraint/);
+
+    // The player's own counts now carry their resignations too.
+    const stats = (await db.query<Record<string, unknown>>("select * from player_level_stats($1)", [a])).rows;
+    expect(stats.map((row) => [row["level"], Number(row["losses"]), Number(row["games"]), Number(row["resigned"])])).toEqual([
+      [1, 0, 0, 0],
+      [2, 0, 0, 0],
+      [3, 0, 0, 0],
+      [4, 2, 3, 1],
+    ]);
+    // A verified win over a resigned loss of the same game clears the flag.
+    const resignedGame = "00000000-0000-4000-8000-000000000001";
+    await db.query(
+      "insert into game_results (player_id, game_id, level, result, resigned) values ($1, $2, 4, 'win', false) on conflict (player_id, game_id) do update set result = excluded.result, resigned = excluded.resigned",
+      [a, resignedGame],
+    );
+    expect(Number((await db.query<{ resigned: unknown }>("select * from player_level_stats($1) where level = 4", [a])).rows[0]!.resigned)).toBe(0);
+    expect(await error(db.exec(`set role anon; select * from player_level_stats('${a}');`))).toMatch(/permission denied/);
+    await db.exec("reset role");
     expect(await error(db.exec("set role anon; select * from ai_record();"))).toMatch(/permission denied/);
     await db.exec("reset role");
     expect(await error(db.exec(sql("leaderboard-migration-3.sql")))).toMatch(/already exists/);

@@ -456,7 +456,7 @@ export function SettingsSheet({ onClose, onProfile, initialPage = null }: { onCl
         <Card>
           <Switch label="Show chat bubbles" checked={settings.chat.bubbles} onChange={(on) => update((s) => ({ ...s, chat: { bubbles: on } }))} />
         </Card>
-        <p className="settings-note">This only hides the bubbles. What the AI may say, the 18+ badge and its consent stay the same.</p>
+        <p className="settings-note">Off, the AI's lines are neither shown nor spoken; its face still reacts. What the AI may say, the 18+ badge and its consent stay the same.</p>
       </>
     ),
     profile: () => (

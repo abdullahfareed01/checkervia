@@ -38,6 +38,8 @@ export const handleSubmitWin: LeaderboardHandler = (request, deps) =>
     if (limited) return limited;
     const player = await playerFromToken(request, deps.store);
     if (!player) return notSignedIn();
+    // A suspended account plays no games against the AI (D85).
+    if ((await deps.store.conduct(player.id)).suspendedUntil) return fail(403, "suspended", "This account is suspended.");
 
     const replay = replayWin(moves, colour);
     if (!replay.ok) return fail(422, replay.reason, REJECTED[replay.reason]!);

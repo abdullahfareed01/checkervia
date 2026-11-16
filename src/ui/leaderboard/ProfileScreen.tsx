@@ -9,18 +9,24 @@
 // for the player), the public notice with its required "I understand", then
 // Save. There is no Skip: Back leaves.
 //
-// The own profile (D64) opens as a view: the avatar, flag and stats. A
-// pencil on the avatar turns the same screen into the form, with an (i)
-// that shows the rules for the username, flag and avatar; Cancel or Save
-// returns to the view.
+// The own profile (D64) opens as a view: the avatar, flag and the stats in
+// little room. A pencil on the avatar opens the edit page, with an (i) that
+// shows the rules for the username, flag and avatar; Cancel or Save returns
+// to the view.
+//
+// Like the Settings sheet, the screen is sized to what it shows and never
+// scrolls: anything longer (the table by level, the reports, the username
+// and the avatar grid) is a row that opens a page inside the screen, with
+// Back in the header.
 // The username can change once every 7 days (the screen says when the next
 // change is allowed); the old name stays reserved for 30 days. The avatar
 // and the flag can change any time. Saving, saved and the three problem
 // messages (D59) are shown under Save.
 import { useEffect, useId, useRef, useState } from "react";
 import type { KeyboardEvent, ReactNode } from "react";
-import { NO_COUNTRY, RENAME_WAIT_DAYS } from "../../leaderboard/protocol";
-import type { ProfileResponse } from "../../leaderboard/protocol";
+import { NO_COUNTRY, RENAME_WAIT_DAYS, REPORT_LIMIT } from "../../leaderboard/protocol";
+import type { ConductStatus, ProfileResponse } from "../../leaderboard/protocol";
+import { AI_LEVELS } from "../../ai/difficulty";
 import { USERNAME_MAX, USERNAME_MESSAGES } from "../../leaderboard/username";
 import { leaderboardApi } from "./api";
 import type { ApiResult } from "./api";
@@ -28,13 +34,15 @@ import { AVATAR_CATEGORIES, Avatar, avatarsIn, categoryOf } from "./Avatar";
 import type { AvatarCategory } from "./Avatar";
 import { CountryPicker } from "./CountryPicker";
 import { Flag, countryName } from "./Flag";
-import { CloseIcon, LbCalendar, LbGradients, LbLaurel, PencilIcon, PersonIcon, PictureIcon, PinIcon } from "./lbIcons";
+import { CloseIcon, LbBars, LbCalendar, LbGradients, LbLaurel, LbStar, LevelCrown, PencilIcon, PersonIcon, PictureIcon, PinIcon } from "./lbIcons";
 import { useLeaderboardProfile } from "./profile";
 import type { Profile } from "./profile";
 import { ProblemPanel, problemOf, problemText } from "./Problem";
 import type { Problem } from "./Problem";
 import { InfoButton, InfoDialog, ProfileRules } from "./InfoDialog";
-import { ProfileStats } from "./ProfileSheet";
+import { conductStore, useShownConduct } from "../conduct";
+import { longDate, reportsLeftText } from "../ConductDialogs";
+import { BackIcon, ChevronIcon } from "../icons";
 import { useUsernameCheck } from "./useUsernameCheck";
 import type { UsernameCheck } from "./useUsernameCheck";
 
@@ -72,6 +80,11 @@ interface ProfileScreenProps {
   onTerms: () => void;
 }
 
+
+// The header: Back on a page inside the screen (or room for it), the title,
+// anything extra (the rules (i) on the edit page), and Close.
+type Head = (title: string, options?: { back?: () => void; backLabel?: string; extra?: ReactNode }) => ReactNode;
+
 export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: ProfileScreenProps) {
   const { profile } = useLeaderboardProfile();
   // Chosen when the screen opens: a profile made here shows its saved state
@@ -87,7 +100,29 @@ export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: 
   }, []);
 
   const creating = creatingChosen || profile === null;
-  const title = creating ? "Create your profile" : "Your profile";
+  const head: Head = (title, { back, backLabel, extra } = {}) => (
+    <header className="lb-head pf-head">
+      {back ? (
+        <button type="button" className="pf-back" data-back="" aria-label={backLabel ?? "Back"} onClick={back}>
+          <BackIcon />
+        </button>
+      ) : (
+        <span className="lb-head-spacer pf-head-spacer" aria-hidden="true" />
+      )}
+      <h2 id={`${ids}-title`} className="lb-title pf-title">
+        {!back && (
+          <span className="pf-title-icon" aria-hidden="true">
+            <PersonIcon />
+          </span>
+        )}
+        <span className="lb-title-text">{title}</span>
+      </h2>
+      {extra}
+      <button ref={closeRef} type="button" className="lb-close" aria-label={firstGame ? "Back to the home screen" : "Close your profile"} onClick={onClose}>
+        <CloseIcon />
+      </button>
+    </header>
+  );
   return (
     <div className="lb-backdrop pf-backdrop">
       <LbGradients />
@@ -100,40 +135,75 @@ export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: 
           if (event.key === "Escape" && !event.defaultPrevented) onClose();
         }}
       >
-        <header className="lb-head">
-          <span className="lb-head-spacer" aria-hidden="true" />
-          <h2 id={`${ids}-title`} className="lb-title pf-title">
-            <span className="pf-title-icon" aria-hidden="true">
-              <PersonIcon />
-            </span>
-            <span className="lb-title-text">{title}</span>
-          </h2>
-          <button
-            ref={closeRef}
-            type="button"
-            className="lb-close"
-            aria-label={firstGame ? "Back to the home screen" : "Close your profile"}
-            onClick={onClose}
-          >
-            <CloseIcon />
-          </button>
-        </header>
-
         {creating ? (
           <CreateProfile
+            head={head}
             firstGame={firstGame}
             onDone={() => (firstGame ? onSaved?.() : setCreating(false))}
             onBack={onClose}
             onTerms={onTerms}
           />
         ) : (
-          <EditProfile profile={profile} onTerms={onTerms} />
+          <EditProfile head={head} profile={profile} onTerms={onTerms} />
         )}
         <div className="lb-scenery" aria-hidden="true" />
       </div>
     </div>
   );
 }
+
+// ---------- Pages inside the screen (like the Settings sheet) ----------
+
+/**
+ * The page shown inside the screen, null for the first one. Back goes to
+ * the page's parent (or the first page); the keyboard lands on Back when a
+ * page opens, and on the row that opened it when coming back.
+ */
+function usePages<P extends string>(parent: Partial<Record<P, P>> = {}) {
+  const [page, setPage] = useState<P | null>(null);
+  const left = useRef<P | null>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    const screen = document.querySelector(".pf-screen");
+    if (screen) screen.scrollTop = 0;
+    const target = left.current ? screen?.querySelector<HTMLElement>(`[data-opens="${left.current}"]`) : screen?.querySelector<HTMLElement>("[data-back]");
+    (target ?? screen?.querySelector<HTMLElement>(".lb-close"))?.focus({ preventScroll: true });
+  }, [page]);
+  const open = (next: P) => {
+    left.current = null;
+    setPage(next);
+  };
+  const back = () => {
+    if (page === null) return;
+    left.current = page;
+    setPage(parent[page] ?? null);
+  };
+  // Escape on a page steps back instead of closing the screen.
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== "Escape" || page === null || event.defaultPrevented) return;
+    event.preventDefault();
+    back();
+  };
+  return { page, open, back, onKeyDown };
+}
+
+/** A row that opens a page: the label, what is chosen now, and an arrow. */
+function Row({ opens, label, value, invalid = false, disabled = false, onOpen }: { opens: string; label: string; value: ReactNode; invalid?: boolean; disabled?: boolean; onOpen: () => void }) {
+  return (
+    <button type="button" className={`pf-row${invalid ? " pf-row-invalid" : ""}`} data-opens={opens} disabled={disabled} onClick={onOpen}>
+      <span className="pf-row-label">{label}</span>
+      <span className="pf-row-value">{value}</span>
+      <ChevronIcon direction="right" />
+    </button>
+  );
+}
+
+/** The avatar row's value: the chosen picture, or words before a choice. */
+const avatarValue = (avatar: string | null) => (avatar === null ? "Choose one" : <Avatar id={avatar} size={32} />);
 
 // ---------- The fields, shared by both forms ----------
 
@@ -295,14 +365,20 @@ function SaveLine({ state }: { state: SaveState }) {
   );
 }
 
+
 // ---------- Making a profile ----------
 
+// The first page lists the three choices as rows; the username and the
+// avatar each open a page of their own, the country its own picker. The
+// public notice and Save sit beside them, so nothing scrolls.
 function CreateProfile({
+  head,
   firstGame,
   onDone,
   onBack,
   onTerms,
 }: {
+  head: Head;
   firstGame: boolean;
   onDone: () => void;
   onBack: () => void;
@@ -317,9 +393,17 @@ function CreateProfile({
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const ids = useId();
   const { check, ready: nameReady } = useNameCheck(name, null, takenName);
+  const { page, open, back, onKeyDown } = usePages<"name" | "avatar">();
   const saving = save.kind === "saving";
 
-  if (profile && save.kind === "saved") return <Saved profile={profile} firstGame={firstGame} onDone={onDone} />;
+  if (profile && save.kind === "saved") {
+    return (
+      <>
+        {head("Create your profile")}
+        <Saved profile={profile} firstGame={firstGame} onDone={onDone} />
+      </>
+    );
+  }
 
   const missing = [
     !nameReady && "a username",
@@ -342,52 +426,95 @@ function CreateProfile({
     setSave({ kind: "error", text: saveProblemText(result) });
   };
 
+  if (page === "name") {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Username", { back, backLabel: "Back to your profile" })}
+        <section className="pf-sub">
+          <UsernameField id={`${ids}-name`} name={name} onName={setName} current={null} check={check} disabled={saving} takenName={takenName} />
+        </section>
+        <DoneButton onDone={back} />
+      </div>
+    );
+  }
+  if (page === "avatar") {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Avatar", { back, backLabel: "Back to your profile" })}
+        <section className="pf-sub">
+          <AvatarPicker value={avatar} onChange={setAvatar} disabled={saving} />
+        </section>
+        <DoneButton onDone={back} />
+      </div>
+    );
+  }
+
   return (
     <form
-      className="pf-form"
+      className="pf-page pf-form"
       noValidate
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
       }}
     >
+      {head("Create your profile")}
       <p className="pf-intro">
         {firstGame ? "Before your first game against the AI, choose how you appear on the leaderboard. Your wins are then added automatically." : "Choose how you appear on the leaderboard."}
       </p>
-      <section className="pf-panel">
-        <UsernameField id={`${ids}-name`} name={name} onName={setName} current={null} check={check} disabled={saving} takenName={takenName} />
-        <AvatarPicker value={avatar} onChange={setAvatar} disabled={saving} />
-        <CountryPicker value={country} onChange={setCountry} disabled={saving} />
-      </section>
+      <div className="pf-columns">
+        <section className="pf-rows">
+          <Row opens="name" label="Username" value={name || "Choose one"} invalid={name.length > 0 && !nameReady} disabled={saving} onOpen={() => open("name")} />
+          <Row opens="avatar" label="Avatar" value={avatarValue(avatar)} disabled={saving} onOpen={() => open("avatar")} />
+          <div className="pf-row-country">
+            <CountryPicker value={country} onChange={setCountry} disabled={saving} />
+          </div>
+        </section>
 
-      <section className="pf-panel pf-notice">
-        <p className="pf-public">{PUBLIC_NOTICE}</p>
-        <label className="pf-check">
-          <input type="checkbox" checked={understood} disabled={saving} onChange={(event) => setUnderstood(event.target.checked)} required />
-          <span className="pf-check-box" aria-hidden="true" />
-          <span>I understand</span>
-        </label>
-        <p className="lb-note">{BROWSER_NOTICE}</p>
-        <button type="button" className="link-button lb-terms" onClick={onTerms}>
-          Read the Terms and notices
-        </button>
-      </section>
+        <div className="pf-column">
+          <section className="pf-notice">
+            <p className="pf-public">{PUBLIC_NOTICE}</p>
+            <label className="pf-check">
+              <input type="checkbox" checked={understood} disabled={saving} onChange={(event) => setUnderstood(event.target.checked)} required />
+              <span className="pf-check-box" aria-hidden="true" />
+              <span>I understand</span>
+            </label>
+            <p className="lb-note">{BROWSER_NOTICE}</p>
+            <button type="button" className="link-button lb-terms" onClick={onTerms}>
+              Read the Terms and notices
+            </button>
+          </section>
 
-      <SaveLine state={save} />
-      {stillNeeded.length > 0 && !saving && (
-        <p className="pf-missing" aria-live="polite">
-          To save, {stillNeeded.join(", and ")}.
-        </p>
-      )}
-      <div className="pf-actions">
-        <button type="button" className="lb-button" disabled={saving} onClick={onBack}>
-          Back
-        </button>
-        <button type="submit" className="lb-button lb-button-gold" aria-busy={saving} disabled={!canSave}>
-          {saving ? "Saving…" : "Save"}
-        </button>
+          <div className="pf-status">
+            <SaveLine state={save} />
+            {!saving && save.kind !== "error" && (
+              <p className="pf-missing" aria-live="polite">
+                {stillNeeded.length > 0 ? `To save, ${stillNeeded.join(", and ")}.` : "Ready to save."}
+              </p>
+            )}
+          </div>
+          <div className="pf-actions">
+            <button type="button" className="lb-button" disabled={saving} onClick={onBack}>
+              Back
+            </button>
+            <button type="submit" className="lb-button lb-button-gold" aria-busy={saving} disabled={!canSave}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
       </div>
     </form>
+  );
+}
+
+/** Done on the username and avatar pages: back to the rows, the choice kept. */
+function DoneButton({ onDone }: { onDone: () => void }) {
+  return (
+    <div className="pf-actions pf-actions-one">
+      <button type="button" className="lb-button lb-button-gold" onClick={onDone}>
+        Done
+      </button>
+    </div>
   );
 }
 
@@ -411,7 +538,7 @@ function Saved({ profile, firstGame, onDone }: { profile: Profile; firstGame: bo
   );
 }
 
-// ---------- Editing ----------
+// ---------- The own profile ----------
 
 /** The compact card at the top of the own profile: avatar with its flag, name, country (D64). */
 function IdentityCard({ profile, onEdit, titleId }: { profile: Profile; onEdit: (() => void) | undefined; titleId: string }) {
@@ -429,9 +556,12 @@ function IdentityCard({ profile, onEdit, titleId }: { profile: Profile; onEdit: 
             <Flag code={profile.country} decorative />
           </span>
         )}
+        {/* A small gold badge; the button around it keeps a 44px target. */}
         {onEdit && (
           <button type="button" className="lb-hero-edit pf-id-edit" aria-label="Edit your profile" onClick={onEdit}>
-            <PencilIcon />
+            <span className="pf-id-edit-badge">
+              <PencilIcon />
+            </span>
           </button>
         )}
       </div>
@@ -455,14 +585,112 @@ function IdentityCard({ profile, onEdit, titleId }: { profile: Profile; onEdit: 
   );
 }
 
-type Stats = { kind: "loading" } | { kind: "problem"; problem: Problem } | { kind: "ready"; profile: ProfileResponse };
+const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 
-function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => void }) {
+/**
+ * The stats in little room: the four numbers on one strip, the best win and
+ * the week's rank as two small boxes, and rows that open the table by level
+ * and the reports.
+ */
+function CompactStats({ stats, onOpen }: { stats: ProfileResponse; onOpen: (page: "levels" | "reports") => void }) {
+  // Always the own profile: the reports as this device and the server count them (D85).
+  const reports = useShownConduct(stats.conduct);
+  const numbers = [
+    { key: "games", label: "Games", value: String(stats.gamesPlayed) },
+    { key: "wins", label: "Wins", value: String(stats.wins) },
+    { key: "losses", label: "Losses", value: String(stats.losses) },
+    { key: "rate", label: "Win rate", value: stats.winRate === null ? "None" : percent(stats.winRate) },
+  ];
+  return (
+    <>
+      <dl className="pf-strip">
+        {numbers.map((item) => (
+          <div key={item.key} className={`pf-strip-item pf-strip-${item.key}`}>
+            <dt>{item.label}</dt>
+            <dd className="lb-stat-number">{item.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <dl className="pf-facts">
+        <div className="pf-fact">
+          <span className="pf-fact-icon" aria-hidden="true">
+            <LbStar />
+          </span>
+          <dt>Best win</dt>
+          <dd>{stats.bestWin ? `${stats.bestWin.moves} moves on ${AI_LEVELS[stats.bestWin.level].name}` : "No wins yet"}</dd>
+        </div>
+        <div className="pf-fact pf-fact-week">
+          <span className="pf-fact-icon" aria-hidden="true">
+            <LbBars rank />
+          </span>
+          <dt>This week on Strongest</dt>
+          <dd>{stats.weeklyStrongestRank !== null ? `Rank ${stats.weeklyStrongestRank}` : "Not ranked yet"}</dd>
+        </div>
+      </dl>
+      <div className="pf-rows">
+        <Row opens="levels" label="Wins and losses by level" value="" onOpen={() => onOpen("levels")} />
+        <Row opens="reports" label="Reports" value={String(reports.totalReports)} onOpen={() => onOpen("reports")} />
+      </div>
+    </>
+  );
+}
+
+/** The table by level, on its own page. */
+function LevelsTable({ stats }: { stats: ProfileResponse }) {
+  return (
+    <table className="lb-levels pf-levels">
+      <caption className="sr-only">Wins and losses by level</caption>
+      <thead>
+        <tr>
+          <th scope="col">Level</th>
+          <th scope="col">Wins</th>
+          <th scope="col">Losses</th>
+          <th scope="col">Resigned</th>
+        </tr>
+      </thead>
+      <tbody>
+        {[...stats.byLevel].reverse().map((record) => (
+          <tr key={record.level}>
+            <th scope="row">
+              <LevelCrown level={record.level} />
+              {AI_LEVELS[record.level].name}
+            </th>
+            <td>{record.wins}</td>
+            <td>{record.losses}</td>
+            <td>{record.resigned ?? 0}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** The own reports for abandoned games (D85), on their own page. */
+function ReportsPage({ server }: { server: ConductStatus | undefined }) {
+  const conduct = useShownConduct(server);
+  const until = conduct.suspendedUntil === null ? null : Date.parse(conduct.suspendedUntil);
+  const suspended = until !== null && !Number.isNaN(until) && until > Date.now();
+  return (
+    <section className="pf-sub pf-reports">
+      <p className="pf-reports-count">
+        <span className="lb-stat-number">{conduct.totalReports}</span>
+        <span>{conduct.totalReports === 1 ? "report in all" : "reports in all"}</span>
+      </p>
+      <p className="pf-reports-line">{suspended ? `Suspended until ${longDate(until)}.` : reportsLeftText(Math.max(1, REPORT_LIMIT - conduct.reports))}</p>
+    </section>
+  );
+}
+
+type Stats = { kind: "loading" } | { kind: "problem"; problem: Problem } | { kind: "ready"; profile: ProfileResponse };
+type OwnPage = "levels" | "reports" | "edit" | "name" | "avatar";
+
+function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile; onTerms: () => void }) {
   const [stats, setStats] = useState<Stats>({ kind: "loading" });
   const [attempt, setAttempt] = useState(0);
   const [nextRename, setNextRename] = useState<string | null>(null);
-  // D64: the profile opens as a view; the pencil on the avatar opens the form here.
-  const [editing, setEditing] = useState(false);
+  // D64: the profile opens as a view; the pencil on the avatar opens the
+  // edit page, whose username and avatar rows open pages of their own.
+  const { page, open, back, onKeyDown } = usePages<OwnPage>({ name: "edit", avatar: "edit" });
   const [rulesOpen, setRulesOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [name, setName] = useState(profile.username);
@@ -471,7 +699,6 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
   const [takenName, setTakenName] = useState<string | null>(null);
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const ids = useId();
-  const formRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -482,17 +709,14 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
         if (result.kind === "ok") {
           setStats({ kind: "ready", profile: result.value });
           setNextRename(result.value.nextRenameAt ?? null);
+          // The server's count of reports is the truth for the profile (D85).
+          if (result.value.conduct) conductStore.applyServer(result.value.conduct);
         } else setStats({ kind: "problem", problem: problemOf(result) });
       })
       .catch(() => {});
     return () => controller.abort();
     // The stats follow the saved name, not the one being typed.
   }, [profile.username, attempt]);
-
-  // The form takes the focus when it opens.
-  useEffect(() => {
-    if (editing) formRef.current?.focus({ preventScroll: false });
-  }, [editing]);
 
   const { check, ready: nameReady } = useNameCheck(name, profile.username, takenName);
   const renameLocked = nextRename !== null && new Date(nextRename).getTime() > Date.now();
@@ -512,7 +736,7 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
     setTakenName(null);
     setSave({ kind: "idle" });
     setJustSaved(false);
-    setEditing(true);
+    open("edit");
   };
 
   const submit = async () => {
@@ -522,8 +746,8 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
     if (result.kind === "ok") {
       setNextRename(result.value.nextRenameAt);
       setSave({ kind: "idle" });
-      setEditing(false);
       setJustSaved(true);
+      back();
       return;
     }
     if (result.kind === "failed" && result.code === "taken") setTakenName(name);
@@ -541,77 +765,71 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
         : `You can change it once every ${RENAME_WAIT_DAYS} days.`}
     </p>
   );
+  const rules = rulesOpen && (
+    <InfoDialog title="Your username, flag and avatar" onClose={() => setRulesOpen(false)}>
+      <ProfileRules onTerms={onTerms} />
+    </InfoDialog>
+  );
+  const ready = stats.kind === "ready" ? stats.profile : null;
 
-  return (
-    <div className="pf-edit">
-      <IdentityCard profile={profile} onEdit={editing ? undefined : startEditing} titleId={`${ids}-who`} />
-      {justSaved && (
-        <p className="pf-save-line pf-save-saved pf-saved-note" role="status">
-          Saved. Your profile is up to date.
-        </p>
-      )}
-
-      {!editing && (
-        <div className="lb-hero lb-hero-plain pf-hero">
-          <div className="lb-hero-card pf-stats-card">
-            {stats.kind === "loading" && (
-              <div className="lb-stats-skeleton" aria-hidden="true">
-                {Array.from({ length: 4 }, (_, index) => (
-                  <span key={index} className="lb-bone lb-bone-card" />
-                ))}
-              </div>
-            )}
-            {stats.kind === "problem" && <ProblemPanel problem={stats.problem} compact onRetry={() => setAttempt((count) => count + 1)} />}
-            {stats.kind === "ready" && <ProfileStats profile={stats.profile} />}
-          </div>
-        </div>
-      )}
-
-      {editing && (
-        <form
-          className="pf-edit-card"
-          noValidate
-          onSubmit={(event) => {
-            event.preventDefault();
-            void submit();
-          }}
-        >
-          <div className="pf-edit-head">
-            <span className="pf-edit-pencil" aria-hidden="true">
-              <PencilIcon />
-            </span>
-            <h3 ref={formRef} tabIndex={-1} className="pf-section-title">
-              Edit your profile
-            </h3>
-            <InfoButton label="Rules for your username, flag and avatar" onClick={() => setRulesOpen(true)} />
-          </div>
-          <section className="pf-sub">
-            <UsernameField
-              id={`${ids}-name`}
-              name={name}
-              onName={(next) => {
-                setName(next);
-                if (save.kind !== "saving") setSave({ kind: "idle" });
-              }}
-              current={profile.username}
-              check={check}
-              disabled={saving || renameLocked}
-              takenName={takenName}
-              note={renameNote}
-              hint=""
-            />
-          </section>
-          <section className="pf-sub">
-            <AvatarPicker
-              value={avatar}
-              onChange={(next) => {
-                setAvatar(next);
-                setSave({ kind: "idle" });
-              }}
-              disabled={saving}
-            />
-          </section>
-          <section className="pf-sub">
+  if (page === "name") {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Username", { back, backLabel: "Back to Edit your profile" })}
+        <section className="pf-sub">
+          <UsernameField
+            id={`${ids}-name`}
+            name={name}
+            onName={(next) => {
+              setName(next);
+              if (save.kind !== "saving") setSave({ kind: "idle" });
+            }}
+            current={profile.username}
+            check={check}
+            disabled={saving || renameLocked}
+            takenName={takenName}
+            note={renameNote}
+            hint=""
+          />
+        </section>
+        <DoneButton onDone={back} />
+      </div>
+    );
+  }
+  if (page === "avatar") {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Avatar", { back, backLabel: "Back to Edit your profile" })}
+        <section className="pf-sub">
+          <AvatarPicker
+            value={avatar}
+            onChange={(next) => {
+              setAvatar(next);
+              setSave({ kind: "idle" });
+            }}
+            disabled={saving}
+          />
+        </section>
+        <DoneButton onDone={back} />
+      </div>
+    );
+  }
+  if (page === "edit") {
+    return (
+      <form
+        className="pf-page pf-edit-card"
+        noValidate
+        onKeyDown={onKeyDown}
+        onSubmit={(event) => {
+          event.preventDefault();
+          void submit();
+        }}
+      >
+        {head("Edit your profile", { back, backLabel: "Back to your profile", extra: <InfoButton label="Rules for your username, flag and avatar" onClick={() => setRulesOpen(true)} /> })}
+        <section className="pf-rows">
+          <Row opens="name" label="Username" value={name} invalid={!nameReady} disabled={saving} onOpen={() => open("name")} />
+          <Row opens="avatar" label="Avatar" value={avatarValue(avatar)} disabled={saving} onOpen={() => open("avatar")} />
+          <div className="pf-row-country">
             <CountryPicker
               value={country}
               onChange={(next) => {
@@ -620,24 +838,62 @@ function EditProfile({ profile, onTerms }: { profile: Profile; onTerms: () => vo
               }}
               disabled={saving}
             />
-          </section>
-          <SaveLine state={save} />
-          <div className="pf-actions">
-            <button type="button" className="lb-button" disabled={saving} onClick={() => setEditing(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="lb-button lb-button-gold" disabled={!canSave} aria-busy={saving}>
-              {saving ? "Saving…" : "Save changes"}
-            </button>
           </div>
-        </form>
-      )}
+        </section>
+        <SaveLine state={save} />
+        <div className="pf-actions">
+          <button type="button" className="lb-button" disabled={saving} onClick={back}>
+            Cancel
+          </button>
+          <button type="submit" className="lb-button lb-button-gold" disabled={!canSave} aria-busy={saving}>
+            {saving ? "Saving…" : "Save changes"}
+          </button>
+        </div>
+        {rules}
+      </form>
+    );
+  }
+  if (page === "levels" && ready) {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Wins and losses", { back, backLabel: "Back to your profile" })}
+        <LevelsTable stats={ready} />
+      </div>
+    );
+  }
+  if (page === "reports" && ready) {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Reports", { back, backLabel: "Back to your profile" })}
+        <ReportsPage server={ready.conduct} />
+      </div>
+    );
+  }
 
-      {rulesOpen && (
-        <InfoDialog title="Your username, flag and avatar" onClose={() => setRulesOpen(false)}>
-          <ProfileRules onTerms={onTerms} />
-        </InfoDialog>
-      )}
+  return (
+    <div className="pf-page pf-edit">
+      {head("Your profile")}
+      <div className="pf-columns">
+        <div className="pf-column">
+          <IdentityCard profile={profile} onEdit={startEditing} titleId={`${ids}-who`} />
+          {justSaved && (
+            <p className="pf-save-line pf-save-saved pf-saved-note" role="status">
+              Saved. Your profile is up to date.
+            </p>
+          )}
+        </div>
+        <div className="pf-column pf-stats">
+          {stats.kind === "loading" && (
+            <div className="lb-stats-skeleton" aria-hidden="true">
+              {Array.from({ length: 4 }, (_, index) => (
+                <span key={index} className="lb-bone lb-bone-card" />
+              ))}
+            </div>
+          )}
+          {stats.kind === "problem" && <ProblemPanel problem={stats.problem} compact onRetry={() => setAttempt((count) => count + 1)} />}
+          {ready && <CompactStats stats={ready} onOpen={open} />}
+        </div>
+      </div>
     </div>
   );
 }

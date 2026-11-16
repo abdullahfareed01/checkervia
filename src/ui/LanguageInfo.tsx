@@ -9,27 +9,36 @@ export function LanguageInfo({ onTerms, onClose }: { onTerms: () => void; onClos
   const closeRef = useRef<HTMLButtonElement>(null);
   useEffect(() => closeRef.current?.focus(), []);
 
+  // The game's leather popup (sheet.css, as the "are you sure?" and the
+  // conduct popups): the 18+ mark in a dark well, the title, the rules in
+  // quieter words, a gold link to the Terms and one gold Close.
   return (
     <div className="result-backdrop" onClick={onClose}>
       <div
-        className="dialog language-info"
+        className="dialog confirm-dialog language-info"
         role="dialog"
         aria-modal="true"
         aria-labelledby="language-info-title"
+        aria-describedby="language-info-text"
         onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => {
           if (event.key === "Escape") onClose();
         }}
       >
-        <h2 id="language-info-title" className="dialog-title">
-          18+ · Strong language
+        <span className="confirm-mark language-info-mark" aria-hidden="true">
+          18+
+        </span>
+        <h2 id="language-info-title" className="confirm-question language-info-title">
+          <span className="sr-only">18+ </span>Strong language
         </h2>
-        <p className="consent-text">{LANGUAGE_RULES}</p>
-        <button type="button" className="link-button" onClick={onTerms}>
+        <p id="language-info-text" className="language-info-text">
+          {LANGUAGE_RULES}
+        </p>
+        <button type="button" className="language-info-terms" onClick={onTerms}>
           Terms and notices
         </button>
-        <div className="dialog-actions">
-          <button ref={closeRef} type="button" className="button button-primary" onClick={onClose}>
+        <div className="confirm-actions language-info-actions">
+          <button ref={closeRef} type="button" className="confirm-button confirm-keep" onClick={onClose}>
             Close
           </button>
         </div>

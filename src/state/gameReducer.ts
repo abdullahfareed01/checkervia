@@ -120,6 +120,9 @@ export interface GameState {
   readonly resignedBy: Player | null;
   // The person's colour against the AI (D81); Black in two player games.
   readonly humanSide: Player;
+  // The game against the AI was abandoned: the player did not move for a
+  // minute (D85). It ends like a resignation (resignedBy is the player).
+  readonly abandoned: boolean;
 }
 
 export type GameAction =
@@ -140,6 +143,8 @@ export type GameAction =
       provenLoss?: boolean | undefined;
     }
   | { type: "resign" }
+  // The player left a game against the AI without a move (D85).
+  | { type: "abandon" }
   | { type: "aiFailed"; requestId: number; reasons: readonly string[] }
   | { type: "aiRetry" }
   | { type: "history"; to: HistoryTarget };
@@ -190,6 +195,7 @@ export function createGameState(options: GameOptions = {}): GameState {
     aiLevel: options.aiLevel ?? DEFAULT_AI_LEVEL,
     resignedBy: null,
     humanSide,
+    abandoned: false,
   };
 }
 
@@ -356,6 +362,13 @@ function handleResign(state: GameState): GameState {
   };
 }
 
+// A game against the AI the player left without a move (D85): it ends like
+// the player's resignation, marked as abandoned. Only while it goes on.
+function handleAbandon(state: GameState): GameState {
+  if (state.mode !== "vs-ai" || state.winner) return state;
+  return { ...handleResign(state), abandoned: true };
+}
+
 function handleAiFailed(
   state: GameState,
   requestId: number,
@@ -426,5 +439,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return handleAiRetry(state);
     case "resign":
       return handleResign(state);
+    case "abandon":
+      return handleAbandon(state);
   }
 }

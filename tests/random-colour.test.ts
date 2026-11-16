@@ -19,6 +19,7 @@ import { App } from "../src/ui/App";
 import { Board } from "../src/ui/Board";
 import type { BoardView } from "../src/ui/Board";
 import { boardViewOf } from "../src/ui/gameView";
+import { reactionBubble } from "../src/ui/bubble";
 import { isLeaderboardGame, qualifyingWin } from "../src/ui/leaderboard/useLeaderboardGame";
 import { flipBoard, flipMove, flipPosition } from "../src/ui/moveGeometry";
 import { moveText } from "../src/ui/notation";
@@ -80,6 +81,17 @@ describe("the colour of a new game", () => {
   });
 });
 
+describe("no screen says you always play Black any more", () => {
+  it("Home, the level dialog and the mode note say the colour is random each game", () => {
+    for (const file of ["Home.tsx", "LevelDialog.tsx", "ModeSelector.tsx"]) {
+      const text = readFileSync(new URL(`../src/ui/${file}`, import.meta.url), "utf8");
+      expect(text, file).not.toMatch(/You play Black|AI plays White/);
+    }
+    expect(readFileSync(new URL("../src/ui/Home.tsx", import.meta.url), "utf8")).toContain('hint="Your colour is random each game. Black moves first."');
+    expect(readFileSync(new URL("../src/ui/LevelDialog.tsx", import.meta.url), "utf8")).toContain("Your colour is random each game. Black moves first.");
+  });
+});
+
 describe("playing White: the AI moves first", () => {
   it("the AI thinks at once, then it is the player's turn", () => {
     const state = asWhite();
@@ -134,9 +146,20 @@ describe("playing White: the AI moves first", () => {
     expect(aiMood({ ...won, winner: "black" })).toBe("laughing");
   });
 
-  it("no greeting when the AI opens (the greetings say 'your move first')", () => {
+  it("when the AI opens, its first line comes from its own bank after its first move (the greetings say 'your move first', D85)", () => {
     const source = readFileSync(new URL("../src/ui/usePersonality.ts", import.meta.url), "utf8");
-    expect(source).toContain("setGreeting(ai && state.currentPlayer === state.humanSide ? say(greetingContext(readSession().last)) : null);");
+    expect(source).toContain('setGreeting(ai ? say(state.currentPlayer === state.humanSide ? greetingContext(readSession().last) : "aiOpens") : null);');
+    const state = asWhite();
+    const opened = gameReducer(state, { type: "aiMoved", requestId: state.aiRequestId, move: state.legalMoves[0]! });
+    const line = "I moved first. Your turn, let us see what you have got, haha.";
+    expect(reactionBubble(state, { greeting: line })).toMatchObject({ text: null }); // the AI thinks first
+    expect(reactionBubble(opened, { greeting: line })).toMatchObject({ key: "greeting", text: line, why: false });
+    // A line the model wrote for its first move wins.
+    const said = gameReducer(state, { type: "aiMoved", requestId: state.aiRequestId, move: state.legalMoves[0]!, reaction: "Let us go." });
+    expect(reactionBubble(said, { greeting: line })).toMatchObject({ text: "Let us go.", why: true });
+    // As Black the greeting is at the start, and nothing extra after the AI's reply.
+    const black = createGameState({ mode: "vs-ai" });
+    expect(reactionBubble(black, { greeting: "Hi" })).toMatchObject({ key: "greeting", text: "Hi" });
   });
 });
 

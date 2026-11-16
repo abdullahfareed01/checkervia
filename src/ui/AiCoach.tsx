@@ -2,6 +2,7 @@ import { memo } from "react";
 import type { AiMood } from "./aiMood";
 import { ChatBubble } from "./ChatBubble";
 import type { BubbleMessage } from "./ChatBubble";
+import { ChatMuteIcon } from "./icons";
 import { RobotFace } from "./RobotFace";
 
 interface AiCoachProps {
@@ -10,6 +11,9 @@ interface AiCoachProps {
   whyOpen: boolean;
   onWhy: () => void;
   onAvatar?: () => void; // opens the AI's record (D77)
+  // Focus mode's small mute button (D87): hides and silences the AI's lines;
+  // its face keeps reacting.
+  mute?: { muted: boolean; onToggle: () => void } | undefined;
 }
 
 // The AI under the board (D64), as on chess.com: its robot on the left,
@@ -19,7 +23,7 @@ interface AiCoachProps {
 // under it moves when a line comes or goes.
 // Its avatar is a button: it opens the AI's record (D77), with a small
 // chart badge on its corner so it reads as one.
-export const AiCoach = memo(function AiCoach({ message, mood, whyOpen, onWhy, onAvatar }: AiCoachProps) {
+export const AiCoach = memo(function AiCoach({ message, mood, whyOpen, onWhy, onAvatar, mute }: AiCoachProps) {
   return (
     <section className="coach" aria-label="AI">
       {onAvatar ? (
@@ -39,6 +43,18 @@ export const AiCoach = memo(function AiCoach({ message, mood, whyOpen, onWhy, on
         </div>
       )}
       <ChatBubble message={message} whyOpen={whyOpen} onWhy={onWhy} />
+      {mute && (
+        <button
+          type="button"
+          className={`coach-mute${mute.muted ? " coach-mute-on" : ""}`}
+          aria-label="Mute the AI's chat"
+          aria-pressed={mute.muted}
+          title={mute.muted ? "Chat muted" : "Mute chat"}
+          onClick={mute.onToggle}
+        >
+          <ChatMuteIcon muted={mute.muted} />
+        </button>
+      )}
     </section>
   );
 });

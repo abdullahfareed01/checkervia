@@ -11,6 +11,8 @@ export const LIMITS = {
   // A real game takes minutes, so 10 wins an hour is far above honest play.
   submitWin: { windowSeconds: 3600, perDevice: 10, perIp: 30 },
   reportGame: { windowSeconds: 3600, perDevice: 30, perIp: 90 },
+  // Reports for abandoned games (D85): one per game at most.
+  reportAbandon: { windowSeconds: 3600, perDevice: 30, perIp: 90 },
   updateProfile: { windowSeconds: 3600, perDevice: 20, perIp: 60 },
   // Renaming is also limited to once in 7 days per player (D61); this stops
   // a device from trying many names in a row.
@@ -26,5 +28,6 @@ export const MAX_BODY = {
   claimUsername: 256,
   submitWin: 32_000,
   reportGame: 256,
+  reportAbandon: 256,
   updateProfile: 160,
 };

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 // Small helpers that turn game state into what the game screen shows.
 import { AI_LEVELS } from "../ai";
 import { strongLanguage } from "../ai/language";
@@ -45,6 +46,7 @@ export function winReasonOf(state: GameState): string | null {
   if (!state.winner) return null;
   const loser = opponentOf(state.winner);
   const name = loser === "black" ? "Black" : "White";
+  if (state.abandoned) return "Game abandoned: you did not move."; // D85
   if (state.resignedBy) return state.mode === "vs-ai" ? "You resigned." : `${name} resigned.`;
   return pieceCounts(state.board)[loser] === 0
     ? `${name} has no pieces left.`
@@ -67,6 +69,7 @@ export function cardFor(
   onAdultInfo?: () => void, // opens the language rules (Strongest's 18+ badge)
   mood: AiMood = "neutral", // the AI's face (D64)
   portrait: string | null = null, // the player's chosen avatar id (D65)
+  action?: ReactNode, // focus mode's small Resign, after the turn (D87)
 ) {
   const counts = pieceCounts(board);
   const isAi = state.mode === "vs-ai" && player === aiSideOf(state);
@@ -94,6 +97,7 @@ export function cardFor(
       portrait={isAi ? null : portrait}
       winner={state.winner === player}
       placement={placement}
+      action={action}
     />
   );
 }

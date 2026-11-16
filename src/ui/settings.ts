@@ -48,7 +48,10 @@ export interface Settings {
     readonly lastMove: boolean;
   };
   readonly chat: {
-    readonly bubbles: boolean;
+    readonly bubbles: boolean; // off: the AI's lines are neither shown nor spoken (D87)
+  };
+  readonly view: {
+    readonly focus: boolean; // focus mode: the big board, the cards and the AI only (D87)
   };
 }
 
@@ -69,6 +72,7 @@ export function defaultSettings(prefersReducedMotion: boolean): Settings {
     animation: { level: prefersReducedMotion ? "reduced" : "standard", speed: 1 },
     board: { theme: "classic", pieces: "classic", coordinates: "squares", legalMoves: true, lastMove: true },
     chat: { bubbles: true },
+    view: { focus: false },
   };
 }
 
@@ -116,6 +120,7 @@ export function sanitize(data: Raw, d: Settings): Settings {
   const animation = part(data.animation);
   const board = part(data.board);
   const chat = part(data.chat);
+  const view = part(data.view);
   return {
     version: SETTINGS_VERSION,
     sound: {
@@ -151,6 +156,7 @@ export function sanitize(data: Raw, d: Settings): Settings {
       lastMove: bool(board.lastMove, d.board.lastMove),
     },
     chat: { bubbles: bool(chat.bubbles, d.chat.bubbles) },
+    view: { focus: bool(view.focus, d.view.focus) },
   };
 }
 

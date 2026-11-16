@@ -1438,11 +1438,19 @@
   border-radius: calc(var(--s) * 18);
   background: linear-gradient(180deg, #3a2213, #2a170b);
 }
+/* Four columns (D87): the centred numbers need little room at their sides,
+   so the table fits a 320px phone; the outer edges keep the wider padding. */
 .lb-levels th,
 .lb-levels td {
-  padding: calc(var(--s) * 9) calc(var(--s) * 14);
+  padding: calc(var(--s) * 9) calc(var(--s) * 6);
   border-bottom: 1px solid rgba(201, 146, 76, 0.22);
   text-align: center;
+}
+.lb-levels tr > :first-child {
+  padding-left: calc(var(--s) * 14);
+}
+.lb-levels tr > :last-child {
+  padding-right: calc(var(--s) * 14);
 }
 .lb-levels tr:last-child th,
 .lb-levels tr:last-child td {
@@ -1470,6 +1478,22 @@
   width: 22%;
   color: #fff4dc;
   font-size: max(18px, calc(var(--s) * 26));
+}
+/* The narrowest phones: the level column (crown and name) gives up a little. */
+@media (max-width: 359px) {
+  .lb-levels tr > :first-child {
+    padding-left: calc(var(--s) * 8);
+  }
+  .lb-levels tr > :last-child {
+    padding-right: calc(var(--s) * 8);
+  }
+  .lb-levels tbody th {
+    gap: calc(var(--s) * 8);
+    font-size: 14px;
+  }
+  .lb-levels thead th {
+    font-size: 12px;
+  }
 }
 .lb-level-chip {
   flex: none;
@@ -2774,4 +2798,565 @@ html[data-anim="off"] .cp-panel {
   .pf-id-laurel {
     display: none;
   }
+}
+
+/* ---------- The compact Profile screen (like the Settings sheet) ----------
+   The screen is a sheet sized to what it shows, centred, and never scrolls:
+   longer things are rows that open a page inside it (ProfileScreen.tsx).
+   Two columns on short, wide windows (phones held sideways). Placed last,
+   so it refines the full height screen and the edit card above. */
+
+.pf-backdrop {
+  display: grid;
+  place-items: center;
+  padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  overflow: hidden;
+}
+
+.pf-screen {
+  width: min(100%, 460px);
+  min-height: 0;
+  max-height: 100%;
+  margin: 0;
+  padding: 12px 14px 14px;
+  border-radius: 24px;
+  overflow: hidden;
+}
+
+.pf-page {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  animation: pf-page-in 0.2s ease-out both;
+}
+
+@keyframes pf-page-in {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+/* The header: Back (or room for it), the title, Close. */
+.pf-head {
+  margin-bottom: 0;
+}
+.pf-head .lb-close,
+.pf-head .lb-head-spacer {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+}
+.pf-head .pf-title {
+  font-size: clamp(20px, 6vw, 26px);
+}
+.pf-head .pf-title-icon {
+  width: 24px;
+  height: 24px;
+  min-width: 0;
+  min-height: 0;
+}
+.pf-head .lb-info-button {
+  flex: none;
+  margin: 0;
+}
+.pf-back {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1.5px solid #6a4527;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #4e3020, #352011);
+  color: var(--lb-gold);
+  cursor: pointer;
+}
+.pf-back .icon {
+  width: 22px;
+  height: 22px;
+}
+.pf-back:hover {
+  filter: brightness(1.12);
+}
+.pf-back:focus-visible {
+  outline: 3px solid var(--lb-focus);
+  outline-offset: 2px;
+}
+
+.pf-columns,
+.pf-column {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-width: 0;
+}
+
+.pf-screen .pf-intro {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* The identity card, a little tighter. */
+.pf-screen .pf-id {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 18px;
+}
+.pf-screen .pf-id-name {
+  font-size: clamp(19px, 5.5vw, 26px);
+}
+.pf-screen .pf-id-place {
+  font-size: 14px;
+}
+
+/* The avatar: a clean gold ring with the picture right to its edge (no dark
+   backing at the rim), and a small pencil badge that covers little of it.
+   The button stays 44px for a finger; only the badge shows. */
+.pf-id-ring .avatar {
+  background: transparent;
+}
+.pf-id-ring {
+  padding: 2.5px;
+}
+.pf-id-ring .avatar {
+  width: 60px !important;
+  height: 60px !important;
+}
+.pf-id .pf-id-edit {
+  left: -14px;
+  bottom: -14px;
+  right: auto;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+.pf-id-edit-badge {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--lb-gold-fill);
+  color: var(--lb-gold-text);
+  box-shadow: 0 0 0 1.5px #fff3cf, 0 2px 4px rgba(0, 0, 0, 0.45);
+}
+.pf-id .pf-id-edit .lb-svg {
+  width: 13px;
+  height: 13px;
+}
+.pf-id .pf-id-edit:hover .pf-id-edit-badge {
+  filter: brightness(1.08);
+}
+.pf-id .pf-id-flag .lb-flag {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+}
+
+/* The four numbers on one strip. */
+.pf-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.pf-strip-item {
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 4px;
+  border: 1px solid rgba(201, 146, 76, 0.36);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #45291a 0%, #321d0e 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 220, 160, 0.1);
+}
+.pf-strip-item dt {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--lb-soft);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pf-strip-item dd {
+  margin: 0;
+  font-size: clamp(18px, 5.5vw, 24px) !important;
+  line-height: 1.1;
+}
+.pf-strip-rate {
+  border-color: #c3d54e;
+  background: linear-gradient(180deg, #56651f, #2f3a10);
+}
+
+/* The best win and the week's rank: two small boxes side by side. */
+/* Side by side only where both fit on one line ("16 moves on Strongest");
+   one over the other on phones, so nothing is cut off. */
+.pf-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13.5em), 1fr));
+  gap: 6px;
+  margin: 0;
+}
+.pf-fact {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(201, 146, 76, 0.36);
+  border-radius: 14px;
+  background: linear-gradient(180deg, #45291a 0%, #321d0e 100%);
+}
+.pf-fact-week {
+  border-color: rgba(190, 140, 230, 0.55);
+  background: linear-gradient(180deg, #4a2a5a, #2c1838);
+}
+.pf-fact-icon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+}
+.pf-fact-icon .lb-svg {
+  width: 100%;
+  height: 100%;
+}
+.pf-fact dt {
+  min-width: 0;
+  color: var(--lb-soft);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+/* Wraps to a second line rather than being cut off, if ever it must. */
+.pf-fact dd {
+  min-width: 0;
+  margin: 0;
+  color: var(--lb-cream);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+}
+
+/* Rows that open a page, in one rounded group (the Settings card). */
+.pf-rows {
+  display: grid;
+  padding: 2px 12px;
+  border-radius: 14px;
+  background: #24150b;
+  box-shadow: inset 0 0 0 1px rgba(201, 146, 76, 0.24);
+}
+.pf-rows > * + * {
+  border-top: 1px solid rgba(201, 146, 76, 0.16);
+}
+/* Each row reaches the group's edges (its 12px padding moved inside), so
+   a highlight fills the whole row. */
+.pf-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-sizing: border-box;
+  width: calc(100% + 24px);
+  min-height: 50px;
+  margin: 0 -12px;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--lb-cream);
+  font-family: var(--lb-sans);
+  font-size: 16px;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+.pf-row:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.pf-row-label {
+  flex: none;
+}
+.pf-row-value {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
+  color: var(--lb-soft);
+  font-size: 15px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pf-row-value .avatar {
+  box-shadow: 0 0 0 1.5px rgba(246, 198, 79, 0.8);
+}
+.pf-row .icon-chevron {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--lb-gold);
+}
+.pf-row-invalid .pf-row-value {
+  color: #ffb39c;
+}
+/* Coming back from a page puts the keyboard on its row (and the country
+   list on its button): a slim ring inside the row, not a big box around it. */
+/* The row the keyboard is on (also the one you came back to): a soft gold
+   tint across the row and a gold bar at its left, as a chosen list item,
+   not a box drawn around the words. */
+.pf-row:focus-visible,
+.pf-row-country:has(.cp-button:focus-visible) {
+  outline: none;
+  background: rgba(244, 197, 92, 0.12);
+  box-shadow: inset 3px 0 0 var(--lb-gold);
+}
+.pf-row-country .cp-button:focus-visible {
+  outline: none;
+}
+.pf-rows > :first-child {
+  border-radius: 14px 14px 0 0;
+}
+.pf-rows > :last-child {
+  border-radius: 0 0 14px 14px;
+}
+.pf-rows > :only-child {
+  border-radius: 14px;
+}
+
+/* The line over Save (what is still needed, Saving or Ready) always keeps
+   its room, so ticking "I understand" never shrinks the sheet. */
+.pf-status {
+  display: grid;
+  align-content: center;
+  min-height: 2.8em; /* two lines: the longest "To save, ..." */
+}
+
+/* The country picker as a row: its label on the left, the choice on the right. */
+.pf-row-country {
+  margin: 0 -12px;
+  padding: 0 12px;
+}
+.pf-row-country .cp {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pf-row-country .cp > .lb-field-label {
+  flex: none;
+  color: var(--lb-cream);
+  font-size: 16px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.pf-row-country .cp-button {
+  flex: 1;
+  min-width: 0;
+  min-height: 50px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--lb-soft);
+  font-size: 15px;
+  font-weight: 700;
+  justify-content: flex-end;
+}
+.pf-row-country .cp-value {
+  flex: 0 1 auto;
+  text-align: right;
+}
+.pf-row-country .cp-chevron {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--lb-gold);
+}
+
+/* The username and avatar pages. */
+.pf-screen .pf-sub {
+  padding: 10px 12px 12px;
+}
+.pf-screen .pf-avatars {
+  grid-template-columns: repeat(5, minmax(44px, 56px));
+  justify-content: space-between;
+  gap: 8px;
+}
+.pf-screen .pf-avatar {
+  min-width: 44px;
+}
+.pf-screen .pf-categories {
+  padding: 4px;
+}
+
+/* The public notice beside the rows when making a profile. */
+.pf-screen .pf-notice {
+  display: grid;
+  gap: 4px;
+  padding: 8px 12px;
+  border: 1px solid rgba(201, 146, 76, 0.3);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.16);
+}
+.pf-screen .pf-public {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.pf-screen .pf-check {
+  min-height: 44px;
+  font-size: 16px;
+}
+.pf-screen .lb-note {
+  font-size: 13px;
+}
+.pf-screen .lb-terms {
+  min-height: 44px;
+  font-size: 14px;
+  text-align: left;
+}
+.pf-screen .pf-missing,
+.pf-screen .pf-save-line {
+  font-size: 14px;
+}
+
+.pf-screen .pf-actions {
+  flex-wrap: nowrap;
+  gap: 10px;
+}
+.pf-screen .pf-actions .lb-button {
+  flex: 1 1 0;
+  max-width: none;
+  min-height: 48px;
+  padding-inline: 10px;
+  font-size: 16px;
+  white-space: nowrap;
+}
+.pf-screen .pf-actions-one .lb-button {
+  flex: 1 1 100%;
+}
+
+/* The table by level on its own page. */
+.pf-screen .pf-levels {
+  margin: 0;
+}
+
+/* The reports page: the count, then the next step or the suspension. */
+.pf-reports {
+  justify-items: center;
+  text-align: center;
+}
+.pf-reports-count {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  color: var(--lb-soft);
+  font-size: 15px;
+  font-weight: 800;
+}
+.pf-reports-count .lb-stat-number {
+  font-size: 34px;
+}
+.pf-reports-line {
+  margin: 0;
+  color: var(--lb-cream);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* After making a profile. */
+.pf-screen .pf-saved {
+  gap: 10px;
+  padding: 16px;
+}
+.pf-screen .pf-saved-avatar .avatar {
+  width: 80px !important;
+  height: 80px !important;
+}
+.pf-screen .pf-saved-name {
+  font-size: 24px;
+}
+.pf-screen .pf-saved-text {
+  font-size: 15px;
+}
+
+/* No checkered floor in the compact sheet: with the content reaching the
+   bottom, it showed through the rows. */
+.pf-screen .lb-scenery {
+  display: none;
+}
+
+/* Phones held sideways and other short, wide windows: two columns. */
+@media (max-height: 560px) and (min-width: 560px) {
+  .pf-screen {
+    width: min(100%, 760px);
+    padding: 8px 12px 10px;
+  }
+  .pf-page {
+    gap: 8px;
+  }
+  .pf-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .pf-column,
+  .pf-columns {
+    gap: 8px;
+  }
+  .pf-screen .pf-avatars {
+    grid-template-columns: repeat(10, minmax(40px, 52px));
+  }
+  .pf-screen .pf-intro {
+    display: none;
+  }
+}
+
+/* Very short windows: the identity card loses its laurels and the strip its padding. */
+@media (max-height: 600px) {
+  .pf-screen .pf-id-laurel {
+    display: none;
+  }
+  .pf-strip-item {
+    padding-block: 6px;
+  }
+  .pf-row,
+  .pf-row-country .cp-button {
+    min-height: 46px;
+  }
+}
+
+/* Under 360px wide: four avatars to a row, so each stays a 44px target. */
+@media (max-width: 359px) {
+  .pf-screen .pf-avatars {
+    grid-template-columns: repeat(4, minmax(44px, 56px));
+  }
+  .pf-strip-item dt {
+    font-size: 12px;
+    letter-spacing: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf-page {
+    animation: none;
+  }
+}
+html:is([data-anim="off"], [data-anim="reduced"]) .pf-page {
+  animation: none;
 }

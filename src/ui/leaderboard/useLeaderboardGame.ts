@@ -7,7 +7,8 @@
 //   panel sends it automatically (winQueue.ts); without a profile nothing is
 //   kept, as the first game's notice says;
 // - with a profile, the finished game is also reported once, as a win or a
-//   loss (a resignation is a loss), for the profile's counters.
+//   loss (a resignation is a loss, flagged as one; an abandoned game is a
+//   plain loss), for the profile's counters and the AI's record.
 import { useEffect, useRef } from "react";
 import { initialBoard } from "../../engine";
 import type { Board } from "../../engine";
@@ -35,15 +36,33 @@ export function qualifyingWin(state: GameState, gameId: string): QualifyingWin |
 }
 
 /**
+ * What a finished game against the AI reports: a loss when the AI won or
+ * the player gave up, flagged as a resignation only when the player pressed
+ * Resign. An abandoned game ends like a resignation (D85) but is a plain
+ * loss, so the AI's record does not count it as a player resigning.
+ */
+export function reportedResult(state: GameState): { readonly result: "win" | "loss"; readonly resigned: boolean } {
+  const lost = state.winner === aiSideOf(state) || state.resignedBy !== null;
+  return { result: lost ? "loss" : "win", resigned: state.resignedBy !== null && !state.abandoned };
+}
+
+// A random id for every game (history[0] is a new object for each game),
+// shared by the leaderboard and the reports for abandoned games (D85).
+const ids = new WeakMap<object, string>();
+
+/** The game's id, made the first time it is asked for. */
+export function gameIdOf(state: GameState): string {
+  const start = state.history[0]!;
+  if (!ids.has(start)) ids.set(start, randomId());
+  return ids.get(start)!;
+}
+
+/**
  * Returns this game's queued win (null while it goes on, when it cannot
  * count, or without a profile). Side effects run once per finished game.
  */
 export function useLeaderboardGame(state: GameState): QualifyingWin | null {
-  // A new id for every new game (history[0] is a new object for each game).
-  const ids = useRef(new WeakMap<object, string>());
-  const start = state.history[0]!;
-  if (!ids.current.has(start)) ids.current.set(start, randomId());
-  const gameId = ids.current.get(start)!;
+  const gameId = gameIdOf(state);
 
   const win = state.winner === null ? null : qualifyingWin(state, gameId);
   const { profile } = useLeaderboardProfile();
@@ -54,7 +73,8 @@ export function useLeaderboardGame(state: GameState): QualifyingWin | null {
     if (!leaderboardStore.get().profile) return;
     if (win) leaderboardStore.enqueue(win);
     // Fire and forget: a lost report only means one game fewer in the counters.
-    void leaderboardApi.reportGame(gameId, state.aiLevel, state.winner === aiSideOf(state) || state.resignedBy ? "loss" : "win", state.resignedBy !== null).catch(() => {});
+    const { result, resigned } = reportedResult(state);
+    void leaderboardApi.reportGame(gameId, state.aiLevel, result, resigned).catch(() => {});
   }, [state.winner, gameId]);
   return profile ? win : null;
 }

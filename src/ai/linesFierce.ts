@@ -163,6 +163,32 @@ export const HARD: Bank = {
     "Move a piece, or I tell everyone you started and ran, lol.",
     "Report button: ready. Your excuse: not ready. Move, hehe.",
   ],
+  // D85: after the AI's first move, when it opens (the player is White)
+  aiOpens: [
+    "I made the first move. Now try to answer it, haha.",
+    "Opening move done. You are already playing catch up, lol.",
+    "I moved first. Your turn, and the pressure is on, hehe.",
+    "My opening is on the board. Good luck with yours, lmao.",
+    "First move, my way. Your turn, if you dare, haha.",
+    "I struck first. Your move, lol.",
+    "There is my opening. Study it well, hehe.",
+    "I started. You follow. That is how this goes, haha.",
+    "Opening move played. Feel the pressure yet? Lmao.",
+    "I moved first and I like my chances. Your turn, lol.",
+  ],
+  // D85: the AI's last, angry line when the game is abandoned and it reports the player
+  abandoned: [
+    "Done. I reported you. Do not start what you cannot finish, lmao.",
+    "I warned you. You ignored me. Reported.",
+    "Reported. That is what happens when you freeze, haha.",
+    "Game abandoned. Report filed. You did this, lol.",
+    "I reported you. Next time, play or stay away, lmao.",
+    "Your minute is up. Reported. I am not sorry, haha.",
+    "You stalled, I reported. Simple as that, lol.",
+    "That is it! Reported, and I would do it again, lmao.",
+    "Report sent. Wasting my time has a price, haha.",
+    "No moves? No mercy. I reported you, lol.",
+  ],
 };
 
 export const STRONGEST: Bank = {
@@ -325,5 +351,31 @@ export const STRONGEST: Bank = {
     "Stalling like a noob. Reported. Unless you move right now, haha.",
     "Start a game and freeze? Pathetic. Move or get reported, lol.",
     "I report quitters, clown. Prove you are not one. Move, lmao.",
+  ],
+  // D85: after the AI's first move, when it opens (the player is White)
+  aiOpens: [
+    "I moved first, noob. Try not to blunder on move one, lmao.",
+    "Opening done. Your turn, amateur. Make it quick, haha.",
+    "I struck first, scrub. Your move, if you can find one, lol.",
+    "First move is mine. Clueless yet? Your turn, lmao.",
+    "There is my opening, clown. Answer it if you can, haha.",
+    "I started this beating. Your move, noob, lol.",
+    "Move one is done. Your turn, amateur. Do not choke, lmao.",
+    "Opening played. Your move, amateur. No pressure, haha.",
+    "I went first, scrub. Try to keep up, lol.",
+    "My opening is on the board. Yours better be good, noob, lmao.",
+  ],
+  // D85: the AI's last, angry line when the game is abandoned and it reports the player
+  abandoned: [
+    "I reported you, noob. Do not start what you cannot finish, lmao.",
+    "Reported, amateur. Go waste someone else's time, haha.",
+    "That is it, clown. I reported you. Bye, lol.",
+    "Game abandoned, scrub. Report filed, lmao.",
+    "Frozen for a minute? Pathetic. I reported you, haha.",
+    "I reported you, noob. Come back when you have a plan, lol.",
+    "Reported. Clueless and slow is a bad combination, lmao.",
+    "Done waiting, amateur. You got reported, haha.",
+    "You stalled, I reported. Laughable, lol.",
+    "Report sent, scrub. Next time move or stay out, lmao.",
   ],
 };

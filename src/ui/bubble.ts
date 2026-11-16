@@ -24,8 +24,8 @@ export interface ExtraLines {
  *   lost, else the AI's reaction (with Why?), else nothing (D65: no "I
  *   played E3 → D4." line);
  * - at the start of a game: the greeting (no Why?). When the AI opens (the
- *   player is White, D81) there is none: the greetings say "your move first",
- *   and the turn pill already says who starts.
+ *   player is White, D81) its opening line comes after its first move,
+ *   unless the model already said something then (D85).
  * A line stays while the player picks up and puts back pieces, and goes
  * when their move is played (the last entry is then theirs) (D65).
  * Nothing in two player games, while reviewing an older position, or once
@@ -44,7 +44,7 @@ export function reactionBubble(state: GameState, extra: ExtraLines = {}): Bubble
   const last = state.history[index]!;
   if (last.player === aiSideOf(state) && last.move) {
     if (extra.hint?.index === index) return { key: `hint-${index}`, text: extra.hint.text, tone: "banter", why: true };
-    if (!last.reaction) return null;
+    if (!last.reaction) return index === 1 && extra.greeting ? { key: "greeting", text: extra.greeting, tone: "banter", why: false } : null;
     const tone = last.judgement ? (last.judgement.verdict === "great" ? "respect" : "roast") : "banter";
     return { key: `move-${index}`, text: last.reaction, tone, why: true };
   }
