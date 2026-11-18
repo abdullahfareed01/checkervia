@@ -28,6 +28,13 @@ function status(overrides: Partial<ComponentProps<typeof StatusBar>> = {}): stri
 }
 
 describe("StatusBar in AI mode", () => {
+  it("explains a known service failure before the collapsed Details", () => {
+    const message = "The AI service has reached its credit limit. Please try again later.";
+    const html = status({ aiPhase: "failed", aiFailureReasons: [`The model call failed: ${message}`] });
+    expect(html).toContain(`<p class="status-hint">${message} No move was played.</p>`);
+    expect(html.indexOf(message)).toBeLessThan(html.indexOf("<details"));
+    expect(html).toContain(">Retry</button>");
+  });
   it("shows 'AI is thinking' with no Retry button while the AI works", () => {
     const html = status({ aiPhase: "thinking" });
     expect(html).toContain("AI is thinking");

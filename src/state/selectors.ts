@@ -2,7 +2,7 @@
 // No rules live here: everything comes from state.legalMoves.
 import { samePosition } from "../engine";
 import type { Board, Player, Position } from "../engine";
-import { canHumanAct } from "./gameReducer";
+import { canHumanAct, isGameOver } from "./gameReducer";
 import type { GameState } from "./gameReducer";
 import { routeChoices } from "./routes";
 
@@ -70,5 +70,5 @@ export function pieceCounts(board: Board): Record<Player, number> {
 // A game is in progress once a move has been played and nobody has won yet.
 // The New game button and the mode switch ask for confirmation only then.
 export function isGameInProgress(state: GameState): boolean {
-  return state.movesPlayed > 0 && state.winner === null;
+  return state.movesPlayed > 0 && !isGameOver(state);
 }

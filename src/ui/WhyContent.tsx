@@ -38,8 +38,8 @@ export function WhyContent({ explanation }: { explanation: AiExplanation }) {
         </section>
       )}
       {explanation.reason && (
-        <section className="why-section" aria-label="AI generated, may be wrong">
-          <h3>AI generated, may be wrong</h3>
+        <section className="why-section" aria-label={explanation.source === "engine" ? "Engine chose this move" : "AI generated, may be wrong"}>
+          <h3>{explanation.source === "engine" ? "Engine chose this move" : "AI generated, may be wrong"}</h3>
           <p className="why-reason">{explanation.reason}</p>
         </section>
       )}

@@ -32,9 +32,10 @@
 4. Check win: if the next player has no legal moves (this includes having no pieces), the mover wins.
 5. Otherwise switch player.
 
-## Win and draw
+## Win, resign and draw
 - Win: opponent has no pieces or no legal moves.
-- No draw rule.
+- Resign: a player may resign at any time and loses. The AI resigns when the engine proves its position lost: every legal move loses by force within 6 turns (D89).
+- Draw (D89, replacing D5): the same position with the same side to move for the third time, or 40 moves by each side (80 in a row) without a capture or a new King. The game applies both itself (there is no referee to claim them). A drawn game is over with no winner.
 
 ## Move representation
 - A move has `from` (start square), `to` (final square), `path` (every square landed on, in order) and `captured` (positions of jumped pieces, in order).

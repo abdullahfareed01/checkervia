@@ -10,15 +10,21 @@ import { checkReaction, checkReason } from "./language";
 import { AI_LEVELS } from "./difficulty";
 import type { AiLevel } from "./difficulty";
 import { parseReply } from "./parseReply";
+import { ModelServiceError } from "./serviceError";
 import { buildPrompt, buildRetryNote } from "./prompt";
 import type { OpponentMove } from "./prompt";
+import { EngineFallbackError } from "./request";
+import type { ModelContext } from "./request";
+import { turnLine } from "./chat";
 
 // Sends the prompt to a model and returns its text. On a retry, `retryNote`
 // explains why the previous answer was rejected.
-export type CallModel = (prompt: string, retryNote?: string) => Promise<string>;
+export type CallModel = ((prompt: string, retryNote?: string, signal?: AbortSignal, context?: ModelContext) => Promise<string>) & { readonly handlesChain?: boolean };
 
 // What the engine's look-ahead said about the chosen move, for the popup.
 export interface ChosenLookahead {
+  // Who selected this move; scores themselves always come from the engine.
+  readonly source?: "engine";
   readonly depth: number; // turns (plies) searched
   readonly score: number; // the chosen move's score
   readonly best: number; // the best score of any legal move
@@ -38,6 +44,12 @@ export type ChooseMoveResult =
   | { ok: false; reasons: string[]; attempts: number };
 
 export interface ChooseMoveOptions {
+  engineFallback?: boolean;
+  opening?: boolean;
+  lineSeed?: number;
+  onFallbackReady?: (result: Extract<ChooseMoveResult, { ok: true }>) => void;
+  signal?: AbortSignal;
+  retryDelayMs?: number; // the controller uses a short exponential backoff
   // The app always passes one. Without a level the model gets every legal
   // move and no engine help (the original brief's mode, used by many tests).
   level?: AiLevel;
@@ -60,7 +72,7 @@ type AttemptResult =
   | { move: Move; index: number; explanation: string | undefined; reaction: string | undefined }
   // `note` is the retry note for the next call. It is undefined when the model
   // never produced an answer (the call threw), so there is nothing to explain.
-  | { reason: string; note: string | undefined };
+  | { reason: string; note: string | undefined; retryable?: boolean; retryAfterMs?: number; fallback?: boolean };
 
 // One attempt: ask the model, read its answer, and look the chosen number up
 // in the legal list. A move can only come out of this function if it is in
@@ -70,13 +82,18 @@ async function attempt(
   prompt: string,
   retryNote: string | undefined,
   moves: readonly Move[],
+  signal?: AbortSignal,
+  context?: ModelContext,
 ): Promise<AttemptResult> {
   let text: string;
   try {
-    text = await callModel(prompt, retryNote);
+    signal?.throwIfAborted();
+    text = await (context ? callModel(prompt, retryNote, signal, context) : callModel(prompt, retryNote, signal));
+    signal?.throwIfAborted();
   } catch (error) {
+    if (error instanceof EngineFallbackError) return { reason: error.message, note: undefined, retryable: false, fallback: true };
     const message = error instanceof Error ? error.message : String(error);
-    return { reason: `The model call failed: ${message}`, note: undefined };
+    return { reason: `The model call failed: ${message}`, note: undefined, retryable: !signal?.aborted && (!(error instanceof ModelServiceError) || error.retryable), retryAfterMs: error instanceof ModelServiceError ? error.retryAfterMs : 0 };
   }
 
   const parsed = parseReply(text, moves.length);
@@ -127,15 +144,25 @@ async function offerFor(board: Board, player: Player, moves: readonly Move[], op
   };
 }
 
-// Picks a move for `player` using the model.
-// - At every level the engine first scores the legal moves by looking ahead;
-//   the model is offered the level's best few, with their scores.
-// - Calls the model once, then retries up to `maxRetries` times (default 3),
-//   so at most 1 + maxRetries calls.
-// - The move returned always comes from the offered list, which comes from
-//   the engine's legal list.
-// - If every attempt fails, returns the reasons. It never guesses or picks
-//   at random.
+// A provider delay must end immediately when the turn is cancelled.
+function waitToRetry(ms: number, signal?: AbortSignal): Promise<void> {
+  if (signal?.aborted) return Promise.reject(signal.reason);
+  if (ms <= 0) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const abort = () => {
+      clearTimeout(timer);
+      reject(signal?.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", abort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", abort, { once: true });
+  });
+}
+
+// Picks from the engine's offered legal moves. At most three retries;
+// permanent failures and cancellation stop sooner. Never guesses a move.
 export async function chooseMove(
   board: Board,
   player: Player,
@@ -153,14 +180,28 @@ export async function chooseMove(
     return { ok: false, reasons: ["The engine's look ahead failed, so the AI's moves could not be listed."], attempts: 0 };
   }
   const prompt = buildPrompt(board, player, offer.choices, offer.shown, options.opponent, moves.length);
+  const bestIndex = offer.scoreOf ? offer.scoreOf.reduce((best, score, index, scores) => score > scores[best]! ? index : best, 0) : 0;
+  const fallback = (attempts: number): Extract<ChooseMoveResult, { ok: true }> => ({
+    ok: true, move: offer.choices[bestIndex]!, attempts,
+    reason: "The engine chose its best scored legal move for this level.",
+    reaction: turnLine("human", options.level ?? 2, options.lineSeed ?? 0),
+    ...(offer.info && offer.scoreOf ? { lookahead: { ...offer.info, score: offer.scoreOf[bestIndex]!, scoresShown: true, source: "engine" as const } } : {}),
+  });
+  if (options.engineFallback) options.onFallbackReady?.(fallback(0));
+  const context: ModelContext | undefined = options.engineFallback ? {
+    job: "move", board, player, level: options.level ?? 2, opening: options.opening ?? false,
+    candidates: offer.choices.map(move => moves.indexOf(move)),
+    ...(offer.shown ? { scores: offer.shown.scores } : {}),
+  } : undefined;
   // A reaction only counts when there was a move to react to.
   const wantsReaction = Boolean(options.opponent);
-  const totalCalls = 1 + Math.max(0, Math.trunc(maxRetries));
+  const retries = Number.isFinite(maxRetries) ? Math.min(3, Math.max(0, Math.trunc(maxRetries))) : 3;
+  const totalCalls = 1 + retries;
   const reasons: string[] = [];
   let retryNote: string | undefined;
 
   for (let call = 1; call <= totalCalls; call++) {
-    const result = await attempt(callModel, prompt, retryNote, offer.choices);
+    const result = await attempt(callModel, prompt, retryNote, offer.choices, options.signal, context);
     if ("move" in result) {
       const { move, index, explanation, reaction } = result;
       const verdict = options.opponent?.judgement?.verdict ?? null;
@@ -168,14 +209,26 @@ export async function chooseMove(
         ok: true,
         move,
         attempts: call,
+        ...(options.engineFallback ? { reaction: turnLine("human", options.level ?? 2, options.lineSeed ?? 0) } : {}),
         ...(explanation === undefined ? {} : { reason: checkReason(explanation) }),
-        ...(wantsReaction && reaction ? { reaction: checkReaction(reaction, options.level, verdict) } : {}),
+        ...(!options.engineFallback && wantsReaction && reaction ? { reaction: checkReaction(reaction, options.level, verdict) } : {}),
         ...(offer.info && offer.scoreOf ? { lookahead: { ...offer.info, score: offer.scoreOf[index]! } } : {}),
       };
     }
 
     reasons.push(result.reason);
+    if (options.engineFallback && (result.fallback || result.retryable === false || call === totalCalls)) return fallback(call);
+    if (result.retryable === false) return { ok: false, reasons, attempts: call };
     retryNote = result.note;
+    if (call < totalCalls) {
+      const delay = Math.max((options.retryDelayMs ?? 0) * 2 ** (call - 1), result.retryAfterMs ?? 0);
+      try {
+        await waitToRetry(delay, options.signal);
+      } catch (error) {
+        reasons.push(error instanceof Error ? error.message : "The AI request was cancelled.");
+        return { ok: false, reasons, attempts: call };
+      }
+    }
   }
 
   return { ok: false, reasons, attempts: totalCalls };

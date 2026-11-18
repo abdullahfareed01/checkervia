@@ -86,7 +86,7 @@ export function toneClasses(message: { tone: BubbleTone; text: string | null }):
 function useAnnouncement(message: BubbleMessage | null): string {
   const [text, setText] = useState(message?.announce !== false ? (message?.text ?? "") : "");
   useEffect(() => {
-    if (message?.text && message.announce !== false) setText(message.text);
+    setText(message?.announce !== false ? message?.text ?? "" : "");
   }, [message?.key, message?.text, message?.announce]);
   return text;
 }

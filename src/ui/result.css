@@ -190,6 +190,14 @@
   --ribbon-edge: #c48a2e;
 }
 
+/* A draw (D89): bronze, nobody's colour. */
+.ribbon-tone-draw {
+  --ribbon: #8a5a2c;
+  --ribbon-tail: #6b431f;
+  --ribbon-fold: #3f2611;
+  --ribbon-edge: #e6ad48;
+}
+
 /* The title sits on the band (the band is the middle half of the shape). */
 .result-title {
   position: absolute;
@@ -216,6 +224,10 @@
 .result-title-white {
   color: #3a2412;
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.result-title-draw {
+  color: #fbe7b5;
 }
 
 /* ---------- The AI's line and the reason ---------- */

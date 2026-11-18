@@ -1,0 +1,40 @@
+/* D103: flat summary cards and scalable SVG charts, with exact data on demand. */
+.adm-overview { display: grid; gap: 16px; min-width: 0; }
+.adm-small { font-size: 0.85rem; }
+.adm-periods { display: flex; flex-wrap: wrap; gap: 6px; }
+.adm-periods [aria-pressed="true"] { background: var(--lb-gold-fill); color: var(--lb-gold-text); border-color: var(--adm-gold); }
+.adm-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 155px), 1fr)); gap: 12px; margin: 0; }
+.adm-metric { gap: 6px; }
+.adm-metric dt { color: var(--adm-soft); font-size: 0.9rem; }
+.adm-metric dd { display: grid; gap: 6px; margin: 0; overflow-wrap: anywhere; }
+.adm-metric-value { color: var(--adm-cream); font-size: 1.9rem; line-height: 1.15; }
+.adm-chart-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.adm-chart-svg text { fill: var(--adm-dim); font: 12px var(--lb-sans); }
+.adm-chart-grid { fill: none; stroke: var(--adm-line-soft); }
+.adm-chart-line { fill: none; stroke: currentColor; stroke-width: 2.5; vector-effect: non-scaling-stroke; }
+.adm-series-0 { color: var(--adm-gold); fill: currentColor; }
+.adm-series-1 { color: #b9d6e9; fill: currentColor; }
+.adm-series-1 .adm-chart-line { stroke-dasharray: 7 4; }
+.adm-series-2 { color: var(--adm-ok); fill: currentColor; }
+.adm-series-2 .adm-chart-line { stroke-dasharray: 2 4; }
+.adm-chart-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; padding: 0; margin: 0; list-style: none; font-size: 0.85rem; }
+.adm-chart-data { min-width: 0; }
+.adm-chart-data summary { display: flex; align-items: center; min-height: 44px; padding: 6px 0; color: var(--adm-gold); cursor: pointer; font-size: 0.85rem; }
+.adm-chart-data summary::before { content: "+"; margin-right: 8px; }
+.adm-chart-data[open] summary::before { content: "\2212"; }
+.adm-chart-data summary:active { color: var(--adm-cream); background: var(--adm-raised); }
+.adm-chart-data summary:hover { color: var(--adm-cream); }
+.adm-chart-data summary:focus-visible { outline: 3px solid var(--adm-focus); outline-offset: 2px; }
+.adm-data-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.85rem; font-variant-numeric: tabular-nums; }
+.adm-data-table caption { text-align: left; color: var(--adm-dim); padding-bottom: 8px; }
+.adm-data-table th, .adm-data-table td { padding: 10px 4px; border-bottom: 1px solid var(--adm-line-soft); overflow-wrap: anywhere; text-align: right; }
+.adm-data-table th:first-child { text-align: left; }
+.adm-data-table thead { color: var(--adm-soft); }
+@media (min-width: 720px) { .adm-chart { align-self: start; } }
+
+.adm-chart-axis { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 12px; color: var(--adm-dim); font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+
+.adm-chart-legend li { display: flex; align-items: center; gap: 6px; }
+.adm-chart-swatch { width: 18px; border-top: 3px solid currentColor; }
+.adm-series-1 .adm-chart-swatch { border-top-style: dashed; }
+.adm-series-2 .adm-chart-swatch { border-top-style: dotted; }

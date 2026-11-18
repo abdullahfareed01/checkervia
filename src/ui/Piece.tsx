@@ -1,4 +1,5 @@
 import type { Piece as PieceType } from "../engine";
+import { useCosmeticSides } from "./CosmeticAppearance";
 
 interface PieceProps {
   piece: PieceType;
@@ -10,6 +11,7 @@ interface PieceProps {
 // A CSS disc. Kings get a gold crown and ring (see styles.css), so they do not
 // rely on colour alone. The square's button carries the accessible label.
 export function Piece({ piece, hidden = false }: PieceProps) {
+  const finish = useCosmeticSides()[piece.player];
   const classes = [
     "piece",
     `piece-${piece.player}`,
@@ -18,5 +20,7 @@ export function Piece({ piece, hidden = false }: PieceProps) {
   ]
     .filter(Boolean)
     .join(" ");
-  return <div className={classes} aria-hidden="true" />;
+  return <div className={classes} data-piece-finish={finish.pieces} data-piece-effect={finish.effect} aria-hidden="true">
+    {finish.effect !== "classic" && <span className={`cosmetic-fx cosmetic-fx-${finish.effect}`}><i /><i /><i /></span>}
+  </div>;
 }

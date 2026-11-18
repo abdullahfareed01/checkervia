@@ -12,6 +12,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { LEVELS, toAiLevel } from "../../src/ai/difficulty";
 import type { AiLevel } from "../../src/ai/difficulty";
+import { parseSuspensionKind } from "../../src/leaderboard/protocol";
 import { aiRecordOf } from "./store";
 import type { Conduct, LeaderboardStore, LevelCounts, PlayerRecord, RankedRow } from "./store";
 
@@ -26,10 +27,19 @@ interface ConductRow {
   reports: number;
   total_reports: number;
   suspended_until: string | null;
+  // From migration 7 on (D102).
+  suspension_kind?: string | null;
+  revised_at?: string | null;
 }
 const toConduct = (row: ConductRow | null): Conduct =>
   row
-    ? { reports: Number(row.reports), totalReports: Number(row.total_reports), suspendedUntil: row.suspended_until === null ? null : new Date(row.suspended_until) }
+    ? {
+        reports: Number(row.reports),
+        totalReports: Number(row.total_reports),
+        suspendedUntil: row.suspended_until === null ? null : new Date(row.suspended_until),
+        ...("suspension_kind" in row ? { kind: parseSuspensionKind(row.suspension_kind) } : {}),
+        ...("revised_at" in row ? { revisedAt: row.revised_at ? new Date(row.revised_at) : null } : {}),
+      }
     : NO_CONDUCT;
 const PLAYER_COLUMNS = "id, username, username_key, country, avatar, hidden, username_changed_at";
 
@@ -236,7 +246,7 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
 
     async levelCounts(playerId): Promise<LevelCounts[]> {
       const rows = check(await db.rpc("player_level_stats", { p_player: playerId })) as
-        | { level: number; wins: number; best_moves: number | null; losses: number; games: number; resigned?: number }[]
+        | { level: number; wins: number; best_moves: number | null; losses: number; games: number; resigned?: number; draws?: number }[]
         | null;
       return (rows ?? [])
         .map((row) => ({
@@ -245,8 +255,9 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
           bestMoves: row.best_moves === null ? null : Number(row.best_moves),
           losses: Number(row.losses),
           games: Number(row.games),
-          // Before migration 3 the function has no resigned column.
+          // Before migration 3 the function has no resigned column, before 5 no draws.
           resigned: Number(row.resigned ?? 0),
+          draws: Number(row.draws ?? 0),
         }))
         .sort((a, b) => a.level - b.level);
     },
@@ -271,12 +282,12 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
           await Promise.all(
             LEVELS.map(async (level) => {
               const [aiWins, aiLosses] = await Promise.all([count(level, "loss"), count(level, "win")]);
-              return { level, games: aiWins + aiLosses, aiWins, aiLosses, resigned: 0 };
+              return { level, games: aiWins + aiLosses, aiWins, aiLosses, resigned: 0, draws: 0 };
             }),
           ),
         );
       }
-      const rows = (check(answer) ?? []) as { level: number; games: number; ai_wins: number; ai_losses: number; resigned: number }[];
+      const rows = (check(answer) ?? []) as { level: number; games: number; ai_wins: number; ai_losses: number; resigned: number; draws?: number }[];
       return aiRecordOf(
         LEVELS.map((level) => {
           const row = rows.find((candidate) => Number(candidate.level) === level);
@@ -286,6 +297,7 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
             aiWins: Number(row?.ai_wins ?? 0),
             aiLosses: Number(row?.ai_losses ?? 0),
             resigned: Number(row?.resigned ?? 0),
+            draws: Number(row?.draws ?? 0), // before migration 5: no column, 0
           };
         }),
       );

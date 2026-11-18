@@ -143,6 +143,7 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
           losses: own.filter((result) => result.level === level && result.result === "loss").length,
           games: own.filter((result) => result.level === level).length,
           resigned: own.filter((result) => result.level === level && result.resigned === true).length,
+          draws: own.filter((result) => result.level === level && result.result === "draw").length,
         };
       });
     },
@@ -175,6 +176,7 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
             aiWins: atLevel.filter((result) => result.result === "loss").length,
             aiLosses: atLevel.filter((result) => result.result === "win").length,
             resigned: atLevel.filter((result) => result.resigned === true).length,
+            draws: atLevel.filter((result) => result.result === "draw").length,
           };
         }),
       );

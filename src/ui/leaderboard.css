@@ -1431,6 +1431,7 @@
 
 .lb-levels {
   width: 100%;
+  table-layout: fixed;
   border-collapse: separate;
   border-spacing: 0;
   overflow: hidden;
@@ -1438,13 +1439,17 @@
   border-radius: calc(var(--s) * 18);
   background: linear-gradient(180deg, #3a2213, #2a170b);
 }
-/* Four columns (D87): the centred numbers need little room at their sides,
+/* Five columns (D89): the centred numbers need little room at their sides,
    so the table fits a 320px phone; the outer edges keep the wider padding. */
 .lb-levels th,
 .lb-levels td {
   padding: calc(var(--s) * 9) calc(var(--s) * 6);
   border-bottom: 1px solid rgba(201, 146, 76, 0.22);
   text-align: center;
+  overflow-wrap: anywhere;
+}
+.lb-levels tr > :first-child {
+  width: 28%;
 }
 .lb-levels tr > :first-child {
   padding-left: calc(var(--s) * 14);
@@ -1467,19 +1472,37 @@
   text-align: left;
 }
 .lb-levels tbody th {
-  display: flex;
-  align-items: center;
-  gap: calc(var(--s) * 14);
   color: #fff1d6;
   font-size: max(16px, calc(var(--s) * 22));
   font-weight: 800;
 }
+.lb-levels tbody th .lb-level-chip {
+  display: inline-grid;
+  margin-right: calc(var(--s) * 8);
+  vertical-align: middle;
+}
 .lb-levels td {
-  width: 22%;
+  width: 18%;
   color: #fff4dc;
   font-size: max(18px, calc(var(--s) * 26));
 }
 /* The narrowest phones: the level column (crown and name) gives up a little. */
+@media (max-width: 420px) {
+  .lb-levels th,
+  .lb-levels td {
+    padding-left: 3px;
+    padding-right: 3px;
+  }
+  .lb-levels tbody th .lb-level-chip {
+    display: none;
+  }
+  .lb-levels tbody th {
+    font-size: 14px;
+  }
+  .lb-levels thead th {
+    font-size: 12px;
+  }
+}
 @media (max-width: 359px) {
   .lb-levels tr > :first-child {
     padding-left: calc(var(--s) * 8);
@@ -2958,7 +2981,7 @@ html[data-anim="off"] .cp-panel {
   height: 20px;
 }
 
-/* The four numbers on one strip. */
+/* The four main totals stay on one strip; the results row shows draws. */
 .pf-strip {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

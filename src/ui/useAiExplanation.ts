@@ -9,6 +9,7 @@ import { moveText } from "./notation";
 // Everything shown about the AI move on screen: in the chat bubble, the
 // sidebar note and behind "Why?".
 export interface AiExplanation {
+  readonly source?: "engine";
   readonly index: number; // history index of the move (its move number)
   readonly label: string; // e.g. "3,2 → 4,1"
   readonly reason: string | null; // the model's own words (not checked)
@@ -24,6 +25,7 @@ export function explainShown(mode: GameMode, shown: DisplayedPosition, aiSide: P
   if (mode !== "vs-ai" || shown.player !== aiSide || !shown.move || !shown.previousBoard) return null;
   return {
     index: shown.index,
+    ...(shown.lookahead?.source === "engine" ? { source: "engine" as const } : {}),
     label: moveText(shown.move),
     reason: shown.reason,
     reaction: shown.reaction,

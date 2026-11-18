@@ -1,0 +1,97 @@
+/* The sign in screens (D100): one leather card in the middle of the page,
+   with the logo, the title and the steps. The page scrolls only when the
+   card is taller than the window (a phone held sideways). */
+
+.adm-auth {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+}
+
+.adm-auth-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 16px;
+  padding: 28px 24px 22px;
+  border: 1px solid var(--adm-line);
+  border-radius: 16px;
+  background: var(--lb-panel);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.adm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--adm-cream);
+  font-family: var(--lb-serif);
+  font-size: 1.15rem;
+}
+
+.adm-brand strong {
+  color: var(--adm-gold);
+  font-weight: 900;
+}
+
+.adm-auth-title {
+  color: var(--adm-cream);
+  font-family: var(--lb-serif);
+  font-size: 1.6rem;
+  line-height: 1.15;
+}
+
+.adm-auth-lead {
+  color: var(--adm-soft);
+  font-size: 0.95rem;
+}
+
+.adm-auth-card > .adm-link {
+  justify-self: start;
+}
+
+.adm-qr {
+  justify-self: center;
+  padding: 10px;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.adm-qr img {
+  display: block;
+  width: 180px;
+  height: 180px;
+}
+
+.adm-secret {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  color: var(--adm-soft);
+  font-size: 0.95rem;
+}
+
+.adm-secret code {
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--adm-input);
+  color: var(--adm-cream);
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+}
+
+.adm-field input.adm-code {
+  font-family: var(--lb-numbers);
+  font-size: 1.5rem;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+/* Inputs and long words never widen the card (large text sizes). */
+.adm-auth-card > *,
+.adm-form > *,
+.adm-field {
+  min-width: 0;
+}

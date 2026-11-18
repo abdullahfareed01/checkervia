@@ -11,11 +11,17 @@
 // counts. Without a profile, or before migration 4, the device's own count
 // still applies. In localStorage, every access in try and catch, checked
 // field by field on load.
+//
+// A moderator can also suspend, shorten or lift a suspension (D102). The
+// server then sends the time of that change (revisedAt); a newer one than
+// this device has seen replaces the device's own suspension, even a longer
+// one, so lifting it restores play at once. Nothing else is wiped.
 import { useEffect, useState, useSyncExternalStore } from "react";
 import type { AiLevel } from "../ai/difficulty";
 import { LEVELS } from "../ai/difficulty";
 import { GAME_ID_PATTERN, REPORT_LIMIT, SUSPENSION_DAYS } from "../leaderboard/protocol";
-import type { AbandonPhase, ConductStatus } from "../leaderboard/protocol";
+import { parseSuspensionKind } from "../leaderboard/protocol";
+import type { AbandonPhase, ConductStatus, SuspensionKind } from "../leaderboard/protocol";
 import { leaderboardApi } from "./leaderboard/api";
 import type { ApiResult } from "./leaderboard/api";
 import { leaderboardStore } from "./leaderboard/profile";
@@ -36,6 +42,8 @@ export interface Conduct {
   readonly reports: number; // towards the next suspension
   readonly totalReports: number;
   readonly suspendedUntil: number | null; // ms since 1970
+  readonly kind?: SuspensionKind; // who suspended (D102), while suspended
+  readonly revisedAt?: number; // the newest moderator change seen (D102), ms since 1970
   readonly reported: readonly string[]; // the last game ids reported
   readonly pending: readonly PendingReport[]; // not yet accepted by the server
 }
@@ -63,7 +71,7 @@ export function withReport(conduct: Conduct, report: PendingReport, now: number)
     const counted = { ...conduct, totalReports: conduct.totalReports + 1, reported, pending: [...conduct.pending, report] };
     if (suspended) next = counted;
     else if (conduct.reports + 1 >= REPORT_LIMIT) {
-      next = { ...counted, reports: 0, suspendedUntil: now + SUSPENSION_DAYS * DAY_MS };
+      next = { ...counted, reports: 0, suspendedUntil: now + SUSPENSION_DAYS * DAY_MS, kind: "reports" };
       suspendedNow = true;
     } else next = { ...counted, reports: conduct.reports + 1, suspendedUntil: null };
   }
@@ -74,21 +82,35 @@ export function withReport(conduct: Conduct, report: PendingReport, now: number)
   };
 }
 
+/** A moderator's change the device has not seen yet (D102), or null. */
+export function newRevision(conduct: Pick<Conduct, "revisedAt">, status: ConductStatus | null | undefined): number | null {
+  const revised = status?.revisedAt ? Date.parse(status.revisedAt) : Number.NaN;
+  return Number.isNaN(revised) || revised <= (conduct.revisedAt ?? 0) ? null : revised;
+}
+
 /**
  * The server's counts, which are the truth for the profile. While reports
  * are still waiting to be sent, the device keeps its own count; a suspension
  * is never shortened by an older answer, and the total never goes down (a
- * report made before the profile existed stays counted here).
+ * report made before the profile existed stays counted here). A moderator's
+ * newer change (D102) is taken as it is, shorter or lifted, once no report
+ * of this device is still on its way.
  */
 export function withServer(conduct: Conduct, status: ConductStatus): Conduct {
-  const serverUntil = status.suspendedUntil === null ? null : Date.parse(status.suspendedUntil);
-  const until = serverUntil === null || Number.isNaN(serverUntil) ? conduct.suspendedUntil : Math.max(serverUntil, conduct.suspendedUntil ?? 0);
-  return {
-    ...conduct,
+  const parsed = status.suspendedUntil === null ? null : Date.parse(status.suspendedUntil);
+  const serverUntil = parsed === null || Number.isNaN(parsed) ? null : parsed;
+  const serverKind = parseSuspensionKind(status.kind) ?? (serverUntil === null ? null : "reports");
+  const revised = conduct.pending.length === 0 ? newRevision(conduct, status) : null;
+  const { kind: _kind, ...rest } = conduct;
+  const base = {
+    ...rest,
     reports: conduct.pending.length > 0 ? conduct.reports : status.reports,
     totalReports: Math.max(conduct.totalReports, status.totalReports),
-    suspendedUntil: until,
   };
+  const withKind = (until: number | null, kind: SuspensionKind | null | undefined): Conduct => ({ ...base, suspendedUntil: until, ...(until !== null && kind ? { kind } : {}) });
+  if (revised !== null) return { ...withKind(serverUntil, serverKind), revisedAt: revised };
+  const serverLonger = serverUntil !== null && serverUntil >= (conduct.suspendedUntil ?? 0);
+  return serverLonger ? withKind(serverUntil, serverKind) : withKind(conduct.suspendedUntil, conduct.kind);
 }
 
 const count = (value: unknown): number | null => (Number.isSafeInteger(value) && (value as number) >= 0 ? (value as number) : null);
@@ -112,7 +134,18 @@ export function parseConduct(raw: string | null): Conduct {
     if (until !== null && count(until) === null) return EMPTY_CONDUCT;
     const reported = Array.isArray(data["reported"]) ? data["reported"].filter((id): id is string => typeof id === "string").slice(-REMEMBERED) : [];
     const pending = Array.isArray(data["pending"]) ? data["pending"].map(asPending).filter((item): item is PendingReport => item !== null) : [];
-    return { reports, totalReports, suspendedUntil: until as number | null, reported, pending };
+    // Saved before D102: no kind (the AI's reports were the only one) and no revision.
+    const kind = until === null ? null : (parseSuspensionKind(data["kind"]) ?? "reports");
+    const revisedAt = count(data["revisedAt"]);
+    return {
+      reports,
+      totalReports,
+      suspendedUntil: until as number | null,
+      ...(kind ? { kind } : {}),
+      ...(revisedAt !== null ? { revisedAt } : {}),
+      reported,
+      pending,
+    };
   } catch {
     return EMPTY_CONDUCT;
   }
@@ -185,12 +218,15 @@ export function useConduct(): Conduct {
  * answers 0), so the profile never shows fewer reports than were made here.
  */
 export function shownConduct(local: Conduct, now: number, server?: ConductStatus | null): ConductStatus {
-  const serverUntil = server?.suspendedUntil ? Date.parse(server.suspendedUntil) : Number.NaN;
-  const until = Math.max(Number.isNaN(serverUntil) ? 0 : serverUntil, local.suspendedUntil ?? 0);
+  // A moderator's change the device has not taken yet (D102) wins outright.
+  const merged = server && local.pending.length === 0 && newRevision(local, server) !== null ? withServer(local, server) : local;
+  const serverUntil = server?.suspendedUntil && merged === local ? Date.parse(server.suspendedUntil) : Number.NaN;
+  const serverWins = !Number.isNaN(serverUntil) && serverUntil > (merged.suspendedUntil ?? 0);
+  const until = serverWins ? serverUntil : (merged.suspendedUntil ?? 0);
   const suspended = until > now;
   return {
-    reports: suspended ? 0 : local.pending.length > 0 || !server ? local.reports : Math.max(local.reports, server.reports),
-    totalReports: Math.max(local.totalReports, server?.totalReports ?? 0),
+    reports: suspended ? 0 : merged.pending.length > 0 || !server ? merged.reports : Math.max(merged.reports, server.reports),
+    totalReports: Math.max(merged.totalReports, server?.totalReports ?? 0),
     suspendedUntil: suspended ? new Date(until).toISOString() : null,
   };
 }

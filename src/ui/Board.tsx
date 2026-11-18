@@ -14,6 +14,9 @@ import { useSettings } from "./settings";
 import { RouteOverlay } from "./RouteOverlay";
 import { Square, sameMarks } from "./Square";
 import type { SquareMarks } from "./Square";
+import type { BoardAppearance } from "../state/cosmeticAppearance";
+import { ORIGINAL_SIDES } from "../state/cosmeticAppearance";
+import { CosmeticSides } from "./CosmeticAppearance";
 
 // What the board needs to draw. All of it comes from the state layer.
 export interface BoardView {
@@ -34,6 +37,7 @@ export interface BoardView {
 }
 
 interface BoardProps {
+  appearance?: BoardAppearance;
   view: BoardView;
   onSquareClick: (position: Position) => void;
   // The move animation tells the game when each landing happens (its sound
@@ -179,7 +183,7 @@ function routeKey(move: Move, moveKey: number): string {
 }
 
 // Draws the 8x8 grid. It only renders what it is given and reports clicks.
-export function Board({ view, onSquareClick, onMoveBeat, onMoveLock }: BoardProps) {
+export function Board({ view, onSquareClick, onMoveBeat, onMoveLock, appearance }: BoardProps) {
   const settings = useSettings();
   // What is drawn: the board, the last move and the board before it, turned
   // round when White is at the bottom (D81). Marks and clicks stay in the
@@ -204,7 +208,8 @@ export function Board({ view, onSquareClick, onMoveBeat, onMoveLock }: BoardProp
 
   return (
     // A thin wooden frame; the coordinates are in the squares' corners.
-    <div className="board-frame">
+    <CosmeticSides.Provider value={appearance?.sides ?? ORIGINAL_SIDES}>
+    <div className="board-frame" data-shop-board={appearance?.board}>
       <div
         className={`board${view.locked ? " board-locked" : ""}`}
         aria-label="Checkers board"
@@ -233,5 +238,6 @@ export function Board({ view, onSquareClick, onMoveBeat, onMoveLock }: BoardProp
         )}
       </div>
     </div>
+    </CosmeticSides.Provider>
   );
 }

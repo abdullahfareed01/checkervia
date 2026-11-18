@@ -33,7 +33,7 @@ export function Scenery({ className = "" }: { className?: string }) {
 // The ribbon's colour per result (owner's choice, D51): red when the AI wins,
 // green when you win, dark with gold text or ivory with dark text when
 // Black or White wins a two player game.
-export type RibbonTone = "ai" | "you" | "black" | "white";
+export type RibbonTone = "ai" | "you" | "black" | "white" | "draw";
 
 /**
  * A ribbon banner: a slightly arched band with folded tails on both sides.

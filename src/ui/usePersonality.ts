@@ -9,7 +9,7 @@ import { gameTips } from "../ai/endgame";
 import type { GameTip, PlayedPosition } from "../ai/endgame";
 import { fillLine, pickLine, rememberLine, withWinLaugh } from "../ai/lines";
 import type { LineContext } from "../ai/lines";
-import { aiSideOf } from "../state/gameReducer";
+import { aiSideOf, isGameOver } from "../state/gameReducer";
 import type { GameState } from "../state/gameReducer";
 import type { BubbleTone } from "./ChatBubble";
 import { createIdleTimer, createPressureTimer, idleDelay } from "./idleTimer";
@@ -24,7 +24,9 @@ export interface EndLine {
 
 /** Which bank the end of game line comes from. */
 export function endContext(state: GameState): LineContext {
+  if (state.drawn) return "draw"; // D89
   if (state.abandoned) return "abandoned"; // the AI reported the player (D85)
+  if (state.resignedBy === aiSideOf(state)) return "aiResigned"; // D89
   if (state.resignedBy) return "resigned";
   if (state.winner !== aiSideOf(state)) return "playerWon";
   // The engine proved it lost and the player played on anyway (D69).
@@ -40,10 +42,12 @@ export function greetingContext(last: "won" | "lost" | null): LineContext {
 
 /**
  * A win that could go on the leaderboard later: the player beat the AI by
- * playing. A resignation never counts, whoever resigned.
+ * playing, or the AI resigned a position the engine proved lost (D89; the
+ * server checks the same proof). The player's own resignation never counts.
  */
 export function isSubmittableWin(state: GameState): boolean {
-  return state.mode === "vs-ai" && state.winner !== null && state.winner !== aiSideOf(state) && state.resignedBy === null;
+  const ai = aiSideOf(state);
+  return state.mode === "vs-ai" && state.winner !== null && state.winner !== ai && (state.resignedBy === null || state.resignedBy === ai);
 }
 
 /**
@@ -52,6 +56,7 @@ export function isSubmittableWin(state: GameState): boolean {
  * ends like a resignation but is a plain loss.
  */
 export function vsAiOutcomeOf(state: GameState): VsAiOutcome {
+  if (state.drawn) return "draw"; // D89
   if (state.winner !== aiSideOf(state)) return "win";
   return state.resignedBy !== null && !state.abandoned ? "resigned" : "loss";
 }
@@ -82,7 +87,7 @@ export function idleContext(count: number): LineContext {
   return count >= WARN_FROM_IDLE ? "idleWarn" : count >= ANGRY_FROM_IDLE ? "idleAngry" : "idle";
 }
 
-const TONES: Partial<Record<LineContext, BubbleTone>> = { aiWonBlunder: "roast", playerWon: "respect" };
+const TONES: Partial<Record<LineContext, BubbleTone>> = { aiWonBlunder: "roast", playerWon: "respect", aiResigned: "respect" };
 
 /** What the resign pressure shows now: nothing during the AI's own line. */
 function pressurePart(now: { count: number; showing: boolean; text: string | null } | null, turn: number) {
@@ -167,9 +172,9 @@ export function usePersonality(state: GameState, idleAllowed: boolean, busy = fa
   const last = state.history[state.history.length - 1]!;
   useEffect(() => setHint(null), [game]);
   useEffect(() => {
-    if (ai && !hint && last.provenLoss && !state.winner) setHint({ index: state.history.length - 1, text: say("resignHint") });
+    if (ai && !hint && last.provenLoss && !isGameOver(state)) setHint({ index: state.history.length - 1, text: say("resignHint") });
   }, [last]);
-  const hintActive = hint !== null && !state.winner;
+  const hintActive = hint !== null && !isGameOver(state);
 
   // B: the idle timer runs on the player's turn, except while the resign
   // pressure speaks instead.
@@ -200,17 +205,19 @@ export function usePersonality(state: GameState, idleAllowed: boolean, busy = fa
   const [end, setEnd] = useState<{ line: EndLine; tips: GameTip[] | null } | null>(null);
   const recordedFor = useRef<unknown>(null); // effects can run twice in development
   useEffect(() => {
-    if (!ai || !state.winner) return setEnd(null);
+    if (!ai || !isGameOver(state)) return setEnd(null);
     if (recordedFor.current !== game) {
       recordedFor.current = game;
-      writeSession(withResult(readSession(), state.winner !== aiSideOf(state)));
+      // A draw (D89) is neither: the next greeting stays as it was.
+      if (state.winner) writeSession(withResult(readSession(), state.winner !== aiSideOf(state)));
       // The player's own totals on this device (D75).
       vsAiRecordStore.add(vsAiOutcomeOf(state));
     }
     const context = endContext(state);
     const text = AI_WINS.includes(context) ? withWinLaugh(say(context), state.aiLevel) : say(context);
     setEnd({ line: { text, tone: TONES[context] ?? "banter" }, tips: null });
-    // No tips after a win by the AI, nor after an abandoned game (D85).
+    // Tips only after the AI won by playing: none after an abandoned game
+    // (D85), a draw or the AI's resignation (D89).
     if (state.winner !== aiSideOf(state) || state.abandoned) return undefined;
     let cancelled = false;
     const kingsMade = { player: state.stats[state.humanSide].kingsMade, ai: state.stats[aiSideOf(state)].kingsMade };
@@ -220,7 +227,7 @@ export function usePersonality(state: GameState, idleAllowed: boolean, busy = fa
     return () => {
       cancelled = true;
     };
-  }, [state.winner, game]);
+  }, [state.winner, state.drawn, game]);
 
   return {
     greeting,

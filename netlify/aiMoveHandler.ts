@@ -7,6 +7,11 @@
 // - The API key and raw provider errors are never returned. The key is never
 //   logged (and is blanked out of anything that is).
 import type { RateLimiter } from "./rateLimiter";
+import type { ServiceErrorCode } from "../src/ai/serviceError";
+import { createAiHealthCheck } from "./aiHealth";
+import { readContext } from "../src/ai/request";
+import { runChain } from "./ai/chain";
+import type { ChainDeps } from "./ai/chain";
 
 export const PROVIDER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
@@ -20,10 +25,8 @@ const MAX_BODY_CHARS = 20_000; // room for JSON escaping of the two fields
 // max_tokens, so leave room for thinking plus a tiny {"move": n} answer.
 export const MAX_OUTPUT_TOKENS = 1500;
 
-// Netlify stops a synchronous function after 60 s and that cannot be changed
-// (docs.netlify.com, "Configuration for functions"). We give up on the
-// provider 5 s earlier, so we can still answer with a clean error.
-export const PROVIDER_TIMEOUT_MS = 55_000;
+// Return a useful error inside the browser's overall 12 second turn budget.
+export const PROVIDER_TIMEOUT_MS = 10_000;
 
 // Provider statuses that can mean "no provider supports response_format".
 const UNSUPPORTED_PARAMETER_STATUSES = new Set([400, 404, 422]);
@@ -54,20 +57,39 @@ export interface HandlerEnv {
 }
 
 export interface HandlerDeps {
+  chain?: ChainDeps;
   env: HandlerEnv;
   fetch: typeof fetch;
   limiter: RateLimiter;
   log?: (message: string) => void;
   providerTimeoutMs?: number;
+  checkHealth?: (env: HandlerEnv) => Promise<boolean>;
 }
 
 export interface HandlerResponse {
   status: number;
-  body: { text: string } | { error: string } | { ready: boolean };
+  body: { text: string } | { fallback: true } | { error: string; code?: ServiceErrorCode; retryable?: boolean; retryAfterSeconds?: number } | { ready: boolean };
 }
 
-function fail(status: number, error: string): HandlerResponse {
-  return { status, body: { error } };
+function fail(status: number, error: string, code?: ServiceErrorCode, retryable?: boolean): HandlerResponse {
+  return { status, body: { error, ...(code ? { code, retryable: retryable ?? false } : {}) } };
+}
+
+function providerFailure(status: number, retryAfterSeconds?: number): HandlerResponse {
+  if (status === 402) return fail(502, "The AI service has reached its credit limit.", "credits", false);
+  if (status === 401 || status === 403) return fail(502, "The AI service cannot access its provider.", "access", false);
+  const result = status === 429
+    ? fail(502, "The AI provider is busy.", "busy", true)
+    : fail(502, "The AI service is unavailable.", "unavailable", status >= 500 || status === 408);
+  if (retryAfterSeconds !== undefined && "error" in result.body) result.body.retryAfterSeconds = retryAfterSeconds;
+  return result;
+}
+
+function retryAfter(response: Response): number | undefined {
+  const raw = response.headers.get("retry-after");
+  if (raw === null) return undefined;
+  const seconds = /^\d+(?:\.\d+)?$/.test(raw) ? Number(raw) : (Date.parse(raw) - Date.now()) / 1000;
+  return Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds) : undefined;
 }
 
 // Validates the browser's JSON body: only `prompt` (required, non-empty,
@@ -119,37 +141,38 @@ function messageContent(data: unknown): string | null {
   return typeof content === "string" && content.trim() !== "" ? content : null;
 }
 
-function finishReason(data: unknown): string {
-  const choices = (data as { choices?: unknown } | null)?.choices;
-  const reason = Array.isArray(choices) ? (choices[0] as { finish_reason?: unknown })?.finish_reason : null;
-  return typeof reason === "string" ? reason : "unknown";
-}
-
 // Turns the provider's response into our response. Provider details go to the
 // log only (key removed), never to the browser.
 async function readProviderResponse(
   response: Response,
-  key: string,
   log: (message: string) => void,
 ): Promise<HandlerResponse> {
   if (!response.ok) {
-    const detail = (await response.text().catch(() => "")).slice(0, 200).split(key).join("[removed]");
-    log(`ai-move: provider returned status ${response.status}: ${detail}`);
-    return fail(502, "The AI service is unavailable.");
+    log(`status ${response.status}`);
+    return providerFailure(response.status, retryAfter(response));
   }
 
   let data: unknown;
   try {
     data = await response.json();
   } catch {
-    log("ai-move: provider sent a body that is not JSON");
-    return fail(502, "The AI service is unavailable.");
+    log("INVALID_REPLY");
+    return fail(502, "The AI service is unavailable.", "invalidReply", true);
+  }
+
+  // Some providers return an error object with HTTP 200. Treat it exactly
+  // like an HTTP error, rather than losing the actual reason as an empty reply.
+  const providerError = (data as { error?: { code?: unknown } } | null)?.error;
+  if (providerError) {
+    const code = Number(providerError.code);
+    log(`status ${Number.isInteger(code) && code >= 400 && code <= 599 ? code : 502}`);
+    return providerFailure(Number.isInteger(code) && code >= 400 && code <= 599 ? code : 502, retryAfter(response));
   }
 
   const text = messageContent(data);
   if (text === null) {
-    log(`ai-move: provider reply had no usable content (finish_reason: ${finishReason(data)})`);
-    return fail(502, "The AI service returned no usable answer.");
+    log("INVALID_REPLY");
+    return fail(502, "The AI service returned no usable answer.", "invalidReply", true);
   }
   return { status: 200, body: { text } };
 }
@@ -159,25 +182,35 @@ function isTimeout(error: unknown): boolean {
   return name === "TimeoutError" || name === "AbortError";
 }
 
-// GET is the health check used by the splash screen. It only says whether the
-// key and model are set: no provider call, no cost, nothing secret returned,
-// and it does not count against the rate limit.
-function healthCheck(env: HandlerEnv): HandlerResponse {
-  return { status: 200, body: { ready: Boolean(env.OPENROUTER_API_KEY && env.LLM_MODEL) } };
-}
-
 // Handles one request. Order: health check (GET), method, rate limit, body
 // shape, configuration, then the provider call.
 export async function handleAiMove(
   request: HandlerRequest,
   deps: HandlerDeps,
 ): Promise<HandlerResponse> {
-  const log = deps.log ?? (() => {});
+  if (deps.chain) {
+    // Engine play is always ready; an exhausted external account must never
+    // prevent entering a game. Legacy callers retain the old interface below.
+    if (request.method === "GET") return { status: 200, body: { ready: true } };
+    if (request.method !== "POST") return fail(405, "Method not allowed.");
+    if (!deps.limiter.allow(request.clientId)) return { status: 200, body: { fallback: true } };
+    if (request.body.length > MAX_BODY_CHARS) return fail(400, "Invalid request.");
+    let body: Record<string, unknown>;
+    try { body = JSON.parse(request.body) as Record<string, unknown>; } catch { return fail(400, "Invalid request."); }
+    const context = readContext(body?.context);
+    if (!context) return fail(400, "Invalid request.");
+    const result = await runChain(context, deps.chain);
+    return { status: 200, body: "text" in result ? { text: result.text } : { fallback: true } };
+  }
+  const log = (code: string) => deps.log?.(JSON.stringify({ provider: "openrouter", code, attempts: 1 }));
 
-  if (request.method === "GET") return healthCheck(deps.env);
+  if (request.method === "GET") {
+    const check = deps.checkHealth ?? createAiHealthCheck(deps.fetch);
+    return { status: 200, body: { ready: await check(deps.env) } };
+  }
   if (request.method !== "POST") return fail(405, "Method not allowed.");
   if (!deps.limiter.allow(request.clientId)) {
-    return fail(429, "Too many requests. Please wait a moment.");
+    return fail(429, "Too many requests. Please wait a moment.", "rateLimit", false);
   }
 
   const parsed = parseRequestBody(request.body);
@@ -186,8 +219,8 @@ export async function handleAiMove(
   const key = deps.env.OPENROUTER_API_KEY;
   const model = deps.env.LLM_MODEL;
   if (!key || !model) {
-    log("ai-move: OPENROUTER_API_KEY or LLM_MODEL is not set");
-    return fail(500, "The AI service is not configured.");
+    log("CONFIGURATION_OPENROUTER_API_KEY_LLM_MODEL");
+    return fail(500, "The AI service is not configured.", "configuration", false);
   }
 
   const content = parsed.retryNote ? `${parsed.prompt}\n\n${parsed.retryNote}` : parsed.prompt;
@@ -207,16 +240,16 @@ export async function handleAiMove(
     if (UNSUPPORTED_PARAMETER_STATUSES.has(response.status)) {
       // No provider (or this one) accepts response_format. Ask once more
       // without it. parseReply in the app is the final guard either way.
-      log(`ai-move: structured output refused (status ${response.status}); retrying without it`);
+      log(`status ${response.status}`);
       response = await send(false);
     }
-    return await readProviderResponse(response, key, log);
+    return await readProviderResponse(response, log);
   } catch (error) {
     if (isTimeout(error)) {
-      log("ai-move: provider call timed out");
-      return fail(504, "The AI service took too long.");
+      log("TIMEOUT");
+      return fail(504, "The AI service took too long.", "timeout", true);
     }
-    log("ai-move: could not reach the provider");
-    return fail(502, "The AI service is unavailable.");
+    log("NETWORK");
+    return fail(502, "The AI service is unavailable.", "unavailable", true);
   }
 }

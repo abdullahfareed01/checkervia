@@ -588,7 +588,7 @@ function IdentityCard({ profile, onEdit, titleId }: { profile: Profile; onEdit: 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 
 /**
- * The stats in little room: the four numbers on one strip, the best win and
+ * The stats in little room: the totals on one strip, the best win and
  * the week's rank as two small boxes, and rows that open the table by level
  * and the reports.
  */
@@ -628,7 +628,7 @@ function CompactStats({ stats, onOpen }: { stats: ProfileResponse; onOpen: (page
         </div>
       </dl>
       <div className="pf-rows">
-        <Row opens="levels" label="Wins and losses by level" value="" onOpen={() => onOpen("levels")} />
+        <Row opens="levels" label="Results by level" value={`${stats.draws ?? 0} ${(stats.draws ?? 0) === 1 ? "draw" : "draws"}`} onOpen={() => onOpen("levels")} />
         <Row opens="reports" label="Reports" value={String(reports.totalReports)} onOpen={() => onOpen("reports")} />
       </div>
     </>
@@ -639,12 +639,13 @@ function CompactStats({ stats, onOpen }: { stats: ProfileResponse; onOpen: (page
 function LevelsTable({ stats }: { stats: ProfileResponse }) {
   return (
     <table className="lb-levels pf-levels">
-      <caption className="sr-only">Wins and losses by level</caption>
+      <caption className="sr-only">Results by level</caption>
       <thead>
         <tr>
           <th scope="col">Level</th>
           <th scope="col">Wins</th>
           <th scope="col">Losses</th>
+          <th scope="col">Draws</th>
           <th scope="col">Resigned</th>
         </tr>
       </thead>
@@ -657,6 +658,7 @@ function LevelsTable({ stats }: { stats: ProfileResponse }) {
             </th>
             <td>{record.wins}</td>
             <td>{record.losses}</td>
+            <td>{record.draws ?? 0}</td>
             <td>{record.resigned ?? 0}</td>
           </tr>
         ))}
@@ -856,7 +858,7 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
   if (page === "levels" && ready) {
     return (
       <div className="pf-page" onKeyDown={onKeyDown}>
-        {head("Wins and losses", { back, backLabel: "Back to your profile" })}
+        {head("Results by level", { back, backLabel: "Back to your profile" })}
         <LevelsTable stats={ready} />
       </div>
     );

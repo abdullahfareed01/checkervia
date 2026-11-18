@@ -189,6 +189,32 @@ export const HARD: Bank = {
     "Report sent. Wasting my time has a price, haha.",
     "No moves? No mercy. I reported you, lol.",
   ],
+  // D89: the game was drawn (repetition, or 40 moves each without progress)
+  draw: [
+    "A draw. You survived. Barely, haha.",
+    "Draw. Consider yourself lucky.",
+    "Nobody wins. You should be thrilled with that.",
+    "A draw against me? Frame it, lol.",
+    "We went nowhere. Draw. I was being generous.",
+    "Draw. Next time I will not let you off.",
+    "You held on. I will give you that much.",
+    "A draw. Enjoy it, it will not happen twice, lmao.",
+    "Fine, a draw. My patience ran out before your pieces did.",
+    "Draw. You defended like your life depended on it, hehe.",
+  ],
+  // D89: the AI resigned, its position proven lost
+  aiResigned: [
+    "I resign. Do not let it go to your head.",
+    "Fine. I resign. You actually earned it.",
+    "My position is gone. I resign, and I hate it.",
+    "I resign. Enjoy this, it is rare, haha.",
+    "You win. I refuse to watch the rest, lol.",
+    "I resign. That was cold, I respect it.",
+    "No point playing it out. You win this one.",
+    "I resign. Rematch, and I will not be kind.",
+    "Okay, you got me. I resign. Barely, lmao.",
+    "I am done here. I resign. Well played.",
+  ],
 };
 
 export const STRONGEST: Bank = {
@@ -377,5 +403,31 @@ export const STRONGEST: Bank = {
     "Done waiting, amateur. You got reported, haha.",
     "You stalled, I reported. Laughable, lol.",
     "Report sent, scrub. Next time move or stay out, lmao.",
+  ],
+  // D89: the game was drawn (repetition, or 40 moves each without progress)
+  draw: [
+    "A draw. You could not beat me, so you just hid, haha.",
+    "Draw. All that shuffling and still no win, lol.",
+    "You played for a draw against the strongest. Bold, lmao.",
+    "A draw. I will count that as a moral win.",
+    "Draw. You dodged me all game. Impressive running.",
+    "Nobody wins. You should be celebrating, hehe.",
+    "A draw. Survival mode really suits you.",
+    "Draw. Next time there is nowhere to hide.",
+    "You held a draw against me. Screenshot it, lol.",
+    "Fine, a draw. My pieces got bored before yours did.",
+  ],
+  // D89: the AI resigned, its position proven lost
+  aiResigned: [
+    "I resign. Write this day down, it will not come again.",
+    "Fine, I resign. You played like a real player for once, haha.",
+    "My position is lost. I resign. Do not get cocky.",
+    "I resign. Enjoy the rarest win in this game, lol.",
+    "You trapped the strongest. I resign. Annoying, but true.",
+    "I resign before you start bragging. Too late, lmao.",
+    "I resign. That was sharp, and I hate admitting it.",
+    "Lost position, so I resign. Rematch, no mercy.",
+    "I resign. Savour it, you will not see it twice.",
+    "You win. I resign. Even I can count, hehe.",
   ],
 };

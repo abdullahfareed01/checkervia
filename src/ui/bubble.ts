@@ -1,7 +1,7 @@
 // What the AI's chat bubble shows (Changes 2 to 4). Pure: worked out from
 // the game state and the AI's local lines, so it can be tested without a
 // browser.
-import { aiSideOf } from "../state/gameReducer";
+import { aiSideOf, isGameOver } from "../state/gameReducer";
 import type { GameState } from "../state/gameReducer";
 import type { BubbleMessage } from "./ChatBubble";
 
@@ -32,7 +32,7 @@ export interface ExtraLines {
  * the game is over (the result panel speaks then).
  */
 export function reactionBubble(state: GameState, extra: ExtraLines = {}): BubbleMessage | null {
-  if (state.mode !== "vs-ai" || state.viewIndex !== null || state.winner) return null;
+  if (state.mode !== "vs-ai" || state.viewIndex !== null || isGameOver(state)) return null;
   if (state.aiPhase === "thinking") return { key: `thinking-${state.aiRequestId}`, text: null, tone: "banter", why: false };
   if (extra.pressure) {
     const { key, text, count } = extra.pressure;

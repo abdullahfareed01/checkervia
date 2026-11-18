@@ -1,0 +1,66 @@
+/* D105: dashboard-only tokens keep the game's own theme independent. */
+:root {
+  --adm-bg: #0e1522; --adm-panel: #151f2e; --adm-raised: #1d2b3e;
+  --adm-input: #0e1725; --adm-line: #33445d; --adm-line-soft: #26364d;
+  --adm-text: #d9e2ef; --adm-cream: #f2f6fc; --adm-soft: #bac9dd; --adm-dim: #96aac4;
+  --adm-gold: #6ce5ca; --adm-focus: #91e9d4; --adm-ok: #8ee0b7;
+  --lb-gold-fill: linear-gradient(135deg, #86ecd2, #55c9b2); --lb-gold-text: #06241e;
+}
+body { background: radial-gradient(ellipse at 85% 0, #16273b 0, transparent 45%), var(--adm-bg); }
+.adm-side, .adm-top, .adm-sheet, .adm-auth-card { background: #101a29; }
+.adm-side { border-right-color: #26364d; }
+.adm-main { max-width: 1480px; }
+.adm-title, .adm-auth-title, .adm-sheet-title { font-family: var(--lb-sans); letter-spacing: -0.035em; }
+.adm-title { margin-bottom: 22px; font-size: 2rem; }
+.adm-panel { background: linear-gradient(145deg, #182436, #151f2e); border: 1px solid var(--adm-line-soft); border-radius: 16px; box-shadow: 0 5px 16px #050b131c; }
+.adm-panel-title { letter-spacing: -0.015em; }
+.adm-button { border-radius: 9px; }
+.adm-button-quiet:hover:not(:disabled), .adm-nav-link:hover { background: #213447; border-color: #4d8291; }
+.adm-nav-link[aria-current="page"] { background: #183b3c; color: #8bf0d8; box-shadow: inset 3px 0 #6ce5ca; }
+.adm-nav-link[aria-current="page"]:active, .adm-nav-link:active { background: #285356; }
+.adm-account { border-color: var(--adm-line-soft); }
+.adm-metrics { gap: 14px; }
+.adm-metric { position: relative; overflow: hidden; min-height: 142px; padding: 20px; }
+.adm-metric::before { content: ""; position: absolute; left: 20px; top: 0; width: 28px; height: 2px; background: #6ce5ca; }
+.adm-metric:nth-child(3n + 2)::before { background: #83b4ff; }
+.adm-metric:nth-child(3n)::before { background: #e4bd7e; }
+.adm-metric dt { color: #a9bbd1; font-size: 0.8rem; }
+.adm-metric-value { font-size: 2.05rem; letter-spacing: -0.055em; }
+.adm-metric .adm-small { font-size: 0.78rem; }
+.adm-chart { padding: 20px; gap: 14px; }
+.adm-chart-heading { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.adm-chart-unit, .adm-tooltip-zone { color: #96aac4; font-size: 0.75rem; letter-spacing: 0.07em; }
+.adm-series-0 { color: #6ce5ca; }
+.adm-series-1 { color: #84b4ff; }
+.adm-series-2 { color: #e7c27f; }
+.adm-chart-plot { position: relative; min-width: 0; }
+.adm-chart-svg { width: 100%; height: max(190px, 12rem); display: block; cursor: crosshair; touch-action: pan-y; }
+.adm-chart-svg:focus-visible { outline: 2px solid var(--adm-focus); outline-offset: 3px; border-radius: 6px; }
+.adm-chart-svg:active { filter: brightness(1.08); }
+.adm-chart-line, .adm-series-1 .adm-chart-line, .adm-series-2 .adm-chart-line { stroke-width: 2.5; stroke-dasharray: 0.5 7; stroke-linecap: round; }
+.adm-chart-grid { stroke: #33445d; stroke-dasharray: 2 6; stroke-width: 1; vector-effect: non-scaling-stroke; opacity: 0.7; }
+.adm-chart-area { stroke: none; }
+.adm-chart-point { fill: none; stroke: currentColor; stroke-width: 9; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.adm-chart-crosshair { fill: none; stroke: #c5d6ec; stroke-dasharray: 4 5; stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
+.adm-chart-tooltip { position: absolute; z-index: 2; top: 8px; width: min(230px, calc(100% - 16px)); padding: 12px 14px; background: #0b1322f5; border: 1px solid #405572; border-radius: 12px; box-shadow: 0 12px 30px #0006; pointer-events: none; font-size: 0.8rem; }
+.adm-tip-left { left: 8px; } .adm-tip-right { right: 8px; }
+.adm-tooltip-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; }
+.adm-tooltip-heading strong { color: #f2f6fc; }
+.adm-chart-tooltip dl { display: grid; gap: 8px; margin: 12px 0 0; }
+.adm-chart-tooltip dl div { display: flex; justify-content: space-between; gap: 12px; }
+.adm-chart-tooltip dt { min-width: 0; } .adm-chart-tooltip dd { margin: 0; color: #f2f6fc; font-variant-numeric: tabular-nums; }
+.adm-chart-swatch, .adm-series-1 .adm-chart-swatch, .adm-series-2 .adm-chart-swatch { border-top-style: dotted; }
+.adm-source-bar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; margin-bottom: 24px; padding: 10px 14px; border: 1px solid #2c4955; border-radius: 12px; background: #122c34; }
+.adm-source-description { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.adm-source-label { font-size: 0.78rem; color: #93ead6; }
+.adm-source-label::before { content: ""; display: inline-block; height: 7px; width: 7px; margin-right: 8px; border-radius: 100%; background: currentColor; }
+.adm-source-sample { background: #30291b; border-color: #695336; }
+.adm-source-sample .adm-source-label { color: #efd19c; }
+.adm-source-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-source-actions a { text-decoration: none; }
+.adm-source-bar .adm-button { font-size: 0.8rem; padding: 0 12px; }
+.adm-badge { background: #243247; color: #b8d0ec; }
+.adm-badge-ok { background: #183c34; color: #a3ecd2; }
+.adm-badge-refused, .adm-badge-failed { background: #432931; color: #ffb5b8; }
+@media (max-width: 420px) { .adm-chart { padding: 14px; } .adm-chart-tooltip { font-size: 0.8rem; } }
+@media (prefers-reduced-motion: reduce) { .adm-panel, .adm-chart-tooltip { transition: none; } }

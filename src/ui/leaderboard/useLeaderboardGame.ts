@@ -14,7 +14,7 @@ import { initialBoard } from "../../engine";
 import type { Board } from "../../engine";
 import { encodeMove } from "../../leaderboard/protocol";
 import type { GameState } from "../../state/gameReducer";
-import { aiSideOf } from "../../state/gameReducer";
+import { aiSideOf, isGameOver } from "../../state/gameReducer";
 import { isSubmittableWin } from "../usePersonality";
 import { leaderboardApi } from "./api";
 import { leaderboardStore, randomId, useLeaderboardProfile } from "./profile";
@@ -41,9 +41,11 @@ export function qualifyingWin(state: GameState, gameId: string): QualifyingWin |
  * Resign. An abandoned game ends like a resignation (D85) but is a plain
  * loss, so the AI's record does not count it as a player resigning.
  */
-export function reportedResult(state: GameState): { readonly result: "win" | "loss"; readonly resigned: boolean } {
-  const lost = state.winner === aiSideOf(state) || state.resignedBy !== null;
-  return { result: lost ? "loss" : "win", resigned: state.resignedBy !== null && !state.abandoned };
+export function reportedResult(state: GameState): { readonly result: "win" | "loss" | "draw"; readonly resigned: boolean } {
+  if (state.drawn) return { result: "draw", resigned: false }; // D89
+  // The AI's resignation (D89) is the player's win.
+  const lost = state.winner === aiSideOf(state);
+  return { result: lost ? "loss" : "win", resigned: lost && state.resignedBy !== null && !state.abandoned };
 }
 
 // A random id for every game (history[0] is a new object for each game),
@@ -65,16 +67,17 @@ export function useLeaderboardGame(state: GameState): QualifyingWin | null {
   const gameId = gameIdOf(state);
 
   const win = state.winner === null ? null : qualifyingWin(state, gameId);
+  const over = isGameOver(state);
   const { profile } = useLeaderboardProfile();
   const handled = useRef<string | null>(null);
   useEffect(() => {
-    if (state.winner === null || handled.current === gameId || !isLeaderboardGame(state)) return;
+    if (!over || handled.current === gameId || !isLeaderboardGame(state)) return;
     handled.current = gameId;
     if (!leaderboardStore.get().profile) return;
     if (win) leaderboardStore.enqueue(win);
     // Fire and forget: a lost report only means one game fewer in the counters.
     const { result, resigned } = reportedResult(state);
     void leaderboardApi.reportGame(gameId, state.aiLevel, result, resigned).catch(() => {});
-  }, [state.winner, gameId]);
+  }, [over, gameId]);
   return profile ? win : null;
 }

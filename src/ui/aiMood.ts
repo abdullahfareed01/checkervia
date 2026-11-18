@@ -3,7 +3,8 @@
 // cocky rival (D43): it laughs at the player's slips and at its own big
 // captures, looks pleased with a capture, gets angry when the player plays
 // well or takes its pieces, and is shocked (but still confident: one brow
-// up and a smirk) when the player takes two or more at once (D69).
+// up and a smirk) when the player takes two at once (D69). Three or more
+// get a separate alarmed, worried face (D95).
 import { aiSideOf } from "../state/gameReducer";
 import type { GameState, HistoryEntry } from "../state/gameReducer";
 
@@ -14,6 +15,7 @@ export type AiMood =
   | "laughing"
   | "angry"
   | "shocked"
+  | "alarmed" // D95: the player captured three or more pieces
   | "smug"
   | "nervous"
   | "defeated"
@@ -42,8 +44,9 @@ function crownedBy(entry: HistoryEntry | undefined, previous: HistoryEntry | und
  * The robot's face for the game as it is now:
  * - the game is over: laughing when the AI won, sulking (defeated) when it
  *   lost (D71);
+ * - the player's triple capture: alarmed through thinking and its reply;
  * - while it thinks: thinking, or shocked right after the player took two
- *   or more of its pieces;
+ *   of its pieces;
  * - after its move: laughing at the player's blunder or at its own capture
  *   of two or more pieces, angry after the player's great move, shocked
  *   when the player's move before took two or more of its pieces, angry
@@ -59,6 +62,7 @@ export function aiMood(state: GameState, aiChance = 0.5): AiMood {
   if (state.mode !== "vs-ai" || state.viewIndex !== null) return "neutral";
   const ai = aiSideOf(state);
   if (state.abandoned) return "angry"; // it reported the player (D85)
+  if (state.drawn) return "neutral"; // a draw (D89): nobody to laugh at
   if (state.winner) return state.winner === ai ? "laughing" : "defeated";
   const calm = aiChance >= SMUG_FROM ? "smug" : aiChance < NERVOUS_UNDER ? "nervous" : "neutral";
 
@@ -66,6 +70,10 @@ export function aiMood(state: GameState, aiChance = 0.5): AiMood {
   const before = state.history[state.history.length - 2];
   const human = state.humanSide;
   const earlier = state.history[state.history.length - 3];
+  const humanCapture = capturedBy(last?.player === ai ? before : last, human);
+  // A triple capture stays alarming through the reply, even if the move's
+  // judgement or an ordinary AI capture would otherwise hide the reaction.
+  if (humanCapture >= 3) return "alarmed";
   // The shock (D69) or the eye roll at the player's new King (D72) come at
   // once, while it thinks about its reply.
   if (state.aiPhase === "thinking") {

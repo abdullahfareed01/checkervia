@@ -16,6 +16,8 @@ import "./ui/motion.css";
 import "./ui/settings.css";
 import "./ui/leaderboard.css";
 import "./ui/focus.css";
+import "./ui/marketplace.css";
+import "./ui/cosmetics.css";
 import "./ui/touch.css";
 
 async function start() {

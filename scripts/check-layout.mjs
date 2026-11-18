@@ -107,7 +107,16 @@ const playMove = `await (async () => {
 })();`;
 const openStrongest = `${click(".menu-card-ai")} ${click(".level-option:last-of-type")} ${clickText(".level-dialog .button-primary", "")}`;
 
+const { marketplaceJourney } = await import("./marketplace-journey.mjs");
 const SCREENS = {
+  "shop-live-paused": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + clickText(".shop-filters button", "Effects") + click(".shop-live-toggle"), layer: ".marketplace" },
+  "shop-effects": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + clickText(".shop-filters button", "Effects") + clickText(".shop-product", "Sapphire Comet") + click(".shop-replay"), layer: ".marketplace" },
+  "shop-friend": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + clickText(".shop-filters button", "Pieces") + clickText(".shop-product", "Amethyst") + clickText(".shop-preview-controls button", "You play White") + clickText(".shop-preview-controls button", "Friend") + click(".shop-replay"), layer: ".marketplace" },
+  "shop-journey": { query: "?lb=populated", steps: `await (${marketplaceJourney.toString()})();`, layer: ".marketplace" },
+  shop: { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace"), layer: ".marketplace" },
+  "shop-pieces": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + clickText(".shop-filters button", "Pieces"), layer: ".marketplace" },
+  "shop-unlock": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + click(".shop-primary"), layer: ".marketplace" },
+  "shop-game": { query: "?lb=populated&scenario=duel", steps: click(".menu > .bar-button") + clickText(".menu-tile", "Shop") + until(".marketplace"), layer: ".marketplace" },
   splash: { query: "?lb=populated", holdHealth: true, steps: until(".splash"), layer: ".splash" },
   home: { query: "?lb=populated", steps: until(".home"), layer: ".home" },
   "home-new": { query: "?lb=new", steps: until(".home"), layer: ".home" },
@@ -462,7 +471,8 @@ async function checkState(browser, [width, height], variantName, screenName) {
     if (msg.method === "Fetch.requestPaused") {
       const { requestId, request } = msg.params;
       const json = (body) => s("Fetch.fulfillRequest", { requestId, responseCode: 200, responseHeaders: [{ name: "Content-Type", value: "application/json" }], body: Buffer.from(JSON.stringify(body)).toString("base64") });
-      if (request.method === "GET") {
+      if (request.url.includes("/.netlify/functions/game-presence")) await json({ ok: true });
+      else if (request.method === "GET") {
         if (screen.holdHealth) heldHealth = () => json({ ready: true });
         else await json(screen.health ?? { ready: true });
       } else await json(AI_REPLY);
@@ -472,7 +482,7 @@ async function checkState(browser, [width, height], variantName, screenName) {
   await s("Runtime.enable");
   await s("Log.enable");
   await s("Page.enable");
-  await s("Fetch.enable", { patterns: [{ urlPattern: "*/.netlify/functions/ai-move*" }] });
+  await s("Fetch.enable", { patterns: [{ urlPattern: "*/.netlify/functions/ai-move*" }, { urlPattern: "*/.netlify/functions/game-presence*" }] });
   await s("Emulation.setDeviceMetricsOverride", { width, height, deviceScaleFactor: 1, mobile: touch, screenWidth: width, screenHeight: height });
   await s("Emulation.setTouchEmulationEnabled", { enabled: touch, maxTouchPoints: touch ? 5 : 0 });
   if (variant.anim === "reduced") await s("Emulation.setEmulatedMedia", { features: [{ name: "prefers-reduced-motion", value: "reduce" }] });
@@ -481,6 +491,7 @@ async function checkState(browser, [width, height], variantName, screenName) {
   // the text size, the consent state.
   const settings = { version: 1, ...(variant.anim ? { animation: { level: variant.anim, speed: 1 } } : {}), view: { focus: !!screen.focus } };
   const setup = [
+    screenName.startsWith("shop") ? `for (const key of Object.keys(localStorage)) if (key.startsWith("checkervia.marketplace.demo.v1")) localStorage.removeItem(key);` : "",
     `localStorage.setItem("checkervia.settings", ${JSON.stringify(JSON.stringify(settings))});`,
     screenName === "consent" ? `for (const key of Object.keys(localStorage)) if (/consent/i.test(key)) localStorage.removeItem(key);` : "",
     variant.text !== 100 ? `document.addEventListener("DOMContentLoaded", () => { const st = document.createElement("style"); st.textContent = "html{font-size:${variant.text}%}"; document.head.prepend(st); });` : "",
@@ -546,7 +557,7 @@ async function pressedStates(s) {
 }
 
 const results = [];
-let debugPort = 9400;
+let debugPort = Number(args["debug-port"] ?? 9400);
 for (const size of sizes) {
   const browser = await openBrowser(debugPort++);
   for (const variant of variants) {

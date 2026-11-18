@@ -1,20 +1,17 @@
 # Deployment Guide
 
-Checkervia is a static Vite site plus Netlify functions: `netlify/functions/ai-move.ts`, which holds the OpenRouter key, and the leaderboard functions (see Leaderboard setup), which hold the Supabase key. Everything is in `netlify.toml`: build command `npm run build`, publish folder `dist`, functions folder `netlify/functions`.
+Checkervia is a static Vite site plus Netlify functions. `netlify/functions/ai-move.ts` serves the free provider chain and shared cooldown storage; credentials remain in Functions. The leaderboard functions use the existing Supabase setup. Everything is in `netlify.toml`: build command `npm run build`, publish folder `dist`, functions folder `netlify/functions`. D92's current provider variables, migration 6 and evaluation instructions are in the [AI chain setup](ai-chain-setup.md).
 
 ## One time setup
 1. Push the code to a GitHub repository (see the release checklist). `.env` is git ignored; never commit a key.
 2. In Netlify: Add new site, Import an existing project, pick the GitHub repository. Netlify reads `netlify.toml`, so no build settings need typing in.
-3. Site configuration, Environment variables, add both (scope: Functions, or All):
-   - `OPENROUTER_API_KEY`: the OpenRouter key
-   - `LLM_MODEL`: `openai/gpt-oss-120b`
-   Never add a `VITE_` prefix: anything with it ends up in the public browser bundle.
+3. Site configuration, Environment variables, add any desired provider keys from the [AI chain setup](ai-chain-setup.md) with Functions scope. No provider key is required for engine play. Never add a `VITE_` prefix: anything with it ends up in the public browser bundle.
 4. Deploy (Netlify builds on every push to the main branch).
 
-Alternative without GitHub: `netlify login`, `netlify init` (or `netlify link`), `netlify env:set OPENROUTER_API_KEY ...`, `netlify env:set LLM_MODEL openai/gpt-oss-120b`, then `netlify deploy --build --prod`.
+Alternative without GitHub: `netlify login`, `netlify init` (or `netlify link`), set the desired Functions variables securely, then deploy the reviewed build. `LLM_MODEL` is not used by the new chain.
 
 ## Check the live site
-1. `https://<site>/.netlify/functions/ai-move` in a browser (a GET) must show `{"ready":true}`. `{"ready":false}` means a variable is missing; an error page means the function was not deployed.
+1. `https://<site>/.netlify/functions/ai-move` in a browser (a GET) must show `{"ready":true}` because engine play is available regardless of external quota. An error page means the function was not deployed or cannot be reached. Readiness does not promise that an external model will answer.
 2. Open the site: the splash shows "Game loaded", then the home menu badge says "AI online".
 3. Play vs AI at any level: typing dots, then the AI's move with its reason in the speech bubble.
 4. Play a two player game and open Learn (neither needs the key).
@@ -22,9 +19,11 @@ Alternative without GitHub: `netlify login`, `netlify init` (or `netlify link`),
 ## Costs and limits
 - Each AI turn is one model call (up to 4 with retries). The look ahead runs in the browser and costs nothing.
 - The function limits each visitor to 20 calls a minute, best effort only (per function instance). Set a spending limit on the OpenRouter key.
-- Netlify stops a function after 60 s; the function gives up on the model after 55 s and the page offers Retry.
+- The function gives up on the model after 10 seconds, the browser request after 11 seconds, and the complete turn after 12 seconds. The page offers Retry. Readiness uses metadata calls with a 30 second cache and makes no model request.
 
 ## Leaderboard setup (Supabase, D56)
+For the existing Checkervia project, migrations 1 to 5 are already present as of 17 Nov 2026. Do not repeat the setup migrations below. See `migration-status.md` for the verified schema, migration history and permissions; run `npm run check:migrations` for read only API probes. The instructions below also document a fresh project setup.
+
 The leaderboard functions store data in Supabase Postgres and use it only from the Netlify functions, with the service role key. Until the three variables below are set, every leaderboard function answers 503 and the game works as before. Nothing goes live before the owner approves phase 4.
 
 1. Create the project: at supabase.com, New project. Pick a region near most players and save the database password somewhere safe (it is not needed by the app).
@@ -40,6 +39,7 @@ The leaderboard functions store data in Supabase Postgres and use it only from t
 7. Run migration 2 (D61, D62), once, after migration 1 and before the version with the Profile screen goes live: SQL Editor, New query, paste all of `docs/07-deployment/leaderboard-migration-2.sql` and Run. It adds `avatar` and `username_changed_at` to `players`, the table `username_reservations` (old usernames kept for their player for 30 days), a trigger that refuses a reserved name, the function `rename_player`, and makes `leaderboard_ranked` again with the avatar. Run it only once: a second run stops at its first line with "already exists" and changes nothing. Check: Table Editor shows five tables, each with "RLS enabled", and `select * from leaderboard_ranked(4, null);` still returns no error. The site's new version needs it: until it is run, claiming a username and the ranking answer 503.
 8. Run migration 3 (D75), once, after migration 2 and before the version with the stats against the AI goes live: SQL Editor, New query, paste all of `docs/07-deployment/leaderboard-migration-3.sql` and Run. It adds `resigned` to `game_results` (only a loss can be a resignation) and the function `ai_record`, the AI's totals over every player (hidden players left out), which only the service role can call. It also remakes `player_level_stats` with a `resigned` count per level, for the profile (D87). Run it only once: a second run stops at its first line with "already exists" and changes nothing. Check: `select * from ai_record();` returns one row per level that has games, and `select * from player_level_stats('<a player id>');` has a `resigned` column. Until it is run, the AI's numbers in the game show as "?" and a resigned game cannot be reported (wins and other losses still are).
 8. Run migration 4 (D85), once, after migration 3 and before the version with abandoned games and suspensions goes live: SQL Editor, New query, paste all of `docs/07-deployment/leaderboard-migration-4.sql` and Run. It adds the table `player_reports` (one row per abandoned game the AI reported), the columns `reports_active` and `suspended_until` on `players`, and the functions `add_report` and `player_conduct`, which only the service role can call. Run it only once: a second run stops at its first line with "already exists". Check: `select * from player_conduct('<a player id>');` returns one row. Until it is run, `report-abandon` answers 503 (the browser keeps the reports and sends them again later), every other function reads "no reports, not suspended", and the suspension is enforced on the device only.
+8. Run migration 5 (D89), once, after migration 4 and before the version with draws goes live: SQL Editor, New query, paste all of `docs/07-deployment/leaderboard-migration-5.sql` and Run. It lets `game_results.result` be `draw` and adds a `draws` count to the functions `ai_record` and `player_level_stats`. Run it only once: a second run stops at its first line (the old constraint is already gone). Check: `select * from ai_record();` has a `draws` column. Until it is run, a draw report is refused (the browser ignores it) and every count reads 0 draws.
 8. Check the live functions: `https://<site>/.netlify/functions/get-leaderboard?level=4&period=week` must return JSON with `"rows":[]` (an error with the code `unavailable` means a variable is missing or the database cannot be reached; the function log says which variable, never its value).
 
 The functions: `check-username` (GET), `claim-username` (POST: username, country code or "none", avatar id; no country is ever taken from the connection), `submit-win` (POST, sent by itself after a qualifying win, D61), `report-game` (POST), `get-leaderboard` (GET), `get-profile` (GET), `update-profile` (POST: any of username, country, avatar; a username once every 7 days). The browser sends a random device id in the `x-checkervia-device` header and, after claiming a username, its token as `Authorization: Bearer`.

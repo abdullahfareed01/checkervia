@@ -10,3 +10,45 @@
   framework = "#custom"
   command = "npm run dev"
   targetPort = 5173
+
+# The admin dashboard (D100): its own page, never linked from the game.
+# /admin and every path under it open the same page; its files under
+# /admin/assets are served as they are (a file that exists wins).
+[[redirects]]
+  from = "/admin"
+  to = "/admin/index.html"
+  status = 200
+
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
+  status = 200
+
+# Never indexed, never framed, never cached, no referrer, and none of the
+# browser's powers. The full Content Security Policy is a meta tag in the
+# built page (vite.admin.config.ts); this header adds what a meta tag cannot.
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Content-Security-Policy = "frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Cross-Origin-Resource-Policy = "same-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), clipboard-read=()"
+    Strict-Transport-Security = "max-age=31536000"
+    Cache-Control = "no-store"
+
+[[headers]]
+  for = "/admin"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow, noarchive"
+    Content-Security-Policy = "frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "no-referrer"
+    Cross-Origin-Opener-Policy = "same-origin"
+    Strict-Transport-Security = "max-age=31536000"
+    Cache-Control = "no-store"

@@ -1,11 +1,13 @@
 import { memo } from "react";
 import { withoutDashes } from "../ai/language";
+import { SERVICE_MESSAGES } from "../ai/serviceError";
 import type { Player } from "../engine";
 import type { AiPhase } from "../state/gameReducer";
 
 interface StatusBarProps {
   currentPlayer: Player;
   winner: Player | null;
+  drawn?: boolean; // the game ended in a draw (D89)
   // Why the game ended, e.g. "White has no legal moves."
   winReason: string | null;
   choosingRoute: boolean;
@@ -40,12 +42,12 @@ function AiThinking() {
 
 // Shown when the AI could not choose a valid move. No move was played.
 function AiFailed({ reasons, onRetry }: { reasons: readonly string[]; onRetry: () => void }) {
+  const known = Object.values(SERVICE_MESSAGES).find((message) => reasons.some((reason) => reason.includes(message)));
   return (
     <section className="status status-failed" role="alert">
       <p className="status-main">The AI could not make a move</p>
       <p className="status-hint">
-        It did not give a valid answer, so no move was played and the board stays locked.
-        Retry to ask again, or start a new game.
+        {known ? `${known} No move was played.` : "It did not give a valid answer, so no move was played and the board stays locked. Retry to ask again, or start a new game."}
       </p>
       <button type="button" className="button button-primary" onClick={onRetry}>
         Retry
@@ -72,12 +74,24 @@ function AiFailed({ reasons, onRetry }: { reasons: readonly string[]; onRetry: (
 export const StatusBar = memo(function StatusBar({
   currentPlayer,
   winner,
+  drawn = false,
   winReason,
   choosingRoute,
   aiPhase,
   aiFailureReasons,
   onRetryAi,
 }: StatusBarProps) {
+  if (drawn) {
+    return (
+      <section className="status status-winner status-draw" aria-live="polite">
+        <p className="status-main">
+          <span className="status-pill">Draw</span>
+        </p>
+        {winReason && <p className="status-hint">{winReason}</p>}
+      </section>
+    );
+  }
+
   if (winner) {
     return (
       <section className="status status-winner" aria-live="polite">

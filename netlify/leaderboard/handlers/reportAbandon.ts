@@ -18,6 +18,9 @@ export const conductStatus = (conduct: Conduct): ConductStatus => ({
   reports: conduct.reports,
   totalReports: conduct.totalReports,
   suspendedUntil: conduct.suspendedUntil?.toISOString() ?? null,
+  // Only from migration 7 on (D102); older servers send neither.
+  ...(conduct.kind !== undefined ? { kind: conduct.kind } : {}),
+  ...(conduct.revisedAt !== undefined ? { revisedAt: conduct.revisedAt?.toISOString() ?? null } : {}),
 });
 
 export const handleReportAbandon: LeaderboardHandler = (request, deps) =>

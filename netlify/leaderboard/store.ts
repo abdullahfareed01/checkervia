@@ -2,7 +2,7 @@
 // supabaseStore.ts (the real one, Postgres through the service role key) and
 // memoryStore.ts (for tests and local work without a database).
 import type { AiLevel } from "../../src/ai/difficulty";
-import type { AbandonPhase, EncodedMove } from "../../src/leaderboard/protocol";
+import type { AbandonPhase, EncodedMove, SuspensionKind } from "../../src/leaderboard/protocol";
 
 export interface PlayerRecord {
   readonly id: string;
@@ -46,7 +46,7 @@ export interface GameResult {
   readonly playerId: string;
   readonly gameId: string;
   readonly level: AiLevel;
-  readonly result: "win" | "loss";
+  readonly result: "win" | "loss" | "draw"; // a draw since D89
   readonly resigned?: boolean; // a loss by resignation (D75)
 }
 
@@ -56,6 +56,7 @@ export interface AiCounts {
   readonly aiWins: number; // the players' losses, resignations included
   readonly aiLosses: number; // the players' wins
   readonly resigned: number; // the players' resignations
+  readonly draws: number; // D89; 0 before migration 5
 }
 
 /**
@@ -70,7 +71,7 @@ export interface AiRecord extends AiCounts {
 /** The totals from the four levels' counts. */
 export function aiRecordOf(levels: readonly (AiCounts & { readonly level: AiLevel })[]): AiRecord {
   const sum = (key: keyof AiCounts) => levels.reduce((total, level) => total + level[key], 0);
-  return { games: sum("games"), aiWins: sum("aiWins"), aiLosses: sum("aiLosses"), resigned: sum("resigned"), levels };
+  return { games: sum("games"), aiWins: sum("aiWins"), aiLosses: sum("aiLosses"), resigned: sum("resigned"), draws: sum("draws"), levels };
 }
 
 /** A report for an abandoned game (D85). */
@@ -86,6 +87,9 @@ export interface Conduct {
   readonly reports: number; // towards the next suspension
   readonly totalReports: number;
   readonly suspendedUntil: Date | null; // null when not suspended now
+  // From migration 7 on (D102): who suspended, and when a moderator last changed it.
+  readonly kind?: SuspensionKind | null;
+  readonly revisedAt?: Date | null;
 }
 
 export interface RankedRow {
@@ -105,6 +109,7 @@ export interface LevelCounts {
   readonly losses: number; // reported
   readonly games: number; // reported, plus every verified win
   readonly resigned: number; // the losses that were resignations; 0 before migration 3
+  readonly draws: number; // D89; 0 before migration 5
 }
 
 export interface RateLimitResult {

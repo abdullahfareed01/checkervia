@@ -4,7 +4,7 @@
 >
 > Notice version for the Strongest consent: 1 (`NOTICE_VERSION` in `src/ui/consent.ts`). Changing the Strongest notice text means bumping it, so everyone is asked again.
 >
-> The leaderboard section describes it as live (phase 4, D57), although nothing is deployed until the owner approves. "Reported" (games played and losses are not replay checked) is said here, not on the screens, as the owner asked.
+> The leaderboard is live. The draw update (D89) requires migration 5 before deployment. "Reported" (games played, losses and draws are not replay checked) is said here, not on the screens, as the owner asked.
 
 ## Entertainment only
 - Checkervia is a free checkers game made for fun. Nothing in it is advice of any kind.
@@ -23,7 +23,7 @@
 - We never ask for or store your age. If you are under 18, please play Easy, Medium or Hard.
 
 ## What is stored
-- In your browser: your chosen level, your settings, your acceptance of the Strongest notice (the time and the notice version), your totals against the AI (games, wins, losses and resignations), which the AI uses to tease you and, for the leaderboard, a random device id, your profile's secret key and any win that could not be sent yet (kept for at most 7 days). Clearing your browser data removes them.
+- In your browser: your chosen level, your settings, your acceptance of the Strongest notice (the time and the notice version), your totals against the AI (games, wins, losses, draws and resignations), which the AI uses to tease you and, for the leaderboard, a random device id, your profile's secret key and any win that could not be sent yet (kept for at most 7 days). Clearing your browser data removes them.
 - In this tab only: your wins and losses against the AI, so it can greet you. They are gone when you close the tab.
 - During a game, the board and the list of possible moves are sent to the AI provider so the AI can choose its move. No personal details are sent.
 - On our server: only what the Leaderboard section below lists, and only once you choose a username.
@@ -31,10 +31,10 @@
 ## Leaderboard
 - Before your first game against the AI you make a profile: a username, an avatar and a flag. Usernames are public and unique, and there is no tag. Please do not use your real name. Usernames are filtered, and names or entries that break these rules may be hidden or removed.
 - Your username, avatar, flag and wins are public on the leaderboard.
-- When you win a game against the AI, the win is submitted automatically after the result appears. Our server checks each one by replaying all of its moves. Two player games, resigned games and games the AI wins never count. If the win cannot be sent (for example while you are offline), it is kept in your browser for up to 7 days and sent by itself later.
-- Your profile shows your games played, wins, losses and win rate. Wins are checked by replay. Games played and losses are reported by the game in your browser and are not checked by replay. The AI's record in the game adds up the reported games of every player: totals only, never names.
+- When you win a game against the AI, the win is submitted automatically after the result appears. Our server checks each one by replaying all of its moves. A win when the AI resigns counts only when the server proves the AI had a forced loss. Two player games, draws, games you resign and games the AI wins never count. If the win cannot be sent (for example while you are offline), it is kept in your browser for up to 7 days and sent by itself later.
+- Your profile shows your games played, wins, losses, draws and win rate. Wins are checked by replay. Games played, losses and draws are reported by the game in your browser and are not checked by replay. The AI's record in the game adds up the reported games of every player: totals only, never names.
 - If you leave a game against the AI without moving for a minute, the game is abandoned and the AI reports you. The fourth report suspends your account for 30 days: no games against the AI until then (two players and Learn stay open), and the count starts again. Our server stores each report (the game, its level, whether it came before your first move, and the time) and your suspension, and your browser keeps the same. Only you see your reports, in your own profile. Questions about a suspension: checkervia.games@gmail.com.
-- Our server stores your username, your avatar (only which picture you chose), your flag, the level, moves and stats of each win, the results of your finished games against the AI (a win, a loss, or a loss by resignation), the date of your last username change, and the dates. It also stores scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It never stores your raw IP address, your age or your email.
+- Our server stores your username, your avatar (only which picture you chose), your flag, the level, moves and stats of each win, the results of your finished games against the AI (a win, a loss, a draw, or a loss by resignation), the date of your last username change, and the dates. It also stores scrambled (hashed) forms of a secret key and a random device id kept in your browser, and of your IP address. It never stores your raw IP address, your age or your email.
 - The avatar groups (male, female, kid, older adult) only help you find a picture. Which group you looked at is never sent or stored.
 - You choose your flag yourself, or Prefer not to show a flag. It is never guessed from your connection. You can change your flag and your avatar any time.
 - You can change your username once every 7 days. Your old username stays reserved for you for 30 days, so nobody else can take it; after that it is free again. Your wins and stats stay with you.
@@ -42,6 +42,16 @@
 - Your profile belongs to the secret key kept in this browser. Clearing your browser data loses the profile, and its username stays taken.
 - Anyone can view the leaderboard and the profiles on it, without choosing a username.
 - To have a profile or an entry removed, email checkvia.games@gmail.com with the username and roughly when you submitted it.
+
+## Moderation
+- The owner of Checkervia keeps the leaderboard fair from a private dashboard that only the owner can sign in to, with a password and a second step from an authenticator app. It shows only what our server already stores, as listed here, and never your raw IP address.
+- Our server also stores when you were last active (the time of your latest game result), which days you played (kept for about 400 days), and, for a suspension, who set it, why, and when it was set or changed. Totals per day (new profiles, games, wins, losses and resignations per level, and per flag) are kept for statistics and hold no names.
+- A moderator may hide a profile or a win, change a username that breaks the rules, reset an avatar or a flag, suspend an account until a date or for good, stop a device from making a new profile, or remove a profile. While suspended your profile, wins and stats are kept, the game tells you how many days are left, and lifting a suspension restores everything.
+- Every moderator action is recorded with the time, its reason and the username it was about. This record cannot be changed and is kept after a profile is removed, as proof of what was done. Looking at a profile in the dashboard is recorded too.
+
+## Visitor and online counts
+- A device is counted once per UTC day with a scrambled mark that changes daily. Marks older than two days are periodically cleared; daily totals remain.
+- While a game is visible, an anonymous heartbeat sends its mode, level and chosen flag every 30 seconds. It expires after 75 seconds and stops when the game is hidden, left or finished. It contains no moves, names or profile keys.
 
 ## Contact
 - Questions about these notices: checkvia.games@gmail.com.

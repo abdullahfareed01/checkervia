@@ -135,23 +135,23 @@ Dependency direction: `ui` → `state` → `engine`; `ai` → `engine`; `leaderb
 Click → UI dispatch `select` / `move` → reducer asks engine for legal moves → engine validates and applies → new state → UI rerenders.
 
 ## Data flow (AI move)
-1. The human (Black) plays a move. The reducer sets `aiPhase = "thinking"` and a new `aiRequestId`. The board is locked.
+1. Black opens. Player colours are random per game; on an AI turn the reducer sets `aiPhase = "thinking"` and a new `aiRequestId`. The board is locked.
 2. `useGame` sees the new request id and calls `startAiTurn` (`state/aiController.ts`).
-3. `chooseMove(board, "white", callModel)` builds the prompt and calls `callModel` (`ai/client.ts`).
+3. The controller checks whether the AI has a proven loss and should resign (D89). Otherwise `chooseMove` lists candidates for the AI's actual colour, builds the prompt and calls `callModel` (`ai/client.ts`).
 4. `callModel` POSTs `{ prompt, retryNote? }` to `/.netlify/functions/ai-move`.
 5. The function (`netlify/aiMoveHandler.ts`) validates and rate limits the request, adds the retry note, and calls OpenRouter with the key from `OPENROUTER_API_KEY` and the model from `LLM_MODEL`. It returns `{ text }` only.
-6. `parseReply` checks the number against the legal list. Invalid answer or error: retry up to 3 times.
+6. `parseReply` checks the number against the legal list. Invalid answers and temporary errors may retry up to 3 times with backoff. Permanent errors stop immediately. One 12 second budget covers the entire turn (D91).
 7. Success: dispatch `aiMoved` with the request id. The reducer plays the move through the same `playMove` as a human move, only if it is in `legalMoves`.
 8. Failure: dispatch `aiFailed`. The UI shows the fallback message and a Retry button; the board stays locked; no move is played. Retry dispatches `aiRetry` (new request id) and runs the flow again.
 
-Stale replies: New game, a mode change and Retry all change `aiRequestId`. The reducer ignores any `aiMoved` or `aiFailed` whose id is not the current one, and the hook's effect cleanup also cancels the pending request.
+Stale replies: New game, a mode change and Retry all change `aiRequestId`. The reducer ignores any `aiMoved` or `aiFailed` whose id is not the current one, and the hook's effect cleanup aborts the pending request. The total turn deadline rejects even a request that ignores cancellation.
 
 ## Serverless proxy (`netlify/`)
-- `POST` only. Body `{ prompt: string, retryNote?: string }`, nothing else; prompt at most 4000 characters, retryNote at most 500. Anything else gets a short generic error.
+- `POST` for moves, `GET` for readiness. Move body `{ prompt: string, retryNote?: string }`, nothing else; prompt at most 8000 characters, retryNote at most 500. Anything else gets a short generic error.
 - Reads `OPENROUTER_API_KEY` and `LLM_MODEL` from the environment. Never returns the key or raw provider errors; never logs the key.
 - Request to OpenRouter: `max_tokens` 1500, `reasoning: { effort: "low" }`, `response_format` as a JSON schema for `{ move: integer }`, `provider: { require_parameters: true }`.
 - If the provider refuses `response_format` (status 400, 404 or 422), the proxy asks once more without it. An empty reply or a missing message is an error, so the client throws and `chooseMove` retries.
-- Timeouts: Netlify stops the function at 60 s (fixed), the provider call at 55 s, the browser request at 65 s.
+- Timeouts: provider call at 10 seconds, browser request at 11 seconds, complete turn at 12 seconds. Readiness checks key and account metadata with a 3 second timeout and a 30 second cache. It makes no model calls and returns only a boolean.
 - Rate limit: best effort, in function memory (see `ai-opponent.md` for what that can and cannot do).
 
 ## Leaderboard functions (`netlify/leaderboard`, D56)

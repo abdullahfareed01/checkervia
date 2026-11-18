@@ -11,7 +11,7 @@
 import { describe, expect, it } from "vitest";
 import { applyMove, getLegalMoves, initialBoard } from "../src/engine";
 import type { Board, Move, Piece, Player } from "../src/engine";
-import { createGameState, gameReducer } from "../src/state/gameReducer";
+import { createGameState, gameReducer, isGameOver } from "../src/state/gameReducer";
 import type { GameState } from "../src/state/gameReducer";
 
 // These tests do real work (about 2.5 s together); give them room so a busy
@@ -202,7 +202,8 @@ describe("BUG-001: the AI path never plays an illegal move", () => {
 
     for (let game = 0; game < 100; game++) {
       let state: GameState = createGameState({ mode: "vs-ai" });
-      for (let turn = 0; turn < 120 && state.winner === null; turn++) {
+      // A game may also end in a draw now (D89).
+      for (let turn = 0; turn < 120 && !isGameOver(state); turn++) {
         if (state.aiPhase === "thinking") {
           // Fake AI: picks a random legal move, like a valid model answer would.
           const legal = getLegalMoves(state.board, "white");
@@ -227,7 +228,7 @@ describe("BUG-001: the AI path never plays an illegal move", () => {
             state = gameReducer(state, { type: "click", position: next });
           }
         }
-        check(state.currentPlayer !== "white" || state.aiPhase !== "idle" || state.winner !== null, "white to move but AI not thinking");
+        check(state.currentPlayer !== "white" || state.aiPhase !== "idle" || isGameOver(state), "white to move but AI not thinking");
       }
     }
     expect(aiMoves).toBeGreaterThan(2000);

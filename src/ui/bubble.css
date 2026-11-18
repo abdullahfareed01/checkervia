@@ -326,334 +326,153 @@
   }
 }
 
-/* ---------- The robot's moods (D64b) ----------
-   A new face pops in; a laugh bounces the head and sheds a tear, anger
-   shakes it and turns the antenna light red, a capture gets
-   a small nod. Only at the Standard and Cinematic animation levels. */
+/* ---------- The robot's moods (D95 follow up) ----------
+   One persistent face. Native SVG owns path interpolation; shared idle
+   clocks and fixed SVG origins keep changes from restarting a pose. */
 
 .robot-face .robot-head,
-.robot-face .robot-expression,
-.robot-face .robot-tear {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
+.robot-face .robot-idle {
+  transform-box: view-box;
+  transform-origin: 24px 35px;
+}
+
+.robot-face .robot-head {
+  transition: transform 420ms ease-in-out;
+}
+
+.robot-face .robot-idle {
+  animation: robot-sulk 5.6s ease-in-out infinite;
 }
 
 .robot-face .robot-expression {
-  transform-origin: 50% 50%;
-  animation: face-pop 0.22s ease-out both;
+  opacity: 1;
 }
 
-.robot-face-laughing .robot-head {
-  animation: robot-laugh 0.3s ease-in-out 6;
+.robot-face .robot-morph-path,
+.robot-face .robot-mouth-detail,
+.robot-face .robot-pupils,
+.robot-face .robot-tears,
+.robot-face .robot-sweat-wrap,
+.robot-face .robot-stars,
+.robot-face .robot-crown,
+.robot-face .robot-sleep-wrap {
+  transition: fill 420ms ease-in-out, stroke 420ms ease-in-out, opacity 420ms ease-in-out;
 }
 
-.robot-face-laughing .robot-tear {
-  animation: robot-tear 1.2s ease-in both;
+.robot-face .robot-light,
+.robot-face .robot-chest {
+  transition: fill 420ms ease-in-out;
 }
 
-.robot-face-angry .robot-head {
-  animation: robot-shake 0.45s ease-in-out 2;
+.robot-face .robot-light {
+  animation: none;
 }
 
 .robot-face-angry .robot-light {
   fill: #ff3b30;
-  animation: blink 0.5s ease-in-out 4;
-}
-
-.robot-face-happy .robot-head {
-  animation: robot-nod 0.6s ease-in-out 1;
-}
-
-/* Shocked (D69): one quick jolt back, then it settles, still smirking. */
-.robot-face-shocked .robot-head {
-  animation: robot-jolt 0.5s ease-out 1;
-}
-
-@keyframes robot-jolt {
-  25% {
-    transform: translateY(-2px) scale(1.05);
-  }
-  60% {
-    transform: translateY(0.5px) scale(0.99);
-  }
-}
-
-@keyframes face-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.7);
-  }
-}
-
-@keyframes robot-laugh {
-  50% {
-    transform: translateY(-1.6px) rotate(-3deg);
-  }
-}
-
-@keyframes robot-shake {
-  20% {
-    transform: translateX(-1.4px) rotate(-2.5deg);
-  }
-  40% {
-    transform: translateX(1.4px) rotate(2.5deg);
-  }
-  60% {
-    transform: translateX(-1px) rotate(-1.5deg);
-  }
-  80% {
-    transform: translateX(1px) rotate(1.5deg);
-  }
-}
-
-@keyframes robot-nod {
-  40% {
-    transform: translateY(1.2px);
-  }
-}
-
-@keyframes robot-tear {
-  from {
-    opacity: 0;
-    transform: translateY(-1px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(1.5px);
-  }
-}
-
-/* ---------- Signs of life (D71) ----------
-   Between reactions the robot is never frozen: it breathes, blinks every
-   few seconds and glances around; smug, it blinks slowly; nervous, a bead
-   of sweat runs down and its eyes dart; defeated, its head droops and the
-   antenna light dims. */
-
-.robot-face .robot-eyes {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-}
-
-.robot-face-neutral .robot-head,
-.robot-face-smug .robot-head,
-.robot-face-nervous .robot-head {
-  animation: robot-breathe 3.4s ease-in-out infinite;
-}
-
-.robot-face-neutral .robot-eyes {
-  animation: robot-look 7.2s ease-in-out infinite;
-}
-
-.robot-face-smug .robot-eyes,
-.robot-face-happy .robot-eyes {
-  animation: robot-blink 5.2s ease-in-out infinite;
-}
-
-.robot-face-nervous .robot-eyes {
-  animation: robot-dart 2.6s ease-in-out infinite;
-}
-
-.robot-face-nervous .robot-sweat {
-  transform-box: fill-box;
-  animation: robot-sweat 2.4s ease-in infinite;
-}
-
-.robot-face-defeated .robot-head {
-  animation: robot-droop 0.9s ease-out forwards;
 }
 
 .robot-face-defeated .robot-light {
   fill: #6e5a63;
 }
 
-@keyframes robot-breathe {
-  50% {
-    transform: translateY(0.7px);
-  }
+.robot-face-defeated .robot-head {
+  transform: translateY(1.6px) rotate(-5deg);
 }
 
-/* Glance left, glance right, then a blink. */
-@keyframes robot-look {
-  0%,
-  30%,
-  100% {
-    transform: translateX(0) scaleY(1);
-  }
-  36%,
-  48% {
-    transform: translateX(-1.6px) scaleY(1);
-  }
-  54%,
-  66% {
-    transform: translateX(1.6px) scaleY(1);
-  }
-  72%,
-  88% {
-    transform: translateX(0) scaleY(1);
-  }
-  92% {
-    transform: translateX(0) scaleY(0.1);
-  }
-  96% {
-    transform: translateX(0) scaleY(1);
-  }
+/* Gaze, blink and jaw clocks never change with mood. Their fixed origins
+   do not move when a path's bounding box changes during a morph. */
+.robot-face .robot-eyes {
+  transform-box: view-box;
+  transform-origin: 24px 21px;
+  animation: robot-sad-look 7s ease-in-out 1.2s infinite;
 }
 
-@keyframes robot-blink {
-  0%,
-  90%,
-  100% {
-    transform: scaleY(1);
-  }
-  94% {
-    transform: scaleY(0.12);
-  }
+.robot-face .robot-mouth-motion {
+  transform-box: view-box;
+  transform-origin: 24px 29px;
+  animation: robot-chuckle 2.8s ease-in-out infinite;
 }
 
-@keyframes robot-dart {
-  0%,
-  40%,
-  100% {
-    transform: translateX(0);
-  }
-  50%,
-  60% {
-    transform: translateX(-2.4px);
-  }
-  70% {
-    transform: translateX(0.6px);
-  }
+.robot-face .robot-pupils {
+  animation: robot-worried-look 4.8s ease-in-out infinite;
 }
 
-@keyframes robot-sweat {
-  0% {
-    opacity: 0;
-    transform: translateY(-1px);
-  }
-  20% {
-    opacity: 1;
-  }
-  80% {
-    opacity: 1;
-    transform: translateY(4px);
-  }
-  100% {
-    opacity: 0;
-    transform: translateY(5px);
-  }
+.robot-face .robot-tear {
+  animation: robot-tear 2.8s ease-in-out infinite;
 }
 
-@keyframes robot-droop {
-  to {
-    transform: translateY(1.6px) rotate(-5deg);
-  }
+.robot-face .robot-tear:last-child {
+  animation-delay: -1.4s;
 }
 
-/* ---------- More reactions (D72) ---------- */
-
-/* Wink: the closed eye opens again after a moment, once. */
-.robot-face-wink .robot-head {
-  animation: robot-nod 0.6s ease-in-out 1;
+.robot-face .robot-sweat {
+  animation: robot-sweat 2.4s ease-in infinite;
 }
 
-/* Starstruck: the stars pulse and the head bounces. */
-.robot-face-starstruck .robot-stars {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: robot-stars 0.7s ease-in-out 4;
-}
-
-.robot-face-starstruck .robot-head {
-  animation: robot-laugh 0.35s ease-in-out 4;
-}
-
-/* Proud: chin up, and the crown drops on. */
-.robot-face-proud .robot-head {
-  animation: robot-proud 0.8s ease-out forwards;
-}
-
-.robot-face-proud .robot-crown {
-  transform-box: fill-box;
-  animation: robot-crown 0.5s ease-out both;
-}
-
-/* Annoyed: a slow eye roll. */
-.robot-face-annoyed .robot-roll {
-  animation: robot-roll 1.4s ease-in-out 1;
-}
-
-/* Sleepy: the head nods off slowly and the z's float up. */
-.robot-face-sleepy .robot-head {
-  animation: robot-doze 4s ease-in-out infinite;
-}
-
-.robot-face-sleepy .robot-zz {
-  transform-box: fill-box;
+.robot-face .robot-zz {
   animation: robot-zz 2.6s ease-in-out infinite;
 }
 
-@keyframes robot-stars {
-  50% {
-    transform: scale(1.25) rotate(12deg);
-  }
+/* Invisible details keep their phase but spend no time animating. */
+.robot-face .robot-tears[opacity="0"] .robot-tear,
+.robot-face .robot-sweat-wrap[opacity="0"] .robot-sweat,
+.robot-face .robot-sleep-wrap[opacity="0"] .robot-zz,
+.robot-face .robot-pupils[opacity="0"] {
+  animation-play-state: paused;
 }
 
-@keyframes robot-proud {
-  to {
-    transform: translateY(-1px) rotate(3deg);
-  }
+@keyframes robot-chuckle {
+  0%, 36%, 100% { transform: scaleY(1); }
+  10%, 26% { transform: scaleY(0.85); }
+  18% { transform: scaleY(1.02); }
 }
 
-@keyframes robot-crown {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
+@keyframes robot-worried-look {
+  0%, 20%, 80%, 100% { transform: translateX(0); }
+  35%, 45% { transform: translateX(-0.7px); }
+  60%, 70% { transform: translateX(0.7px); }
 }
 
-@keyframes robot-roll {
-  0% {
-    transform: translate(0, 2px);
-  }
-  30% {
-    transform: translate(-2px, 0);
-  }
-  60% {
-    transform: translate(2px, -0.5px);
-  }
-  100% {
-    transform: translate(0, 0);
-  }
+@keyframes robot-tear {
+  0%, 100% { opacity: 0; transform: translateY(-0.5px); }
+  15%, 35% { opacity: 0.9; }
+  65%, 90% { opacity: 0; transform: translateY(2px); }
 }
 
-@keyframes robot-doze {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  50% {
-    transform: translateY(1px) rotate(-4deg);
-  }
+@keyframes robot-sweat {
+  0% { opacity: 0; transform: translateY(-1px); }
+  20% { opacity: 1; }
+  80% { opacity: 1; transform: translateY(4px); }
+  100% { opacity: 0; transform: translateY(5px); }
+}
+
+/* A tiny continuous sigh, inside the smoothly changing head pose. */
+@keyframes robot-sulk {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  45%, 60% { transform: translateY(0.25px) rotate(0.2deg); }
+}
+
+@keyframes robot-sad-look {
+  0%, 14%, 100% { transform: translate(0, 0) scaleY(1); }
+  24%, 38% { transform: translate(-1.5px, 0.6px) scaleY(1); }
+  46%, 52% { transform: translate(0, 0.3px) scaleY(1); }
+  62%, 76% { transform: translate(1.5px, 0.6px) scaleY(1); }
+  84% { transform: translate(0, 0) scaleY(1); }
+  90% { transform: translate(0, 0.4px) scaleY(0.25); }
+  95% { transform: translate(0, 0) scaleY(1); }
 }
 
 @keyframes robot-zz {
-  0% {
-    opacity: 0;
-    transform: translate(0, 2px);
-  }
-  30%,
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-    transform: translate(2px, -3px);
-  }
+  0% { opacity: 0; transform: translate(0, 2px); }
+  30%, 70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(2px, -3px); }
 }
 
 html[data-anim="off"] .robot-face *,
 html[data-anim="reduced"] .robot-face * {
   animation: none !important;
+  transition: none !important;
 }
 
 /* ---------- What "Why?" shows ---------- */
@@ -769,6 +588,10 @@ html[data-anim="reduced"] .robot-face * {
   .why-sheet,
   .robot-face * {
     animation: none !important;
+  }
+
+  .robot-face * {
+    transition: none !important;
   }
 }
 

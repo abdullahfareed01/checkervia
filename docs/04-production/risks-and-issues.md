@@ -10,7 +10,7 @@
 | API key leaks to the browser or repo | Low | High | Serverless proxy, no `VITE_` prefix, `.env` in `.gitignore`, review before push |
 | Rule engine tangled with UI | Medium | High | Keep engine pure; no React imports in `src/engine` |
 | Author cannot explain generated code | Medium | High | Small functions, comments, walk through each task |
-| No draw rule allows endless King games | Low | Low | Accepted; New game button |
+| Repeated King positions prevent a game ending | Low | Low | D89 applies repetition and no progress draws; migration 5 is applied |
 | Cost or rate limits on the LLM | Low | Medium | Small prompts, one call per move, cheap model |
 | Someone abuses the public AI endpoint and runs up the OpenRouter bill | Medium | Medium | Size and shape limits, best effort per instance rate limit, and a spending cap on the OpenRouter key itself (the only hard limit). Consider Netlify's code based rate limiting at deploy time |
 | Reasoning uses up max_tokens and the answer comes back empty | Medium | Low | max_tokens 1500, reasoning effort low, empty answer counts as a failed attempt and is retried |
@@ -19,10 +19,10 @@
 | Scope creep | Medium | Medium | Stick to the scope doc; park ideas |
 
 ## Open issues
-- `BUG-001`: user reports the AI making illegal moves. Not reproduced yet; see `docs/06-qa/bug-tracker.md`.
+- Current release work: publish the tested draw update, improve AI failure handling, then complete human acceptance and the recording. See the task backlog.
 
 ## Issue log
 | # | Date | Description | Status |
 |---|---|---|---|
-| 1 | 12 Nov 2026 | `BUG-001` reported by the user after playing vs AI in the browser | Open, waiting for an example |
-| 2 | 12 Nov 2026 | User feedback: 8 feature requests (history, AI reasons, animation, no scroll, splash, menu and Learn mode, mobile, player icons) | Planned as task 10, waiting for decisions |
+| 1 | 12 Nov 2026 | `BUG-001` reported by the user after playing vs AI in the browser | Closed after the route display fix and user review; see the bug tracker |
+| 2 | 12 Nov 2026 | User feedback: 8 feature requests (history, AI reasons, animation, no scroll, splash, menu and Learn mode, mobile, player icons) | Implemented; human acceptance remains separate |

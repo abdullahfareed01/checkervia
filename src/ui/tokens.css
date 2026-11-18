@@ -1,0 +1,52 @@
+/* The design tokens the game's leaderboard screens and the admin dashboard
+   share (D57, D62, D100): the self hosted fonts and the leather and gold
+   palette. Imported by leaderboard.css (so the game's CSS is unchanged) and
+   by the admin page. Fonts: Nunito for words, Fraunces Black for titles, and
+   Checkervia Numerals (Fraunces digits made tabular) for counts and ranks. */
+
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/fonts/nunito-700-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 800 900;
+  font-display: swap;
+  src: url("/fonts/nunito-800-latin.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Checkervia Numerals";
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url("/fonts/checkervia-numerals.woff2") format("woff2");
+  unicode-range: U+0020, U+0023, U+0025, U+0030-0039;
+}
+
+:root {
+  /* One mockup pixel, from the width and (for short windows) the height. */
+  --s: clamp(0.72px, min(calc(100vw / 600), calc(100dvh / 1000)), 1px);
+  --lb-sans: "Nunito", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --lb-serif: "Fraunces", Georgia, "Times New Roman", serif;
+  --lb-numbers: "Checkervia Numerals", "Fraunces", Georgia, serif;
+  --lb-cream: #fbedd2;
+  --lb-text: #f3e3c7;
+  --lb-soft: #e3cfac;
+  --lb-dim: #c7ab84;
+  --lb-gold: #f4c55c;
+  --lb-gold-deep: #c98a2c;
+  --lb-line: rgba(201, 146, 76, 0.42);
+  --lb-panel: linear-gradient(180deg, #432918 0%, #301c10 100%);
+  --lb-panel-flat: #35200f;
+  --lb-well: #24150b;
+  --lb-gold-fill: linear-gradient(180deg, #ffe48e 0%, #f7c04a 48%, #e39a28 100%);
+  --lb-gold-text: #3a2006;
+  --lb-focus: #ffe08a;
+  --lb-glow-gold: 0 0 calc(var(--s) * 18) rgba(255, 186, 64, 0.55);
+  --lb-silver: #e7edf4;
+  --lb-bronze: #e8935a;
+}

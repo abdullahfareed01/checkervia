@@ -25,7 +25,9 @@ export type LineContext =
   | "playerWon" // the player won
   | "resignHint" // the engine proved the player's position is lost
   | "resignPush" // the position is proven lost and the player keeps stalling (D69)
-  | "aiWonStubborn"; // the AI won after the player ignored the resign hint (D69)
+  | "aiWonStubborn" // the AI won after the player ignored the resign hint (D69)
+  | "draw" // the game was drawn (D89)
+  | "aiResigned"; // the AI resigned: its position was proven lost (D89)
 
 export type Bank = Readonly<Record<LineContext, readonly string[]>>;
 

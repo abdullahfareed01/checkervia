@@ -43,11 +43,17 @@ export function boardViewOf(state: GameState, shown: DisplayedPosition, moveKey:
 
 // Plain-language reason for a win: the loser has no pieces, or none can move.
 export function winReasonOf(state: GameState): string | null {
+  // A draw (D89): the same position a third time, or 40 moves each without progress.
+  if (state.drawn === "repetition") return "Draw: the same position came up three times.";
+  if (state.drawn === "noProgress") return "Draw: 40 moves each without a capture or a new King.";
   if (!state.winner) return null;
   const loser = opponentOf(state.winner);
   const name = loser === "black" ? "Black" : "White";
   if (state.abandoned) return "Game abandoned: you did not move."; // D85
-  if (state.resignedBy) return state.mode === "vs-ai" ? "You resigned." : `${name} resigned.`;
+  if (state.resignedBy) {
+    if (state.mode !== "vs-ai") return `${name} resigned.`;
+    return state.resignedBy === state.humanSide ? "You resigned." : "The AI resigned: its position was lost."; // D89
+  }
   return pieceCounts(state.board)[loser] === 0
     ? `${name} has no pieces left.`
     : `${name} has no legal moves.`;

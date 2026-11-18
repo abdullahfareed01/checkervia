@@ -86,7 +86,7 @@ export function useGameFeedback({ state, resultOpen, sheets, bubble }: GameFeedb
 
   // A new line in the AI's bubble (not the typing dots).
   const lastBubble = useRef<string | null>(null);
-  const key = bubble && bubble.text !== null ? bubble.key : null;
+  const key = bubble && bubble.text !== null && bubble.announce !== false ? bubble.key : null;
   useEffect(() => {
     if (key && key !== lastBubble.current) playFeedback(key.startsWith("idle") ? "idleBubble" : "aiBubble");
     lastBubble.current = key;

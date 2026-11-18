@@ -45,8 +45,9 @@ export const handleGetProfile: LeaderboardHandler = (request, deps) =>
       wins,
       losses: sum((level) => level.losses),
       resigned: sum((level) => level.resigned),
+      draws: sum((level) => level.draws), // D89
       winRate: gamesPlayed > 0 ? Math.min(1, wins / gamesPlayed) : null,
-      byLevel: levels.map(({ level, wins: levelWins, losses, resigned }) => ({ level, wins: levelWins, losses, resigned })),
+      byLevel: levels.map(({ level, wins: levelWins, losses, resigned, draws }) => ({ level, wins: levelWins, losses, resigned, draws })),
       bestWin: bestWin(levels),
       weeklyStrongestRank: week?.rank ?? null,
     };

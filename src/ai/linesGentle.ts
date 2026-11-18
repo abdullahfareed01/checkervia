@@ -190,6 +190,32 @@ export const EASY: Bank = {
     "I am sad and a little angry. I reported you.",
     "No moves, no game. I reported you.",
   ],
+  // D89: the game was drawn (repetition, or 40 moves each without progress)
+  draw: [
+    "A draw! That was a close game, well played.",
+    "Nobody won this time. Great effort from you!",
+    "A draw, hehe. We were evenly matched.",
+    "We both held on. A fair draw!",
+    "A draw it is. You defended really well.",
+    "Good game! Neither of us could break through.",
+    "It ends level. I enjoyed every move.",
+    "A draw! Shall we play again and find a winner?",
+    "Evenly matched today. Well played, friend!",
+    "No winner, but a lot of fun. Thank you for the game!",
+  ],
+  // D89: the AI resigned, its position proven lost
+  aiResigned: [
+    "I resign. You played that really well!",
+    "There is no way out for me. I resign, well done!",
+    "I give up this one. You earned it!",
+    "My position is lost, so I resign. Congratulations!",
+    "I resign, hehe. That was a lovely game from you.",
+    "You have me trapped. I resign!",
+    "Well played! I know when I am beaten.",
+    "I resign. You were too good today.",
+    "Nothing can save me now. You win!",
+    "I am resigning. Great game, champion!",
+  ],
 };
 
 export const MEDIUM: Bank = {
@@ -378,5 +404,31 @@ export const MEDIUM: Bank = {
     "No move for a whole minute? Reported, hehe.",
     "I reported you. Starting a game is a promise to play it.",
     "Enough waiting. Reported. Goodbye, haha.",
+  ],
+  // D89: the game was drawn (repetition, or 40 moves each without progress)
+  draw: [
+    "A draw? Fine, I will call that a tie, haha.",
+    "Round and round we went. Draw!",
+    "Nobody wins. I was about to, obviously, hehe.",
+    "A draw. You are tougher than you look.",
+    "We kept going in circles. Okay, draw, lol.",
+    "A draw! Next game I break the tie.",
+    "Evenly matched, for now. Rematch?",
+    "No winner today. That is almost a win for you, haha.",
+    "Draw. I will take it, but I do not like it.",
+    "A draw. Neither of us blinked.",
+  ],
+  // D89: the AI resigned, its position proven lost
+  aiResigned: [
+    "Okay, okay, I resign. You got me, haha.",
+    "I resign. Do not get used to it.",
+    "Fine, my position is lost. You win this one.",
+    "I see the end coming, so I resign. Well played.",
+    "I resign, hehe. Enjoy it while it lasts.",
+    "You trapped me. I resign, grudgingly.",
+    "No escape for me. I resign. Rematch soon!",
+    "I resign. That was sneaky good.",
+    "Alright, I give up. Nicely done, lol.",
+    "I resign now. Watching the rest would only hurt. Good game.",
   ],
 };

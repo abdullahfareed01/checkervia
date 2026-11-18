@@ -67,7 +67,7 @@ export function parseColour(value: unknown): Player | null {
 export interface ReportGameRequest {
   readonly gameId: string;
   readonly level: AiLevel;
-  readonly result: "win" | "loss";
+  readonly result: "win" | "loss" | "draw"; // a draw since D89
 }
 
 // Reports for abandoned games (D85): a game against the AI left without a
@@ -87,11 +87,29 @@ export interface ReportAbandonRequest {
   readonly phase: AbandonPhase;
 }
 
+/**
+ * Who suspended the account (D102): the AI's reports, a moderator until a
+ * date, or a moderator for good (until 9999-12-31, so every client can read
+ * the date).
+ */
+export type SuspensionKind = "reports" | "admin" | "permanent";
+
 /** The player's reports and suspension, as the server counts them. */
 export interface ConductStatus {
   readonly reports: number; // towards the next suspension, 0 to REPORT_LIMIT - 1
   readonly totalReports: number; // every report ever
   readonly suspendedUntil: string | null; // ISO time, null when not suspended now
+  // Left out by servers from before migration 7 (D102).
+  readonly kind?: SuspensionKind | null; // null when not suspended now
+  // The last time a moderator set, changed or lifted the suspension (ISO).
+  // A newer one than the device has seen replaces the device's own copy,
+  // even when it is shorter.
+  readonly revisedAt?: string | null;
+}
+
+/** A suspension kind as sent by the server, or null. */
+export function parseSuspensionKind(value: unknown): SuspensionKind | null {
+  return value === "reports" || value === "admin" || value === "permanent" ? value : null;
 }
 
 /** Any of the three; the fields left out stay as they are. */
@@ -151,6 +169,7 @@ export interface LevelRecord {
   readonly wins: number;
   readonly losses: number;
   readonly resigned?: number; // of the losses; left out by servers from before it
+  readonly draws?: number; // D89; left out by servers from before it
 }
 
 /** GET get-ai-stats (D75): the AI's record over every player. */
@@ -159,6 +178,7 @@ export interface AiStatsCounts {
   readonly aiWins: number;
   readonly aiLosses: number;
   readonly resigned: number;
+  readonly draws?: number; // D89; left out by servers from before it
 }
 
 /** The AI's record over every player: the totals, and per level (D77). */
@@ -174,6 +194,7 @@ export interface ProfileResponse {
   readonly wins: number;
   readonly losses: number;
   readonly resigned?: number; // the losses that were resignations; left out by servers from before it
+  readonly draws?: number; // D89; left out by servers from before it
   readonly winRate: number | null; // 0 to 1, null before the first game
   readonly byLevel: readonly LevelRecord[]; // Easy to Strongest
   readonly bestWin: { readonly moves: number; readonly level: AiLevel } | null;

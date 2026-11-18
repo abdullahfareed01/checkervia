@@ -11,7 +11,7 @@ import { GAME_ID_PATTERN, parseColour } from "../../../src/leaderboard/protocol"
 import type { EncodedMove, SubmitWinResponse } from "../../../src/leaderboard/protocol";
 import { checkRateLimits, fail, guarded, invalid, notSignedIn, ok, parseBody, playerFromToken, validDevice } from "../http";
 import type { LeaderboardHandler } from "../http";
-import { replayWin } from "../replay";
+import { acceptWin } from "../replay";
 import { sha256Hex } from "../security";
 import { LIMITS, MAX_BODY } from "./limits";
 
@@ -41,7 +41,8 @@ export const handleSubmitWin: LeaderboardHandler = (request, deps) =>
     // A suspended account plays no games against the AI (D85).
     if ((await deps.store.conduct(player.id)).suspendedUntil) return fail(403, "suspended", "This account is suspended.");
 
-    const replay = replayWin(moves, colour);
+    // A finished win, or the AI's resignation of a proven lost game (D89).
+    const replay = await acceptWin(moves, colour);
     if (!replay.ok) return fail(422, replay.reason, REJECTED[replay.reason]!);
 
     const added = await deps.store.addWin({

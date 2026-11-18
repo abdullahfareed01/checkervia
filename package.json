@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && vite build --config vite.admin.config.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "eval:ai": "node scripts/run-ai-eval.mjs",
+    "check:migrations": "node scripts/check-leaderboard-schema.mjs",
     "test": "vitest run",
     "test:watch": "vitest"
   },

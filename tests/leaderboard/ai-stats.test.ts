@@ -64,7 +64,7 @@ describe("the AI's record (get-ai-stats)", () => {
     // The same per level: all four, in order (every report here is at level 4).
     const levels = response.body["levels"] as { level: number; games: number }[];
     expect(levels.map((row) => [row.level, row.games])).toEqual([[1, 0], [2, 0], [3, 0], [4, 4]]);
-    expect(levels[3]).toEqual({ level: 4, games: 4, aiWins: 3, aiLosses: 1, resigned: 2 });
+    expect(levels[3]).toEqual({ level: 4, games: 4, aiWins: 3, aiLosses: 1, resigned: 2, draws: 0 });
   });
 
   it("is open to everyone, needs no token and carries no names", async () => {
@@ -73,7 +73,7 @@ describe("the AI's record (get-ai-stats)", () => {
     await report(w, token, "loss");
     const response = await call(handleGetAiStats, w);
     expect(JSON.stringify(response.body)).not.toContain("Secret_Name");
-    expect(Object.keys(response.body).sort()).toEqual(["aiLosses", "aiWins", "games", "levels", "resigned"]);
+    expect(Object.keys(response.body).sort()).toEqual(["aiLosses", "aiWins", "draws", "games", "levels", "resigned"]);
   });
 
   it("leaves hidden players out", async () => {
@@ -117,16 +117,18 @@ describe("the Supabase adapter (D75)", () => {
       { level: 1, games: "4", ai_wins: 1, ai_losses: 3, resigned: "0" },
       { level: 4, games: "10", ai_wins: 7, ai_losses: 3, resigned: "2" },
     ]);
+    // Before migration 5 the rows carry no draws column: 0 (D89).
     expect(await store.aiRecord()).toEqual({
       games: 14,
       aiWins: 8,
       aiLosses: 6,
       resigned: 2,
+      draws: 0,
       levels: [
-        { level: 1, games: 4, aiWins: 1, aiLosses: 3, resigned: 0 },
-        { level: 2, games: 0, aiWins: 0, aiLosses: 0, resigned: 0 },
-        { level: 3, games: 0, aiWins: 0, aiLosses: 0, resigned: 0 },
-        { level: 4, games: 10, aiWins: 7, aiLosses: 3, resigned: 2 },
+        { level: 1, games: 4, aiWins: 1, aiLosses: 3, resigned: 0, draws: 0 },
+        { level: 2, games: 0, aiWins: 0, aiLosses: 0, resigned: 0, draws: 0 },
+        { level: 3, games: 0, aiWins: 0, aiLosses: 0, resigned: 0, draws: 0 },
+        { level: 4, games: 10, aiWins: 7, aiLosses: 3, resigned: 2, draws: 0 },
       ],
     });
     expect(seen[0]!.url.pathname).toBe("/rest/v1/rpc/ai_record");
@@ -149,7 +151,7 @@ describe("the Supabase adapter (D75)", () => {
     });
     const record = await store.aiRecord();
     expect(record).toMatchObject({ games: 110, aiWins: 10, aiLosses: 100, resigned: 0 });
-    expect(record.levels[2]).toEqual({ level: 3, games: 33, aiWins: 3, aiLosses: 30, resigned: 0 });
+    expect(record.levels[2]).toEqual({ level: 3, games: 33, aiWins: 3, aiLosses: 30, resigned: 0, draws: 0 });
     expect(seen.filter((url) => url.pathname === "/rest/v1/game_results")).toHaveLength(8);
   });
 

@@ -132,7 +132,7 @@ describe("Home", () => {
   });
 
   it.each([
-    ["offline", "AI not set up", "no API key"],
+    ["offline", "AI unavailable", "unavailable right now"],
     ["unreachable", "AI unreachable", "netlify dev"],
   ] as const)("explains %s and offers to check again", (aiStatus, badge, help) => {
     const html = home({ aiStatus });

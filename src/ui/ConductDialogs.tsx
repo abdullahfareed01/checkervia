@@ -4,10 +4,13 @@
 // ready.") or later ("The AI reported you for not playing."), and how many
 // reports are left before a 30 day suspension. The suspension popup comes
 // whenever a suspended player tries to play the AI, opens the app or the
-// Profile, with the email address for questions.
+// Profile, with the email address for questions. It says how many days are
+// left and who suspended the account: the AI's reports, or a moderator for
+// a while or for good (D102). Nothing is wiped while suspended.
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { CONTACT_EMAIL, REPORT_LIMIT, SUSPENSION_DAYS } from "../leaderboard/protocol";
+import type { SuspensionKind } from "../leaderboard/protocol";
 import type { AbandonOutcome } from "./conduct";
 import { conductStore } from "./conduct";
 import { AlertIcon, FlagIcon } from "./icons";
@@ -16,6 +19,14 @@ import "./conduct.css";
 /** A date as "16 December 2026". */
 export function longDate(ms: number): string {
   return new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+const DAY_MS = 86_400_000;
+
+/** Whole days left, rounded up, never under 1 while suspended: "12 days left". */
+export function daysLeftText(until: number, now: number): string {
+  const days = Math.max(1, Math.ceil((until - now) / DAY_MS));
+  return `${days} ${days === 1 ? "day" : "days"} left`;
 }
 
 /** "3 more reports and your account will be suspended for 30 days." */
@@ -93,14 +104,28 @@ export function AbandonDialog({ outcome, onClose }: { outcome: AbandonOutcome | 
   );
 }
 
-/** For a suspended account: no games against the AI until the date. */
-export function SuspendedDialog({ until, onClose }: { until: number; onClose: () => void }) {
+interface SuspendedProps {
+  until: number;
+  kind?: SuspensionKind | null; // before D102 every suspension came from the AI's reports
+  now?: number;
+  onClose: () => void;
+}
+
+/** For a suspended account: no games against the AI until the date (or for good), and how long is left. */
+export function SuspendedDialog({ until, kind = "reports", now = Date.now(), onClose }: SuspendedProps) {
+  const permanent = kind === "permanent";
   return (
     <SmallDialog icon={<AlertIcon />} title="Account suspended" onClose={onClose}>
       <p className="conduct-lead">
-        Your account has been suspended for {SUSPENSION_DAYS} days: the AI reported you {REPORT_LIMIT} times for not playing.
+        {kind === "admin" || permanent
+          ? "Your account has been suspended by a moderator."
+          : `Your account has been suspended for ${SUSPENSION_DAYS} days: the AI reported you ${REPORT_LIMIT} times for not playing.`}
       </p>
-      <p className="conduct-warning">You can play the AI again on {longDate(until)}. Two players and Learn are open.</p>
+      {permanent ? null : <p className="conduct-days">{daysLeftText(until, now)}</p>}
+      <p className="conduct-warning">
+        {permanent ? "Games against the AI are closed for this account." : `You can play the AI again on ${longDate(until)}.`} Two players and Learn are open.
+        Your wins and stats are kept.
+      </p>
       <Contact />
     </SmallDialog>
   );
@@ -112,15 +137,17 @@ export function SuspendedDialog({ until, onClose }: { until: number; onClose: ()
  * OK, as for the Profile); otherwise returns false and does nothing.
  */
 export function useSuspendedNotice(): [(next?: () => void) => boolean, ReactNode] {
-  const [shown, setShown] = useState<{ until: number; next: (() => void) | undefined } | null>(null);
+  const [shown, setShown] = useState<{ until: number; kind: SuspensionKind | undefined; next: (() => void) | undefined } | null>(null);
   const notify = useCallback((next?: () => void) => {
     if (!conductStore.isSuspended()) return false;
-    setShown({ until: conductStore.get().suspendedUntil!, next });
+    const conduct = conductStore.get();
+    setShown({ until: conduct.suspendedUntil!, kind: conduct.kind, next });
     return true;
   }, []);
   const node = shown && (
     <SuspendedDialog
       until={shown.until}
+      kind={shown.kind}
       onClose={() => {
         setShown(null);
         shown.next?.();

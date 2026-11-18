@@ -8,6 +8,7 @@ import { useLeaderboardProfile } from "./leaderboard/profile";
 import { RobotFace } from "./RobotFace";
 import { Logo } from "./Splash";
 import { GameTitle } from "./TopBar";
+import { ShopIcon } from "./Marketplace";
 
 interface HomeProps {
   aiStatus: AiStatus | "checking";
@@ -19,19 +20,20 @@ interface HomeProps {
   onSettings?: (() => void) | undefined; // sound, haptics, voice, animation, board
   onLeaderboard?: (() => void) | undefined; // D57: open to everyone
   onProfile?: (() => void) | undefined; // D62: the profile icon, top right
+  onShop?: (() => void) | undefined;
 }
 
 // What the AI badge says for each health check result.
 const AI_BADGES: Record<AiStatus | "checking", { text: string; tone: string }> = {
   ready: { text: "AI Online", tone: "ok" },
   checking: { text: "Checking the AI…", tone: "wait" },
-  offline: { text: "AI not set up", tone: "warn" },
+  offline: { text: "AI unavailable", tone: "warn" },
   unreachable: { text: "AI unreachable", tone: "warn" },
 };
 
 // Why the AI cannot be used, in plain words.
 const AI_HELP: Partial<Record<AiStatus, string>> = {
-  offline: "The server has no API key or model set. Two players still works.",
+  offline: "The AI is unavailable right now. Try again shortly. Two Players and Learn still work.",
   unreachable: "The AI service did not answer. Run the game with netlify dev, or try again.",
 };
 
@@ -69,7 +71,7 @@ function MenuCard({ icon, label, hint, onClick, className = "", badge }: MenuCar
 // mockup): a gold rimmed frame with a checkered floor, the logo and title,
 // Play vs AI, 2 Players, Learn, the Leaderboard and How to Play, then
 // Settings and the Terms.
-export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerms, onSettings, onLeaderboard, onProfile }: HomeProps) {
+export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerms, onSettings, onLeaderboard, onProfile, onShop }: HomeProps) {
   const badge = AI_BADGES[aiStatus];
   const help = aiStatus === "checking" ? undefined : AI_HELP[aiStatus];
   const { profile } = useLeaderboardProfile();
@@ -79,6 +81,7 @@ export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerm
       <div className="home-frame">
         <LbGradients />
         <div className="home-scenery" aria-hidden="true" />
+        {onShop && <button type="button" className="home-shop" onClick={onShop}><ShopIcon /><span>Shop</span></button>}
         {onProfile && (
           // The player's avatar once a profile exists, a neutral person before.
           <button

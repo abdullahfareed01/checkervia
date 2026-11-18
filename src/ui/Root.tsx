@@ -1,3 +1,4 @@
+import { useGameVisits } from "./telemetry/useGameTraffic";
 import { useCallback, useEffect, useState } from "react";
 import type { AiLevel, AiStatus } from "../ai";
 import type { GameMode, GameOptions } from "../state/gameReducer";
@@ -22,6 +23,8 @@ import { useProfileGate } from "./leaderboard/ProfileGate";
 import { ProfileScreen } from "./leaderboard/ProfileScreen";
 import { leaderboardStore } from "./leaderboard/profile";
 import { startQueueRetries } from "./leaderboard/winQueue";
+import { Marketplace } from "./Marketplace";
+import { useCosmeticLook } from "./useMarketplace";
 
 // Which screen is showing. A game gets a fresh `id` each time one is started
 // from the menu, so the board always starts clean.
@@ -41,6 +44,8 @@ interface RootProps {
 // The whole app: splash first (until the AI check is done), then the home
 // menu, the rules page or a game.
 export function Root({ initial, checkAi }: RootProps) {
+  useGameVisits();
+  useCosmeticLook();
   const ai = useAiStatus(checkAi);
   useInterfaceFeedback(); // audio unlock on the first tap, button clicks
   // The animation level and speed (motion.css) and the board options
@@ -58,6 +63,7 @@ export function Root({ initial, checkAi }: RootProps) {
     root.dataset.lastMove = board.lastMove ? "on" : "off";
   }, [animation.level, animation.speed, board.theme, board.pieces, board.coordinates, board.legalMoves, board.lastMove]);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [shopOpen, setShopOpen] = useState(false);
   const splash = useSplash(ai.loaded);
   const [aiLevel, setAiLevel] = useAiLevel();
   // A recorded test win (?testwin, D60) without a profile goes through the
@@ -132,6 +138,7 @@ export function Root({ initial, checkAi }: RootProps) {
           onRecheck={ai.recheck}
           onTerms={() => setTermsOpen(true)}
           onSettings={() => setSettingsOpen(true)}
+          onShop={() => setShopOpen(true)}
           onLeaderboard={() => setLeaderboardOpen(true)}
           onProfile={() => {
             if (!notifySuspended(() => setProfileOpen(true))) setProfileOpen(true);
@@ -148,6 +155,7 @@ export function Root({ initial, checkAi }: RootProps) {
       {leaderboardOpen && <LeaderboardScreen onClose={() => setLeaderboardOpen(false)} onOwnProfile={() => setProfileOpen(true)} />}
       {profileOpen && <ProfileScreen onClose={() => setProfileOpen(false)} onTerms={() => setTermsOpen(true)} />}
       {termsOpen && <TermsDialog onClose={() => setTermsOpen(false)} />}
+      {shopOpen && <Marketplace onClose={() => setShopOpen(false)} />}
       {settingsOpen && (
         <SettingsSheet
           onClose={() => setSettingsOpen(false)}

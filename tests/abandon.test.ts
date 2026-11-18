@@ -319,9 +319,10 @@ describe("the wiring", () => {
     const app = source("src/ui/App.tsx");
     expect(app).toContain('touchAbandon.current = useAbandonTimer(state.mode === "vs-ai" && playerTurn && !covered && pageVisible, state.aiRequestId, game.abandon);');
     expect(app).toMatch(/\(position: Position\) => \{\s*touchAbandon\.current\(\);/);
-    expect(app).toContain("useResultPopup(state.winner, state.lastMove, state.abandoned ? ABANDON_POPUP_EXTRA_MS : 0)");
+    // The ending: the winner, or a draw (D89).
+    expect(app).toContain("useResultPopup(ending, state.lastMove, state.abandoned ? ABANDON_POPUP_EXTRA_MS : 0)");
     expect(app).toContain("{state.winner && result.open && state.abandoned && <AbandonDialog outcome={abandonOutcome} onClose={result.close} />}");
-    expect(app).toContain("{state.winner && result.open && !state.abandoned && (");
+    expect(app).toContain("{over && result.open && !state.abandoned && (");
   });
 
   it("every way into a game against the AI is closed while suspended; the app and the Profile say so", () => {

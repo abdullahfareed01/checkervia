@@ -172,10 +172,10 @@ describe("every game counts once for the player and for the AI, for either colou
     const profile = (await call(handleGetProfile, w, { query: { username: "both_sides" } })).body;
     expect(profile).toMatchObject({ gamesPlayed: 5, wins: 2, losses: 3, resigned: 2 });
     expect(profile["byLevel"]).toEqual([
-      { level: 1, wins: 0, losses: 1, resigned: 1 },
-      { level: 2, wins: 0, losses: 1, resigned: 1 },
-      { level: 3, wins: 1, losses: 0, resigned: 0 },
-      { level: 4, wins: 1, losses: 1, resigned: 0 },
+      { level: 1, wins: 0, losses: 1, resigned: 1, draws: 0 },
+      { level: 2, wins: 0, losses: 1, resigned: 1, draws: 0 },
+      { level: 3, wins: 1, losses: 0, resigned: 0, draws: 0 },
+      { level: 4, wins: 1, losses: 1, resigned: 0, draws: 0 },
     ]);
 
     // The AI's record: the player's wins are its losses, the player's losses its wins.
@@ -183,10 +183,10 @@ describe("every game counts once for the player and for the AI, for either colou
     expect(ai).toMatchObject({ games: 5, aiWins: 3, aiLosses: 2, resigned: 2 });
     const levels = ai["levels"] as { level: number; games: number; aiWins: number; aiLosses: number; resigned: number }[];
     expect(levels).toEqual([
-      { level: 1, games: 1, aiWins: 1, aiLosses: 0, resigned: 1 },
-      { level: 2, games: 1, aiWins: 1, aiLosses: 0, resigned: 1 },
-      { level: 3, games: 1, aiWins: 0, aiLosses: 1, resigned: 0 },
-      { level: 4, games: 2, aiWins: 1, aiLosses: 1, resigned: 0 },
+      { level: 1, games: 1, aiWins: 1, aiLosses: 0, resigned: 1, draws: 0 },
+      { level: 2, games: 1, aiWins: 1, aiLosses: 0, resigned: 1, draws: 0 },
+      { level: 3, games: 1, aiWins: 0, aiLosses: 1, resigned: 0, draws: 0 },
+      { level: 4, games: 2, aiWins: 1, aiLosses: 1, resigned: 0, draws: 0 },
     ]);
   });
 });

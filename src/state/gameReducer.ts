@@ -3,6 +3,7 @@
 // whose turn it is, and where the AI's turn stands.
 import {
   applyMove,
+  drawReason,
   getLegalMoves,
   getWinner,
   initialBoard,
@@ -10,7 +11,7 @@ import {
   pieceAt,
   samePosition,
 } from "../engine";
-import type { Board, Move, Player, Position } from "../engine";
+import type { Board, DrawReason, Move, Player, Position } from "../engine";
 import { DEFAULT_AI_LEVEL } from "../ai/difficulty";
 import type { AiLevel } from "../ai/difficulty";
 import type { ChosenLookahead } from "../ai/chooseMove";
@@ -116,8 +117,13 @@ export interface GameState {
   // game, so a game (and later a leaderboard win) belongs to one level;
   // choosing another level starts a new game (D44).
   readonly aiLevel: AiLevel;
-  // Who resigned, if the game ended that way (Change 4).
+  // Who resigned, if the game ended that way (Change 4): the player, or
+  // since D89 the AI when its position is proven lost.
   readonly resignedBy: Player | null;
+  // Why the game was drawn (D89): the same position a third time, or 40
+  // moves each without a capture or a new King. Null while it goes on and
+  // when someone won. A drawn game is over with no winner.
+  readonly drawn: DrawReason | null;
   // The person's colour against the AI (D81); Black in two player games.
   readonly humanSide: Player;
   // The game against the AI was abandoned: the player did not move for a
@@ -143,6 +149,8 @@ export type GameAction =
       provenLoss?: boolean | undefined;
     }
   | { type: "resign" }
+  // The AI gives up (D89): its position is proven lost. Tagged like a move.
+  | { type: "aiResigned"; requestId: number }
   // The player left a game against the AI without a move (D85).
   | { type: "abandon" }
   | { type: "aiFailed"; requestId: number; reasons: readonly string[] }
@@ -163,8 +171,13 @@ export interface GameOptions {
 
 // The AI is "thinking" whenever it is the AI's turn in a game that is not
 // over: from the very start when the person is White (D81).
-function aiPhaseFor(mode: GameMode, player: Player, winner: Player | null, humanSide: Player): AiPhase {
-  return mode === "vs-ai" && player !== humanSide && winner === null ? "thinking" : "idle";
+function aiPhaseFor(mode: GameMode, player: Player, over: boolean, humanSide: Player): AiPhase {
+  return mode === "vs-ai" && player !== humanSide && !over ? "thinking" : "idle";
+}
+
+/** True once the game has ended: someone won (or resigned), or it was drawn (D89). */
+export function isGameOver(state: Pick<GameState, "winner" | "drawn">): boolean {
+  return state.winner !== null || state.drawn !== null;
 }
 
 // A fresh game: standard board, black to move. Options exist so tests can
@@ -189,11 +202,12 @@ export function createGameState(options: GameOptions = {}): GameState {
     viewIndex: null,
     movesPlayed: 0,
     stats: { black: NO_STATS, white: NO_STATS },
-    aiPhase: aiPhaseFor(mode, currentPlayer, winner, humanSide),
+    aiPhase: aiPhaseFor(mode, currentPlayer, winner !== null, humanSide),
     aiRequestId: options.aiRequestId ?? 0,
     aiFailureReasons: [],
     aiLevel: options.aiLevel ?? DEFAULT_AI_LEVEL,
     resignedBy: null,
+    drawn: null,
     humanSide,
     abandoned: false,
   };
@@ -203,7 +217,7 @@ export function createGameState(options: GameOptions = {}): GameState {
 // waiting for (or recovering from) the AI, and the live position is on screen
 // (not an older one from the history).
 export function canHumanAct(state: GameState): boolean {
-  return state.winner === null && state.aiPhase === "idle" && state.viewIndex === null;
+  return !isGameOver(state) && state.aiPhase === "idle" && state.viewIndex === null;
 }
 
 // The current player's legal moves for the piece on `from`.
@@ -225,39 +239,45 @@ function clearSelection(state: GameState): GameState {
 // other player's legal moves and ask the engine whether the game is won.
 // Human and AI moves both go through here. If the AI must move next, the
 // state becomes "thinking" with a new request id.
+// A move that wins ends the game; otherwise the draw rules (D89) may.
 function playMove(state: GameState, move: Move, ai: AiMoveDetails = {}): GameState {
   const board = applyMove(state.board, move);
   const nextPlayer = opponentOf(state.currentPlayer);
   const winner = getWinner(board, nextPlayer);
-  const aiPhase = aiPhaseFor(state.mode, nextPlayer, winner, state.humanSide);
   const crowned = pieceAt(state.board, move.from)?.kind === "man" && pieceAt(board, move.to)?.kind === "king";
   const mover = state.currentPlayer;
+  const history = [
+    ...state.history,
+    {
+      board,
+      move,
+      player: mover,
+      ...(ai.reason ? { reason: ai.reason } : {}),
+      ...(ai.lookahead ? { lookahead: ai.lookahead } : {}),
+      ...(ai.level ? { level: ai.level } : {}),
+      ...(ai.reaction ? { reaction: ai.reaction } : {}),
+      ...(ai.judgement ? { judgement: ai.judgement } : {}),
+      ...(ai.provenLoss ? { provenLoss: true } : {}),
+    },
+  ];
+  // Who moved first in this game (Black, unless a test started otherwise).
+  const firstToMove = history[1]!.player!;
+  const drawn = winner === null ? drawReason(history, firstToMove) : null;
+  const aiPhase = aiPhaseFor(state.mode, nextPlayer, winner !== null || drawn !== null, state.humanSide);
 
   return {
     ...state,
     board,
     currentPlayer: nextPlayer,
-    legalMoves: getLegalMoves(board, nextPlayer),
+    legalMoves: drawn ? [] : getLegalMoves(board, nextPlayer),
     selected: null,
     pendingRoutes: [],
     winner,
+    drawn,
     lastMove: move,
     // Add the new position. If the player is reviewing (only possible when
     // the AI's reply arrives meanwhile), they stay where they are.
-    history: [
-      ...state.history,
-      {
-        board,
-        move,
-        player: mover,
-        ...(ai.reason ? { reason: ai.reason } : {}),
-        ...(ai.lookahead ? { lookahead: ai.lookahead } : {}),
-        ...(ai.level ? { level: ai.level } : {}),
-        ...(ai.reaction ? { reaction: ai.reaction } : {}),
-        ...(ai.judgement ? { judgement: ai.judgement } : {}),
-        ...(ai.provenLoss ? { provenLoss: true } : {}),
-      },
-    ],
+    history,
     movesPlayed: state.movesPlayed + 1,
     stats: { ...state.stats, [mover]: addToStats(state.stats[mover], move, crowned) },
     aiPhase,
@@ -342,12 +362,11 @@ function handleAiMoved(state: GameState, requestId: number, move: Move, ai: AiMo
   return playMove(state, legal, { ...ai, level: state.aiLevel });
 }
 
-// The side giving up: the player in a game against the AI (the AI never
-// resigns), otherwise the side to move. The other side wins; a pending AI
-// reply is dropped (new request id). Only while the game is still going.
-function handleResign(state: GameState): GameState {
-  if (state.winner) return state;
-  const resignedBy = state.mode === "vs-ai" ? state.humanSide : state.currentPlayer;
+// The side giving up: the player in a game against the AI (the AI resigns
+// through aiResigned), otherwise the side to move. The other side wins; a
+// pending AI reply is dropped (new request id). Only while the game goes on.
+function handleResign(state: GameState, resignedBy: Player = state.mode === "vs-ai" ? state.humanSide : state.currentPlayer): GameState {
+  if (isGameOver(state)) return state;
   return {
     ...state,
     winner: opponentOf(resignedBy),
@@ -365,8 +384,15 @@ function handleResign(state: GameState): GameState {
 // A game against the AI the player left without a move (D85): it ends like
 // the player's resignation, marked as abandoned. Only while it goes on.
 function handleAbandon(state: GameState): GameState {
-  if (state.mode !== "vs-ai" || state.winner) return state;
+  if (state.mode !== "vs-ai" || isGameOver(state)) return state;
   return { ...handleResign(state), abandoned: true };
+}
+
+// The AI resigns (D89): only in answer to the request it was asked, like a
+// move. The player wins.
+function handleAiResigned(state: GameState, requestId: number): GameState {
+  if (state.mode !== "vs-ai" || !isCurrentAiRequest(state, requestId)) return state;
+  return handleResign(state, aiSideOf(state));
 }
 
 function handleAiFailed(
@@ -439,6 +465,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return handleAiRetry(state);
     case "resign":
       return handleResign(state);
+    case "aiResigned":
+      return handleAiResigned(state, action.requestId);
     case "abandon":
       return handleAbandon(state);
   }

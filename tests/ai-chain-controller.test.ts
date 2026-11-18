@@ -1,0 +1,57 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { createCallModel } from "../src/ai/client";
+import { getLegalMoves } from "../src/engine";
+import { createGameState, gameReducer } from "../src/state/gameReducer";
+import type { GameAction } from "../src/state/gameReducer";
+import { startAiTurn } from "../src/state/aiController";
+import { displayedPosition } from "../src/state/history";
+import { explainShown } from "../src/ui/useAiExplanation";
+import { WhyContent } from "../src/ui/WhyContent";
+afterEach(() => vi.useRealTimers());
+describe("the real chain client and controller", () => {
+  it("plays a verified engine move when the proxy has no available provider and labels Why", async () => {
+    let state = createGameState({ mode: "vs-ai", humanSide: "white", aiLevel: 2 });
+    const before = state;
+    const actions: GameAction[] = [];
+    const send = vi.fn(async () => new Response(JSON.stringify({ fallback: true })));
+    const call = createCallModel({ chain: true, fetch: send });
+    const cancel = startAiTurn(state, call, action => { actions.push(action); state = gameReducer(state, action); });
+    await vi.waitFor(() => expect(actions).toHaveLength(1));
+    expect(actions[0]?.type).toBe("aiMoved");
+    expect(state.history.at(-1)?.lookahead?.source).toBe("engine");
+    expect(getLegalMoves(before.board, before.currentPlayer)).toContainEqual(state.lastMove);
+    const explanation = explainShown("vs-ai", displayedPosition(state), "black")!;
+    const html = renderToStaticMarkup(createElement(WhyContent, { explanation }));
+    expect(html).toContain("Engine chose this move");
+    expect(html).not.toContain("AI generated, may be wrong");
+    cancel();
+  });
+  it("uses the prepared level search on a total timeout and ignores the eventual late provider reply", async () => {
+    vi.useFakeTimers();
+    const state = createGameState({ mode: "vs-ai", humanSide: "white", aiLevel: 1 });
+    let release: (response: Response) => void = () => {};
+    const send = vi.fn(() => new Promise<Response>(resolve => { release = resolve; }));
+    const actions: GameAction[] = [];
+    const cancel = startAiTurn(state, createCallModel({ chain: true, fetch: send }), a => actions.push(a), { timeoutMs: 12000 });
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(12000);
+    expect(actions).toHaveLength(1);
+    expect(actions[0]).toMatchObject({ type: "aiMoved", lookahead: { source: "engine" } });
+    release(new Response(JSON.stringify({ text: '{"move":1}' })));
+    await vi.advanceTimersByTimeAsync(10);
+    expect(actions).toHaveLength(1);
+    cancel();
+  });
+  it("cancels the modern request on a changed game without playing a fallback into that game", async () => {
+    const state = createGameState({ mode: "vs-ai", humanSide: "white" });
+    const send = vi.fn(() => new Promise<Response>(() => {}));
+    const actions: GameAction[] = [];
+    const cancel = startAiTurn(state, createCallModel({ chain: true, fetch: send }), a => actions.push(a));
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    cancel();
+    await new Promise(resolve => setTimeout(resolve, 10));
+    expect(actions).toEqual([]);
+  });
+});

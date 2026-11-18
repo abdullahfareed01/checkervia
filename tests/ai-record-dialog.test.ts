@@ -29,11 +29,14 @@ const MINE = { games: 12, wins: 5, losses: 7, resigned: 2 };
 describe("your totals against the AI (kept, never shown)", () => {
   it("count games, wins, losses and resignations (a resignation is also a loss)", () => {
     const record = ["win", "loss", "resigned", "loss"].reduce((current, outcome) => withOutcome(current, outcome as "win"), EMPTY_RECORD);
-    expect(record).toEqual({ games: 4, wins: 1, losses: 3, resigned: 1 });
+    expect(record).toEqual({ games: 4, wins: 1, losses: 3, resigned: 1, draws: 0 });
   });
 
   it("a stored record is checked when read; anything broken starts again at zero", () => {
-    expect(parseRecord(JSON.stringify({ games: 3, wins: 1, losses: 2, resigned: 1 }))).toEqual({ games: 3, wins: 1, losses: 2, resigned: 1 });
+    // A record from before D89 has no draws: 0.
+    expect(parseRecord(JSON.stringify({ games: 3, wins: 1, losses: 2, resigned: 1 }))).toEqual({ games: 3, wins: 1, losses: 2, resigned: 1, draws: 0 });
+    // With draws (D89), games are the wins, losses and draws.
+    expect(parseRecord(JSON.stringify({ games: 4, wins: 1, losses: 2, resigned: 1, draws: 1 }))).toEqual({ games: 4, wins: 1, losses: 2, resigned: 1, draws: 1 });
     for (const bad of [null, "", "{", "[]", '{"games":2,"wins":1,"losses":0,"resigned":0}', '{"games":1,"wins":0,"losses":1,"resigned":2}']) {
       expect(parseRecord(bad)).toEqual(EMPTY_RECORD);
     }
@@ -75,7 +78,7 @@ describe("the popup", () => {
   const render = (props: Partial<Parameters<typeof AiRecordDialog>[0]> = {}) =>
     renderToStaticMarkup(createElement(AiRecordDialog, { ai: AI, mine: MINE, level: 3, onClose: () => {}, random: () => 0, ...props }));
 
-  it("a dialog: the robot and its bubble (typing first), the title, the ring and four totals", () => {
+  it("a dialog: the robot and its bubble (typing first), the title, the ring and totals", () => {
     const html = render();
     expect(html).toMatch(/role="dialog" aria-modal="true"/);
     expect(html).toContain('aria-label="Hear another taunt"');
@@ -83,9 +86,15 @@ describe("the popup", () => {
     expect(html).toContain("The AI&#x27;s record");
     expect(html).toContain("Against every player with a profile");
     expect(html).toContain('aria-label="The AI wins 83% of its games."');
-    expect([...html.matchAll(/class="airec-stat-label">([^<]+)</g)].map((match) => match[1])).toEqual(["Games played", "Wins", "Losses", "Players resigned"]);
-    expect([...html.matchAll(/class="airec-stat-value">([^<]+)</g)].map((match) => match[1])).toEqual(["48.2K", "39.9K", "8,343", "9,120"]);
+    expect([...html.matchAll(/class="airec-stat-label">([^<]+)</g)].map((match) => match[1])).toEqual(["Games played", "Wins", "Losses", "Draws", "Players resigned"]);
+    expect([...html.matchAll(/class="airec-stat-value">([^<]+)</g)].map((match) => match[1])).toEqual(["48.2K", "39.9K", "8,343", "0", "9,120"]);
     expect(html).toContain("Back to the game");
+  });
+
+  it("draws have their own total and reduce the win rate without becoming losses", () => {
+    const html = render({ ai: { ...AI, games: 10, aiWins: 3, aiLosses: 2, draws: 5, resigned: 1 } });
+    expect(html).toContain('aria-label="The AI wins 30% of its games."');
+    expect([...html.matchAll(/class="airec-stat-value">([^<]+)</g)].map((match) => match[1])).toEqual(["10", "3", "2", "5", "1"]);
   });
 
   it("per level: a bar and the win rate, the level being played marked", () => {
@@ -191,7 +200,7 @@ describe("the robot's taunts", () => {
 
   it("the popup takes gameOver from App", () => {
     const source = readFileSync(new URL("../src/ui/App.tsx", import.meta.url), "utf8");
-    expect(source).toContain("gameOver={state.winner !== null}");
+    expect(source).toContain("gameOver={over}"); // a win or a draw (D89)
   });
 
   it("still teases when the record cannot be loaded", () => {

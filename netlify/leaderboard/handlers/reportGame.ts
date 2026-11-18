@@ -18,7 +18,7 @@ export const handleReportGame: LeaderboardHandler = (request, deps) =>
     const { gameId, result } = body;
     const level = body["level"] as AiLevel;
     if (typeof gameId !== "string" || !GAME_ID_PATTERN.test(gameId) || !LEVELS.includes(level)) return invalid();
-    if (result !== "win" && result !== "loss") return invalid();
+    if (result !== "win" && result !== "loss" && result !== "draw") return invalid(); // draws since D89
     const resigned = body["resigned"] ?? false;
     if (typeof resigned !== "boolean" || (resigned && result !== "loss")) return invalid();
 

@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { ModelServiceError } from "./serviceError";
 import { getLegalMoves, initialBoard } from "../engine";
 import { boardFrom } from "../engine/testUtils";
 import { chooseMove } from "./chooseMove";
@@ -116,6 +117,43 @@ describe("chooseMove: retries after a rejected reply", () => {
 });
 
 describe("chooseMove: failure", () => {
+  it.each([99, Infinity, NaN])("never exceeds three retries even with an invalid limit %s", async (limit) => {
+    const { callModel, calls } = fakeModel(["bad", "bad", "bad", "bad"]);
+    expect(await chooseMove(board, "black", callModel, limit)).toMatchObject({ ok: false, attempts: 4 });
+    expect(calls).toHaveLength(4);
+  });
+
+  it("honours a provider delay before retrying", async () => {
+    vi.useFakeTimers();
+    try {
+      const { callModel, calls } = fakeModel([new ModelServiceError("busy", true, 2000), '{"move": 1}']);
+      const result = chooseMove(board, "black", callModel, 3, { retryDelayMs: 250 });
+      await vi.advanceTimersByTimeAsync(1999);
+      expect(calls).toHaveLength(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await result).toMatchObject({ ok: true, attempts: 2, move: legal[0] });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("cancels a retry delay without making the next request", async () => {
+    vi.useFakeTimers();
+    try {
+      const controller = new AbortController();
+      const { callModel, calls } = fakeModel([new ModelServiceError("busy", true, 30_000), '{"move": 1}']);
+      const pending = chooseMove(board, "black", callModel, 3, { signal: controller.signal });
+      await vi.advanceTimersByTimeAsync(1);
+      controller.abort(new ModelServiceError("timeout", false));
+      const result = await pending;
+      expect(result).toMatchObject({ ok: false, attempts: 1 });
+      expect(result).not.toHaveProperty("move");
+      expect(calls).toHaveLength(1);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it("fails after 4 bad replies, using exactly 4 calls (1 + 3 retries)", async () => {
     const { callModel, calls } = fakeModel(["bad 1", '{"move": 0}', '{"move": 1.5}', "bad 4"]);
     const result = await chooseMove(board, "black", callModel);
@@ -173,6 +211,29 @@ describe("chooseMove: failure", () => {
 });
 
 describe("chooseMove: a model that throws", () => {
+  it.each(["credits", "access", "configuration", "rateLimit"] as const)("does not retry %s or guess a move", async (code) => {
+    const { callModel, calls } = fakeModel([new ModelServiceError(code, false), '{"move": 1}']);
+    const result = await chooseMove(board, "black", callModel);
+    expect(result).toMatchObject({ ok: false, attempts: 1 });
+    expect(result).not.toHaveProperty("move");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("retries a temporary service failure and still verifies the eventual move", async () => {
+    const { callModel, calls } = fakeModel([new ModelServiceError("busy", true), '{"move": 2}']);
+    expect(await chooseMove(board, "black", callModel)).toEqual({ ok: true, move: legal[1], attempts: 2 });
+    expect(calls).toHaveLength(2);
+  });
+
+  it("never calls the model after cancellation, even when moves were already scored", async () => {
+    const controller = new AbortController();
+    controller.abort(new ModelServiceError("timeout", false));
+    const { callModel, calls } = fakeModel(['{"move": 1}']);
+    const result = await chooseMove(board, "black", callModel, 3, { signal: controller.signal });
+    expect(result).toMatchObject({ ok: false, attempts: 1 });
+    expect(result).not.toHaveProperty("move");
+    expect(calls).toHaveLength(0);
+  });
   it("counts a thrown error as a failed attempt and tries again", async () => {
     const { callModel, calls } = fakeModel([new Error("network down"), '{"move": 2}']);
     const result = await chooseMove(board, "black", callModel);

@@ -5,17 +5,18 @@
 - The model only answers with the number of one move from a numbered list.
 - Our code checks the number against the list before anything is played. The move that comes back is always an object from the engine's list, and the reducer plays it only if it is in the state's legal moves.
 - `src/ai` has no React and no API key. The only network code is `client.ts`, which talks to our own function. The model call is injected into `chooseMove`, so tests use fake models.
-- Provider: OpenRouter (`https://openrouter.ai/api/v1/chat/completions`), model `openai/gpt-oss-120b`. Variables: `OPENROUTER_API_KEY` and `LLM_MODEL`, read only by the Netlify function.
-- In the game the human plays Black and the AI plays White.
+- Providers: a configurable free chain inside the Netlify function, with shared reset aware cooldowns and an engine fallback (D92). See the [provider audit](ai-providers.md), [model evaluation](ai-model-ranking.md) and [setup](../07-deployment/ai-chain-setup.md). The base prompt remains v11; the canonical server prompt adds checked reason choices and separates personality requests.
+- The human's colour is chosen per game (D81); Black moves first.
 
 ## Flow of one AI turn
-1. The human moves. The reducer sets `aiPhase = "thinking"` with a new `aiRequestId`; the board is locked.
-2. `chooseMove` builds the prompt (same text for every attempt) and calls `callModel`.
-3. `callModel` POSTs `{ prompt, retryNote? }` to `/.netlify/functions/ai-move`. The function calls OpenRouter and returns `{ text }`.
-4. `parseReply` extracts a move number, or says why it cannot.
-5. Valid: `moves[number - 1]` is dispatched as `aiMoved` with the request id. Invalid or error: record the reason, build a retry note, go to step 2.
-6. After 1 + 3 attempts with no valid answer: dispatch `aiFailed`. The UI shows the fallback message and a Retry button. Nothing is played and the board stays locked.
-7. A reply for an old request id (New game, mode change, Retry) is ignored by the reducer.
+1. An AI turn sets `aiPhase = "thinking"` with a new `aiRequestId`; the board is locked. The existing engine proof may resign a lost position (D89).
+2. `chooseMove` computes the selected level's scores/candidates and prepares a verified best engine choice for fallback. Search depth and candidate filtering are unchanged.
+3. The chain client POSTs structured board, candidate indexes, scores, level and job context to `/.netlify/functions/ai-move`. It does not send free form prompt text or profile data. The server validates the context and rebuilds a canonical prompt.
+4. The server walks the configured job order, skipping missing keys and active cooldowns. Each attempt normally gets 3.5 seconds inside a ten second chain budget. HTTP failures, timeouts and invalid candidate replies move to the next provider immediately; limit advice is persisted for later requests.
+5. A reply passes the unchanged numbered candidate parser on the server and again in the browser. Only an object in the engine's legal list can be dispatched as `aiMoved`.
+6. If every provider fails, the server returns a fallback marker. The browser plays its prepared best legal engine move with a local line, and Why says the engine chose it. The existing twelve second whole turn deadline can use that same cached choice. No funding is needed for engine play.
+7. Separate personality requests use the fast order; local banks remain immediate fallbacks. Warnings and proved loss instructions retain their local text. Engine fallback move lines stay local.
+8. A reply for an old request id is ignored, and cancellation after a new game dispatches nothing. The injected legacy client interface still supports its original maximum three retries for compatibility tests; it is not the application's provider chain.
 
 ## Difficulty levels and look ahead (prompt v7, D44)
 - A **turn** (a **ply**) is one move by one side; a multi jump counts as one turn. "Looks 6 turns ahead" means 3 moves by each side, starting with the AI's own move.
@@ -49,7 +50,7 @@
 - Tips after the AI wins come from engine searches 4 turns deep of the player's own moves (`gameTips`).
 
 ## Prompt format (version v2, still the base of v3)
-All prompt text lives in `src/ai/prompt.ts` (`PROMPT_VERSION = "v3"`). v2 differed from v1 only in the reply instruction: `{"move": <number>, "reason": "<why>"}`, the reason being one short sentence of at most 20 words. The example below is v1; apart from that one line it is unchanged. Order:
+The base move prompt lives in `src/ai/prompt.ts` (`PROMPT_VERSION = "v11"`); `src/ai/request.ts` rebuilds the server's move and separate taunt prompts from structured context. The example below is historical v1. v2 added the reason field, and subsequent revisions are recorded in the log below. Original order:
 1. Rules summary and the reply instruction.
 2. The position as a text grid.
 3. Legend, direction of play, and which side the model plays.
@@ -142,9 +143,9 @@ Legal moves, as (row,column):
 - Not confirmed from the OpenRouter docs: whether `openai/gpt-oss-120b` is served by a provider that supports both `response_format` and `reasoning.effort`. The first real test will show; see "Testing with a real key".
 
 ## Serverless proxy (`netlify/`)
-- Health check: `GET /.netlify/functions/ai-move` answers `{ "ready": true }` or `{ "ready": false }` (key and model set or not). It never calls the provider and is not rate limited. The splash screen and home menu use it (D34).
+- Health check: `GET /.netlify/functions/ai-move` answers `{ "ready": true }` or `{ "ready": false }`. D91 checks provider key access and a positive account balance through metadata calls, with a 3 second timeout and a 30 second cache. It makes no model calls and exposes no key or balance. Unavailable metadata returns false. The splash screen and home menu use it.
 - `netlify/functions/ai-move.ts` is a thin wrapper. The logic is `handleAiMove` in `netlify/aiMoveHandler.ts`, a pure function that takes a fakeable `fetch`.
-- POST only (405 otherwise). Body: `{ prompt: string, retryNote?: string }` and nothing else. `prompt` is required, nonempty, at most 4000 characters; `retryNote` at most 500. Anything else gets 400 `Invalid request.`
+- POST for moves (405 for unsupported methods). Body: `{ prompt: string, retryNote?: string }` and nothing else. `prompt` is required, nonempty, at most 8000 characters; `retryNote` at most 500. Anything else gets 400 `Invalid request.`
 - Returns `{ text }` (the model's message content) or `{ error }` with a short generic message. Never the key, never a raw provider error. Provider details go to the function log only, with the key blanked out.
 - Statuses: 400 bad body, 405 wrong method, 429 rate limited, 500 not configured, 502 provider problem or empty answer, 504 provider timed out.
 - Each request is a single user message. Nothing from earlier turns is stored.
@@ -152,9 +153,9 @@ Legal moves, as (row,column):
 ### Timeouts (checked against the current docs)
 - Netlify synchronous functions: 60 s, shown as not configurable in the "Default values" table of docs.netlify.com "Configuration for functions". The plan does not change it there, so there is nothing to raise.
 - Older Netlify forum threads mention 10 s (26 s on Pro). These conflict with the current docs and are probably out of date. If a real call ever dies near 10 s or 26 s, that is why.
-- Provider call: gives up at 55 s (`PROVIDER_TIMEOUT_MS`), 5 s before Netlify would kill the function, so we can still answer with a clean 504. One deadline covers the optional second call.
-- Browser: waits 65 s (`CLIENT_TIMEOUT_MS`), longer than the function, so the function's own error arrives first.
-- These are ceilings. With low reasoning effort a normal answer should take a few seconds. A turn can take up to 4 attempts, so the worst case is long; that is why the UI shows "AI is thinking" and can fall back.
+- Provider call: gives up at 10 seconds (`PROVIDER_TIMEOUT_MS`), including the optional second call without structured output.
+- Browser request: waits 11 seconds (`CLIENT_TIMEOUT_MS`) for the function's response.
+- Complete turn: one 12 second budget covers search, all attempts and the final proof. Permanent failures stop immediately; temporary failures can retry with backoff at most three times. Cancellation aborts active requests and retry waits. The existing Retry message is shown if the turn fails; no automatic move is played.
 
 ### Rate limiting: what it can and cannot do
 - What it is: an in memory counter per client, 20 requests per 60 s. The client is identified by the `x-nf-client-connection-ip` header, which Netlify sets itself. Refused requests are not counted, and memory is capped at 1000 clients.
@@ -194,3 +195,11 @@ Add a row for every prompt version. Fill in the result after real testing.
 | v9 | 13 Nov 2026 | "Do not use hyphens, em dashes or en dashes: write compound words as separate words or as one word" (D46). | The code sanitizer stays the real guarantee; the prompt only makes it rarer. |
 | v10 | 13 Nov 2026 | "at most 140 characters" for the reaction (D47). | Enforced in code too (`capLength`, cut at a word boundary). Live: every reply in the layout check (10 sizes) fitted. |
 | v11 | 13 Nov 2026 | "You may laugh (haha, hehe, lol) when it fits." (D48). | Live: Strongest after a blunder: "What a crap move, you just handed me a piece, guess you are playing checkers in the dark!"; no failures. |
+
+## Chat correction on 18 Nov 2026 (D107)
+
+The move prompt and legal move selection remain unchanged. The separate taunt prompt now identifies both sides, carries the engine's move judgement and game outcome, and uses difficulty specific voices. Strongest permits grudging respect after a great move or human win, with competitive taunts otherwise. Both client and server reject misleading colour/position claims, wrong turn or result claims and unearned Strongest praise.
+
+The move bubble holds a varied turn cue for 1.4 seconds, displays animated dots for at least one second, then reveals one final remark. It waits at most four seconds before choosing a local fallback. A later remote reply cannot overwrite that choice. Greetings, idle and result messages use dots before their single final line. Voice, screen reader announcements and chat sounds skip the preliminary cue. Existing game instruction warnings keep their exact local wording and timing.
+
+Historical model ranking data used the earlier taunt prompt. It is not a fresh quality measurement for this revision; rerunning `npm run eval:ai` detects the changed fixture hash and preserves quota accounting while beginning the updated cohort. `node scripts/check-chat.mjs` is the repeatable mocked browser regression, with Vite on port 5180, and makes no real provider requests.

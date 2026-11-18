@@ -1,6 +1,6 @@
 # Checkervia: Write up
 
-Checkervia is a browser checkers game for two players on one screen, or one player against an AI powered by `openai/gpt-oss-120b` (through OpenRouter and a Netlify function). Built with React, TypeScript and Vite; 812 automated tests.
+Checkervia is a browser checkers game for two players on one screen, or one player against an AI powered by `openai/gpt-oss-120b` (through OpenRouter and a Netlify function). Built with React, TypeScript and Vite, with automated engine, state, AI, UI and database tests. The latest validation is recorded in the progress log.
 
 ## The hardest rule: multi jumps
 Forced capture and Kings were simple to state and to test. Multi jumps were not:
@@ -33,6 +33,6 @@ What helped most was taking work away from the model: the engine finds the legal
 History with arrows, a result popup with stats, a home menu with a splash tied to real loading, a Learn mode where two robots play four scripted lessons (each move checked by the engine), four difficulty levels whose strength comes from the engine, an 18 plus notice for the strongest level with language rules enforced in code, a chat bubble that never moves the board, "Why?" on demand, greetings, idle lines, resigning with an engine proven hint, tips from the engine after a loss, a calm look with simple animations, and a layout that works from small phones (portrait and landscape) to large screens.
 
 ## Links
-- Live site: (add after deploy)
-- Repository: (add after push)
+- Live site: https://checkervia.netlify.app
+- Repository: https://github.com/abdullahfareed01/checkervia
 - Recording: (add after recording)

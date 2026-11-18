@@ -1,7 +1,7 @@
 // The AI's record (D75, D77): a popup that opens only when the robot's
 // avatar under the board is tapped. The robot at the top with a new taunt
 // in its chat bubble each time (typed first, like a chat), its record over
-// every player (a win rate ring, games, wins, losses, resignations) and the
+// every player (a win rate ring, games, wins, losses, draws, resignations) and the
 // same per level. No player's own numbers are shown. It follows the game's
 // sheets: dark leather, a bronze rim, gold numbers and the Fraunces title.
 import { useEffect, useId, useRef, useState } from "react";
@@ -176,6 +176,7 @@ export function AiRecordDialog({ ai, mine, level, gameOver = false, onClose, ran
         { key: "games", label: "Games played", value: ai.games, icon: <SwordsIcon /> },
         { key: "wins", label: "Wins", value: ai.aiWins, icon: <TrophyIcon /> },
         { key: "losses", label: "Losses", value: ai.aiLosses, icon: <HumanIcon /> },
+        { key: "draws", label: "Draws", value: ai.draws ?? 0, icon: <SwordsIcon /> },
         { key: "resigned", label: "Players resigned", value: ai.resigned, icon: <FlagIcon /> },
       ]
     : null;

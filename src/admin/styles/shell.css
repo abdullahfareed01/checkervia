@@ -1,0 +1,354 @@
+/* The dashboard's frame (D100). Phones (and short windows): a top bar with
+   Menu, which opens the sections as a sheet; the page is the one scroll.
+   From 960px wide and 600px tall: the sections in a side bar that stays
+   put (it fits without scrolling), the content beside it. Panels sit in a
+   grid of one column, two from 720px. No sideways scroll from 320px up. */
+
+.adm-app {
+  min-height: 100dvh;
+}
+
+.adm-side {
+  display: none;
+}
+
+.adm-top {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 16px;
+  padding-top: calc(8px + env(safe-area-inset-top));
+  border-bottom: 1px solid var(--adm-line-soft);
+  background: var(--adm-panel);
+}
+
+.adm-brand-small {
+  font-size: 1rem;
+}
+
+.adm-main {
+  width: 100%;
+  max-width: 1200px;
+  padding: 20px 16px calc(32px + env(safe-area-inset-bottom));
+}
+
+.adm-title {
+  margin-bottom: 16px;
+  color: var(--adm-cream);
+  font-family: var(--lb-serif);
+  font-size: 1.7rem;
+  line-height: 1.15;
+}
+
+/* ---------- The sections ---------- */
+
+.adm-nav-list {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  color: var(--adm-soft);
+  text-decoration: none;
+  user-select: none;
+}
+
+.adm-nav-link:hover {
+  background: rgba(244, 197, 92, 0.07);
+  color: var(--adm-cream);
+}
+
+.adm-nav-link:active {
+  background: rgba(244, 197, 92, 0.16);
+}
+
+.adm-nav-link[aria-current="page"] {
+  background: rgba(244, 197, 92, 0.13);
+  box-shadow: inset 3px 0 0 var(--adm-gold);
+  color: var(--adm-gold);
+}
+
+.adm-nav-link[aria-current="page"]:active {
+  background: rgba(244, 197, 92, 0.24);
+}
+
+.adm-account {
+  display: grid;
+  gap: 8px;
+  padding-top: 14px;
+  border-top: 1px solid var(--adm-line-soft);
+}
+
+.adm-account-email {
+  overflow: hidden;
+  color: var(--adm-dim);
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- The phone menu sheet ---------- */
+
+.adm-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(10, 5, 2, 0.65);
+}
+
+.adm-sheet {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  width: min(340px, 100%);
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  padding-top: calc(12px + env(safe-area-inset-top));
+  border-left: 1px solid var(--adm-line);
+  background: var(--lb-panel);
+  scrollbar-width: thin;
+}
+
+.adm-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.adm-sheet-title {
+  color: var(--adm-cream);
+  font-family: var(--lb-serif);
+  font-size: 1.2rem;
+}
+
+/* ---------- Wide screens: the side bar ---------- */
+
+@media (min-width: 960px) and (min-height: 600px) {
+  .adm-app {
+    display: grid;
+    grid-template-columns: 248px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .adm-side {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    height: 100dvh;
+    padding: 20px 14px;
+    border-right: 1px solid var(--adm-line-soft);
+    background: var(--adm-panel);
+  }
+
+  .adm-side .adm-account {
+    margin-top: auto;
+  }
+
+  .adm-top {
+    display: none;
+  }
+
+  .adm-main {
+    padding: 32px 40px 48px;
+  }
+
+  .adm-title {
+    font-size: 2rem;
+  }
+}
+
+/* ---------- Panels ---------- */
+
+.adm-grid {
+  display: grid;
+  gap: 16px;
+}
+
+@media (min-width: 720px) {
+  .adm-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .adm-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+.adm-panel {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--adm-line-soft);
+  border-radius: 14px;
+  background: var(--adm-panel);
+}
+
+.adm-panel-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.adm-panel-title {
+  color: var(--adm-cream);
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.adm-empty p {
+  max-width: 62ch;
+}
+
+.adm-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.adm-facts div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+}
+
+.adm-facts dt {
+  color: var(--adm-dim);
+}
+
+.adm-facts dd {
+  margin: 0;
+  min-width: 0;
+  color: var(--adm-cream);
+}
+
+/* ---------- Recent activity ---------- */
+
+.adm-activity {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-activity-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-top: 1px solid var(--adm-line-soft);
+}
+
+.adm-activity-what {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.adm-activity-time {
+  color: var(--adm-dim);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 420px) {
+  .adm-activity-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .adm-activity-time {
+    grid-column: 2;
+    white-space: normal;
+  }
+}
+
+.adm-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.adm-badge-ok {
+  background: var(--adm-ok-bg);
+  color: var(--adm-ok);
+}
+
+.adm-badge-refused,
+.adm-badge-failed {
+  background: var(--adm-danger-bg);
+  color: var(--adm-danger);
+}
+
+/* ---------- Section cards ---------- */
+
+.adm-section-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.adm-section-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  min-height: 44px;
+  padding: 14px;
+  border: 1px solid var(--adm-line-soft);
+  border-radius: var(--adm-radius);
+  background: var(--adm-raised);
+  color: var(--adm-text);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+}
+
+.adm-section-card:hover {
+  border-color: var(--adm-gold);
+}
+
+.adm-section-card:active {
+  background: #4a2f1e;
+}
+
+.adm-section-card:focus-visible {
+  outline: 3px solid var(--adm-focus);
+  outline-offset: 2px;
+}
+
+.adm-section-name {
+  color: var(--adm-cream);
+  font-size: 1rem;
+  font-weight: 800;
+}

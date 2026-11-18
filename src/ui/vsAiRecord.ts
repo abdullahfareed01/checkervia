@@ -1,5 +1,6 @@
 // The player's own totals against the AI on this device (D75): games,
-// wins, losses and resignations (a resignation is also a loss). Kept in
+// wins, losses, resignations (a resignation is also a loss) and, since D89,
+// draws. Kept in
 // localStorage, every access in try and catch, checked on load. Clearing the
 // browser data starts them again.
 import { useSyncExternalStore } from "react";
@@ -9,20 +10,22 @@ export interface VsAiRecord {
   readonly wins: number;
   readonly losses: number; // resignations included
   readonly resigned: number;
+  readonly draws?: number; // D89 (missing in records from before it: 0)
 }
 
-export type VsAiOutcome = "win" | "loss" | "resigned";
+export type VsAiOutcome = "win" | "loss" | "resigned" | "draw";
 
 export const VS_AI_RECORD_KEY = "checkervia.vsAiRecord";
-export const EMPTY_RECORD: VsAiRecord = { games: 0, wins: 0, losses: 0, resigned: 0 };
+export const EMPTY_RECORD: VsAiRecord = { games: 0, wins: 0, losses: 0, resigned: 0, draws: 0 };
 
 /** The record after one more finished game. */
 export function withOutcome(record: VsAiRecord, outcome: VsAiOutcome): VsAiRecord {
   return {
     games: record.games + 1,
     wins: record.wins + (outcome === "win" ? 1 : 0),
-    losses: record.losses + (outcome === "win" ? 0 : 1),
+    losses: record.losses + (outcome === "loss" || outcome === "resigned" ? 1 : 0),
     resigned: record.resigned + (outcome === "resigned" ? 1 : 0),
+    draws: (record.draws ?? 0) + (outcome === "draw" ? 1 : 0),
   };
 }
 
@@ -37,9 +40,11 @@ export function parseRecord(raw: string | null): VsAiRecord {
     const wins = count(data["wins"]);
     const losses = count(data["losses"]);
     const resigned = count(data["resigned"]);
-    if (games === null || wins === null || losses === null || resigned === null) return EMPTY_RECORD;
-    if (wins + losses !== games || resigned > losses) return EMPTY_RECORD;
-    return { games, wins, losses, resigned };
+    // Records from before D89 have no draws.
+    const draws = data["draws"] === undefined ? 0 : count(data["draws"]);
+    if (games === null || wins === null || losses === null || resigned === null || draws === null) return EMPTY_RECORD;
+    if (wins + losses + draws !== games || resigned > losses) return EMPTY_RECORD;
+    return { games, wins, losses, resigned, draws };
   } catch {
     return EMPTY_RECORD;
   }

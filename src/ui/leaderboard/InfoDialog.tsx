@@ -66,7 +66,8 @@ export function RankingRules() {
       <h3 className="lb-info-sub">What counts</h3>
       <ul className="lb-info-list">
         <li>Only wins against the AI count. Our server checks each win by replaying every move.</li>
-        <li>Two player games, resigned games and games the AI wins never count.</li>
+        <li>A win when the AI resigns counts only when the server proves the AI had a forced loss.</li>
+        <li>Two player games, draws, games you resign and games the AI wins never count.</li>
       </ul>
       <h3 className="lb-info-sub">The order</h3>
       <ol className="lb-info-steps">

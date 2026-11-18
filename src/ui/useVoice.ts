@@ -15,7 +15,7 @@ export type SpokenKind = keyof Settings["voice"]["read"];
 
 /** Which reading switch a bubble line falls under (null: never read). */
 export function bubbleKind(message: BubbleMessage | null): SpokenKind | null {
-  if (!message || message.text === null) return null; // typing dots
+  if (!message || message.text === null || message.announce === false) return null; // typing dots and silent turn cues
   if (message.key === "greeting") return "greetings";
   if (message.key.startsWith("idle")) return "idle";
   return "reactions"; // a line after an AI move, or the resign hint

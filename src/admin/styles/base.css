@@ -1,0 +1,233 @@
+/* The admin dashboard's base (D100): the game's shared tokens (tokens.css,
+   the leather and gold palette and the self hosted fonts), calm and flat,
+   no glow. Text can be selected here (an admin copies names and ids). Every
+   control is at least 44px, text at least 12px, inputs 16px (no zoom on
+   phones), and the focus ring is always visible. */
+
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url("/fonts/fraunces-black-latin.woff2") format("woff2");
+}
+
+:root {
+  --adm-bg: var(--lb-well);
+  --adm-panel: var(--lb-panel-flat);
+  --adm-raised: #40281a;
+  --adm-input: #1b1009;
+  --adm-line: var(--lb-line);
+  --adm-line-soft: rgba(201, 146, 76, 0.22);
+  --adm-text: var(--lb-text);
+  --adm-cream: var(--lb-cream);
+  --adm-soft: var(--lb-soft);
+  --adm-dim: var(--lb-dim);
+  --adm-gold: var(--lb-gold);
+  --adm-focus: var(--lb-focus);
+  --adm-danger: #ff9a88;
+  --adm-danger-bg: rgba(224, 82, 60, 0.16);
+  --adm-ok: #b5dc8f;
+  --adm-ok-bg: rgba(120, 180, 80, 0.16);
+  --adm-radius: 12px;
+  color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--adm-bg);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  background: var(--adm-bg);
+  color: var(--adm-text);
+  font-family: var(--lb-sans);
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1.45;
+  overflow-wrap: break-word;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.adm-locked,
+html.adm-locked body {
+  overflow: hidden;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+.adm-dim {
+  color: var(--adm-dim);
+}
+
+.adm-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-break {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Buttons and links ---------- */
+
+.adm-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s,
+    filter 0.15s;
+}
+
+.adm-button-primary {
+  background: var(--lb-gold-fill);
+  color: var(--lb-gold-text);
+}
+
+.adm-button-primary:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+
+.adm-button-quiet {
+  background: transparent;
+  border-color: var(--adm-line);
+  color: var(--adm-soft);
+}
+
+.adm-button-quiet:hover:not(:disabled) {
+  background: rgba(244, 197, 92, 0.08);
+  border-color: var(--adm-gold);
+}
+
+.adm-button:active:not(:disabled) {
+  filter: brightness(0.9);
+  transform: translateY(1px);
+}
+
+.adm-button:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.adm-link {
+  min-height: 44px;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--adm-gold);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.adm-link:active {
+  color: var(--adm-cream);
+}
+
+:is(.adm-button, .adm-link, a, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--adm-focus);
+  outline-offset: 2px;
+}
+
+.adm-main:focus {
+  outline: none;
+}
+
+/* ---------- Forms ---------- */
+
+.adm-form {
+  display: grid;
+  gap: 14px;
+}
+
+.adm-field {
+  display: grid;
+  gap: 6px;
+  color: var(--adm-soft);
+  font-size: 0.95rem;
+}
+
+.adm-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--adm-line);
+  border-radius: 10px;
+  background: var(--adm-input);
+  color: var(--adm-cream);
+  font: inherit;
+  font-size: 16px;
+}
+
+.adm-field input:focus {
+  border-color: var(--adm-gold);
+}
+
+/* A problem line keeps its height, so the form never jumps. */
+.adm-problem {
+  min-height: 1.45em;
+  color: var(--adm-danger);
+  font-size: 0.95rem;
+}
+
+.adm-problem:empty {
+  margin-top: -14px;
+}
+
+.adm-skip {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 100;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.adm-skip:focus {
+  width: auto;
+  height: auto;
+  clip-path: none;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--adm-gold);
+  color: var(--lb-gold-text);
+  font-weight: 800;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-button {
+    transition: none;
+  }
+}

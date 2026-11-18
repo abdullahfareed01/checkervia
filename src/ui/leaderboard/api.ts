@@ -124,7 +124,7 @@ export const leaderboardApi = {
   submitWin: (gameId: string, level: AiLevel, moves: readonly EncodedMove[], colour: Player = "black") =>
     call<SubmitWinResponse>("submit-win", { body: { gameId, level, mode: "vs-ai", colour, moves } }),
 
-  reportGame: (gameId: string, level: AiLevel, result: "win" | "loss", resigned = false) =>
+  reportGame: (gameId: string, level: AiLevel, result: "win" | "loss" | "draw", resigned = false) =>
     call<{ recorded: boolean }>("report-game", { body: { gameId, level, result, ...(resigned ? { resigned: true } : {}) } }),
 
   /** The AI reported the player for an abandoned game (D85); answers their reports and suspension. */

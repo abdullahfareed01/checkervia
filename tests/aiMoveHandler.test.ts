@@ -105,6 +105,37 @@ describe("handleAiMove: request validation", () => {
   });
 });
 
+describe("provider failure categories", () => {
+  it("passes the provider retry delay as a safe number", async () => {
+    const { deps } = makeDeps([new Response("Busy", { status: 429, headers: { "retry-after": "30" } })]);
+    expect((await handleAiMove(post({ prompt: "p" }), deps)).body).toMatchObject({ code: "busy", retryable: true, retryAfterSeconds: 30 });
+  });
+  it.each([[401, "access", false], [402, "credits", false], [403, "access", false], [429, "busy", true], [503, "unavailable", true]])("classifies status %i without exposing provider details", async (status, code, retryable) => {
+    const { deps, calls } = makeDeps([jsonResponse({ error: { message: "PRIVATE DETAIL" } }, Number(status))]);
+    const result = await handleAiMove(post({ prompt: "p" }), deps);
+    expect(result.status).toBe(502);
+    expect(result.body).toMatchObject({ code, retryable });
+    expect(JSON.stringify(result)).not.toContain("PRIVATE DETAIL");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("recognizes a credit error inside HTTP 200 and redacts its server log", async () => {
+    const { deps, logs } = makeDeps([jsonResponse({ error: { code: 402, message: `Out of credits for ${KEY}` } })]);
+    const result = await handleAiMove(post({ prompt: "p" }), deps);
+    expect(result).toEqual({ status: 502, body: { error: "The AI service has reached its credit limit.", code: "credits", retryable: false } });
+    expect(logs.join(" ")).toContain("402");
+    expect(logs.join(" ")).not.toContain(KEY);
+    expect(JSON.stringify(result)).not.toContain(KEY);
+  });
+
+  it("redacts the complete key before truncating an HTTP error log", async () => {
+    const { deps, logs } = makeDeps([new Response("x".repeat(195) + KEY, { status: 503 })]);
+    await handleAiMove(post({ prompt: "p" }), deps);
+    expect(logs.join(" ")).not.toContain(KEY.slice(0, 5));
+    expect(logs.join(" ")).not.toContain(KEY);
+  });
+});
+
 describe("handleAiMove: a good request", () => {
   it("returns only { text } with the model's message content", async () => {
     const { deps } = makeDeps([providerAnswer('{"move": 3}')]);
@@ -166,9 +197,8 @@ describe("handleAiMove: a good request", () => {
     expect(calls[0]!.init.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it("times out the provider call before Netlify's 60 second function limit", () => {
-    expect(PROVIDER_TIMEOUT_MS).toBeLessThan(60_000);
-    expect(PROVIDER_TIMEOUT_MS).toBeGreaterThanOrEqual(50_000);
+  it("gives the provider 10 seconds inside the total turn budget", () => {
+    expect(PROVIDER_TIMEOUT_MS).toBe(10_000);
   });
 });
 
@@ -197,7 +227,7 @@ describe("handleAiMove: bad answers from the provider", () => {
     const { deps, logs } = makeDeps([jsonResponse({ error: { message: secret } }, 500)]);
     const result = await handleAiMove(post({ prompt: "p" }), deps);
 
-    expect(result).toEqual({ status: 502, body: { error: "The AI service is unavailable." } });
+    expect(result).toEqual({ status: 502, body: { error: "The AI service is unavailable.", code: "unavailable", retryable: true } });
     expect(JSON.stringify(result)).not.toContain(secret);
     // It is logged on the server so the developer can see it.
     expect(logs.join("\n")).toContain("status 500");
@@ -206,7 +236,7 @@ describe("handleAiMove: bad answers from the provider", () => {
   it("returns 504 when the provider call times out", async () => {
     const { deps } = makeDeps([new DOMException("The operation timed out.", "TimeoutError")]);
     const result = await handleAiMove(post({ prompt: "p" }), deps);
-    expect(result).toEqual({ status: 504, body: { error: "The AI service took too long." } });
+    expect(result).toEqual({ status: 504, body: { error: "The AI service took too long.", code: "timeout", retryable: true } });
   });
 
   it("returns 502 when the provider cannot be reached", async () => {
@@ -272,7 +302,7 @@ describe("handleAiMove: configuration and secrets", () => {
     const { deps, calls, logs } = makeDeps([], { env: { LLM_MODEL: MODEL } });
     const result = await handleAiMove(post({ prompt: "p" }), deps);
 
-    expect(result).toEqual({ status: 500, body: { error: "The AI service is not configured." } });
+    expect(result).toEqual({ status: 500, body: { error: "The AI service is not configured.", code: "configuration", retryable: false } });
     expect(calls).toHaveLength(0);
     expect(logs.join("\n")).toContain("OPENROUTER_API_KEY");
   });
@@ -310,7 +340,9 @@ describe("handleAiMove: configuration and secrets", () => {
   it("blanks the key out of a provider error that echoes it", async () => {
     const { deps, logs } = makeDeps([jsonResponse({ error: { message: `Invalid API key ${KEY}` } }, 401)]);
     await handleAiMove(post({ prompt: "p" }), deps);
-    expect(logs.join("\n")).toContain("[removed]");
+    // Stronger privacy contract: discard the whole upstream message, rather
+    // than logging even a redacted copy of potentially personal content.
+    expect(logs).toEqual([JSON.stringify({ provider: "openrouter", code: "status 401", attempts: 1 })]);
   });
 });
 
@@ -323,7 +355,7 @@ describe("handleAiMove: rate limiting", () => {
     expect((await handleAiMove(post({ prompt: "p" }, "ip-1"), deps)).status).toBe(200);
     const blocked = await handleAiMove(post({ prompt: "p" }, "ip-1"), deps);
 
-    expect(blocked).toEqual({ status: 429, body: { error: "Too many requests. Please wait a moment." } });
+    expect(blocked).toEqual({ status: 429, body: { error: "Too many requests. Please wait a moment.", code: "rateLimit", retryable: false } });
     expect(calls).toHaveLength(2);
   });
 
@@ -378,8 +410,8 @@ describe("createRateLimiter", () => {
 describe("handleAiMove: health check (GET)", () => {
   const get: HandlerRequest = { method: "GET", body: "", clientId: "x" };
 
-  it("says ready when the key and model are set, without calling the provider", async () => {
-    const { deps, calls } = makeDeps([]);
+  it("reports verified readiness without making a model request", async () => {
+    const { deps, calls } = makeDeps([], { checkHealth: async () => true });
     expect(await handleAiMove(get, deps)).toEqual({ status: 200, body: { ready: true } });
     expect(calls).toHaveLength(0);
   });
@@ -393,7 +425,7 @@ describe("handleAiMove: health check (GET)", () => {
 
   it("does not use up the rate limit", async () => {
     const limiter = createRateLimiter({ limit: 1, windowMs: 60_000 });
-    const { deps } = makeDeps([providerAnswer('{"move": 1}')], { limiter });
+    const { deps } = makeDeps([providerAnswer('{"move": 1}')], { limiter, checkHealth: async () => true });
     for (let i = 0; i < 5; i++) await handleAiMove({ ...get, clientId: "ip-1" }, deps);
     expect((await handleAiMove(post({ prompt: "p" }, "ip-1"), deps)).status).toBe(200);
   });

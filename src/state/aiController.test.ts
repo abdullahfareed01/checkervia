@@ -1,10 +1,10 @@
 // The AI turn flow end to end with a fake model: the controller asks the
 // model, dispatches the result into the real reducer, and late replies are
 // ignored. No network, no real API.
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { CallModel } from "../ai";
 import { getLegalMoves } from "../engine";
-import { at } from "../engine/testUtils";
+import { at, boardFrom } from "../engine/testUtils";
 import { startAiTurn } from "./aiController";
 import { createGameState, gameReducer } from "./gameReducer";
 import type { GameAction, GameState } from "./gameReducer";
@@ -68,6 +68,35 @@ function thinkingStore() {
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("AI turn flow", () => {
+  it("ends a hung turn within its total budget and never plays a late reply", async () => {
+    const store = thinkingStore();
+    const { callModel, reply } = manualModel();
+    const requestId = store.state.aiRequestId;
+    startAiTurn(store.state, callModel, store.dispatch, { timeoutMs: 30 });
+    await vi.waitFor(() => expect(store.state.aiPhase).toBe("failed"));
+    expect(store.actions).toHaveLength(1);
+    expect(store.actions[0]).toMatchObject({ type: "aiFailed", requestId, reasons: ["The AI took too long. Retry to ask again."] });
+    const failed = store.state;
+    reply('{"move": 1}');
+    await settle();
+    expect(store.actions).toHaveLength(1);
+    expect(store.state).toBe(failed);
+  });
+
+  it("aborts the model request when a turn is cancelled, without dispatching a failure", async () => {
+    const store = thinkingStore();
+    const signals: AbortSignal[] = [];
+    const callModel: CallModel = (_prompt, _note, signal) => {
+      if (signal) signals.push(signal);
+      return new Promise((_resolve, reject) => signal?.addEventListener("abort", () => reject(signal.reason), { once: true }));
+    };
+    const cancel = startAiTurn(store.state, callModel, store.dispatch);
+    await vi.waitFor(() => expect(signals).toHaveLength(1));
+    cancel();
+    await settle();
+    expect(signals[0]!.aborted).toBe(true);
+    expect(store.actions).toEqual([]);
+  });
   it("asks the model about white's position and plays the move it picks", async () => {
     const store = thinkingStore();
     const whiteMoves = getLegalMoves(store.state.board, "white");
@@ -129,13 +158,16 @@ describe("AI turn flow", () => {
 });
 
 describe("fallback and Retry", () => {
+  beforeEach(() => vi.useFakeTimers());
+  afterEach(() => vi.useRealTimers());
   it("after 4 bad replies the AI fails, no move is played, and the board stays locked", async () => {
     const store = thinkingStore();
     const boardBefore = store.state.board;
     const { callModel, calls } = scriptedModel(["x", '{"move": 99}', '{"move": 0}', "no"]);
 
     startAiTurn(store.state, callModel, store.dispatch);
-    await vi.waitFor(() => expect(store.state.aiPhase).toBe("failed"));
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(store.state.aiPhase).toBe("failed");
 
     expect(calls).toHaveLength(4);
     expect(store.state.board).toBe(boardBefore);
@@ -154,7 +186,8 @@ describe("fallback and Retry", () => {
     const { callModel, calls } = scriptedModel([boom, boom, boom, boom]);
 
     startAiTurn(store.state, callModel, store.dispatch);
-    await vi.waitFor(() => expect(store.state.aiPhase).toBe("failed"));
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(store.state.aiPhase).toBe("failed");
 
     expect(calls).toHaveLength(4);
     expect(store.state.aiFailureReasons.join(" ")).toContain("network down");
@@ -163,7 +196,8 @@ describe("fallback and Retry", () => {
   it("Retry asks again and, if the model now answers, plays the move", async () => {
     const store = thinkingStore();
     startAiTurn(store.state, scriptedModel(["x", "x", "x", "x"]).callModel, store.dispatch);
-    await vi.waitFor(() => expect(store.state.aiPhase).toBe("failed"));
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(store.state.aiPhase).toBe("failed");
 
     store.dispatch({ type: "aiRetry" });
     expect(store.state.aiPhase).toBe("thinking");
@@ -177,7 +211,8 @@ describe("fallback and Retry", () => {
   it("New game works while the board is locked after a failure", async () => {
     const store = thinkingStore();
     startAiTurn(store.state, scriptedModel(["x", "x", "x", "x"]).callModel, store.dispatch);
-    await vi.waitFor(() => expect(store.state.aiPhase).toBe("failed"));
+    await vi.advanceTimersByTimeAsync(2_000);
+    expect(store.state.aiPhase).toBe("failed");
 
     store.dispatch({ type: "newGame" });
     expect(store.state.aiPhase).toBe("idle");
@@ -255,5 +290,33 @@ describe("stale responses", () => {
     store.dispatch({ type: "click", position: at(4, 3) });
 
     expect(store.state).toBe(lockedState);
+  });
+});
+
+// D89: the AI resigns, instead of moving, when its own position is proven
+// lost (every move loses by force within the engine's proof).
+describe("the AI resigns a lost position", () => {
+  // White's last man can only step to 2,1, where Black's man takes it.
+  const LOST = boardFrom([
+    "........",
+    "w.......",
+    "........",
+    "..b.....",
+    "........",
+    "........",
+    "........",
+    "........",
+  ]);
+
+  it("resigns without asking the model; the player wins", async () => {
+    const store = createStore(createGameState({ board: LOST, mode: "vs-ai", humanSide: "black", currentPlayer: "white" }));
+    expect(store.state.aiPhase).toBe("thinking");
+    const { callModel, calls } = scriptedModel([]);
+    startAiTurn(store.state, callModel, store.dispatch);
+    await vi.waitFor(() => expect(store.actions).toHaveLength(1));
+    expect(store.actions[0]).toEqual({ type: "aiResigned", requestId: store.state.aiRequestId - 1 });
+    expect(calls).toHaveLength(0);
+    expect(store.state.winner).toBe("black");
+    expect(store.state.resignedBy).toBe("white");
   });
 });

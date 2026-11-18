@@ -1,0 +1,184 @@
+/* D106: materials belong to a participant, never the document or room. */
+:root {
+  --free-light: #f0cf9d; --free-dark: #7a4a2a; --free-frame: #38271b;
+  --free-last: #95653d; --free-coord-light: #6e4123; --free-coord-dark: #efd8ad;
+  --original-black: radial-gradient(circle at 35% 30%, #5a5a5a, #1b1b1b 70%);
+  --original-white: radial-gradient(circle at 35% 30%, #fff, #c9c9c9 70%);
+}
+:root[data-board-theme="slate"] { --free-light: #c7ccd3; --free-dark: #4a5361; --free-frame: #252a32; --free-last: #67717f; --free-coord-light: #3a414c; --free-coord-dark: #dfe3e8; }
+:root[data-board-theme="felt"] { --free-light: #dbe5cb; --free-dark: #2f6a46; --free-frame: #16301f; --free-last: #44875c; --free-coord-light: #2f5a3d; --free-coord-dark: #e3eed6; }
+:root[data-board-theme="minimal"] { --free-light: #f5f1e8; --free-dark: #c9bfac; --free-frame: #e7e0d2; --free-last: #dcc79b; --free-coord-light: #6b6252; --free-coord-dark: #4c4436; }
+:root[data-pieces="flat"] { --original-black: #262626; --original-white: #ececea; }
+.board-frame[data-shop-board="classic"], .shop-look[data-shop-board="classic"] { --light-square: var(--free-light); --dark-square: var(--free-dark); --last-move-square: var(--free-last); --coord-on-light: var(--free-coord-light); --coord-on-dark: var(--free-coord-dark); }
+.board-frame[data-shop-board="midnight"], .shop-look[data-shop-board="midnight"] { --light-square: #d8dce1; --dark-square: #283b52; --last-move-square: #4a6076; --coord-on-light: #243a51; --coord-on-dark: #eff1f4; --cosmetic-frame: #1b2938; }
+.board-frame[data-shop-board="jade"], .shop-look[data-shop-board="jade"] { --light-square: #e2dbc1; --dark-square: #205749; --last-move-square: #397562; --coord-on-light: #234a3a; --coord-on-dark: #f0e9d5; --cosmetic-frame: #19392f; }
+.board-frame[data-shop-board="rosewood"], .shop-look[data-shop-board="rosewood"] { --light-square: #e6bd82; --dark-square: #68343e; --last-move-square: #92505b; --coord-on-light: #542b2c; --coord-on-dark: #ffecd0; --cosmetic-frame: #48252b; }
+.board-frame[data-shop-board] { background: var(--cosmetic-frame, var(--free-frame)); }
+.piece[data-piece-finish="sovereign"] { --finish-dark: radial-gradient(circle at 32% 25%, #e4ba60, #85551a 72%); --finish-light: radial-gradient(circle at 32% 25%, #fffdf0, #cec1a2 72%); }
+.piece[data-piece-finish="sapphire"] { --finish-dark: radial-gradient(circle at 32% 25%, #517fb3, #102d52 72%); --finish-light: radial-gradient(circle at 32% 25%, #fff, #c6d6e7 72%); }
+.piece[data-piece-finish="copper"] { --finish-dark: radial-gradient(circle at 32% 25%, #57534f, #181716 72%); --finish-light: radial-gradient(circle at 32% 25%, #ffe0c2, #d08f65 72%); }
+.piece[data-piece-finish="amethyst"] { --finish-dark: radial-gradient(circle at 32% 25%, #aa7dd1, #44235f 72%); --finish-light: radial-gradient(circle at 32% 25%, #fff7ff, #d6c5de 72%); }
+.piece-black[data-piece-finish]:not([data-piece-finish="classic"]) { background: var(--finish-dark); }
+.piece-white[data-piece-finish]:not([data-piece-finish="classic"]) { background: var(--finish-light); }
+.shop-look .piece-black[data-piece-finish="classic"] { background: var(--original-black); }
+.shop-look .piece-white[data-piece-finish="classic"] { background: var(--original-white); }
+/* A light metal lip and a dark inner edge keep gems visible on every board. */
+.piece[data-piece-finish]:not([data-piece-finish="classic"]) { box-shadow: inset 0 0 0 1.5px #eee7d2, inset 0 0 0 3px #231b20, 0 3px 4px #0009; }
+.piece-black[data-piece-finish]:not([data-piece-finish="classic"]).piece-king::before { color: #fff5d1; text-shadow: 0 1px 2px #140f0b; }
+.piece-white[data-piece-finish]:not([data-piece-finish="classic"]).piece-king::before { color: #49301c; text-shadow: 0 1px 1px #fff9ec; }
+.piece-king[data-piece-effect="coronation"] { outline: 3px double #d3ac57; outline-offset: -4px; }
+
+.cosmetic-fx { position: absolute; z-index: 2; inset: -10%; border-radius: 50%; pointer-events: none; opacity: 0; }
+.cosmetic-fx i { position: absolute; display: block; width: 12%; height: 12%; border-radius: 50%; background: #e6c878; left: 45%; top: 3%; }
+.cosmetic-fx i:nth-child(2) { left: 8%; top: 67%; }
+.cosmetic-fx i:nth-child(3) { left: 82%; top: 67%; }
+.cosmetic-fx-silk { border: 2px solid transparent; border-left-color: #f6e5b5; border-top-color: #fff9e8; }
+.cosmetic-fx-silk i { background: #fbefcc; width: 8%; height: 20%; border-radius: 50%; }
+.cosmetic-fx-coronation { border: 1.5px dashed #f7cb6b; }
+.cosmetic-fx-coronation i { border: 1px solid #fff2be; background: #c69530; }
+.cosmetic-fx-comet { border-bottom: 3px solid #9ed8ff; border-left: 2px solid #529bd2; }
+.cosmetic-fx-comet i { background: #c3e9ff; }
+.cosmetic-fx-petal i { border-radius: 80% 15% 80% 15%; background: #f2b1ca; width: 16%; height: 22%; }
+.cosmetic-fx-ember { border-left: 3px solid #f7c99c; border-top: 1.5px solid #d98e59; }
+.cosmetic-fx-ember i { width: 8%; height: 20%; border-radius: 1px; background: #ffdaa3; }
+.ghost-mover .cosmetic-fx, .square-selected .cosmetic-fx,
+.shop-look-playing .shop-preview-mover .cosmetic-fx { animation: cosmetic-orbit calc(800ms / var(--anim-speed, 1)) ease-out both; }
+.ghost-mover .cosmetic-fx-comet, .square-selected .cosmetic-fx-comet,
+.shop-look-playing .shop-preview-mover .cosmetic-fx-comet { animation-name: cosmetic-comet; }
+.ghost-mover .cosmetic-fx-petal, .square-selected .cosmetic-fx-petal,
+.shop-look-playing .shop-preview-mover .cosmetic-fx-petal { animation-name: cosmetic-petals; }
+@keyframes cosmetic-orbit { 0% { opacity: 0; transform: rotate(-65deg) scale(.7); } 20% { opacity: 1; } 65% { opacity: .85; } 100% { opacity: 0; transform: rotate(90deg) scale(1.3); } }
+@keyframes cosmetic-comet { 0% { opacity: 0; transform: translate(-12%, 12%) scale(.8); } 20% { opacity: 1; } 100% { opacity: 0; transform: translate(-55%, 55%) scale(1.5); } }
+@keyframes cosmetic-petals { 0% { opacity: 0; transform: translateY(5%) rotate(0); } 25% { opacity: 1; } 100% { opacity: 0; transform: translateY(-70%) rotate(65deg) scale(1.5); } }
+
+/* Display plinths keep actual assets distinct from the warm game chrome. */
+.marketplace { display: flex; flex-direction: column; overflow: hidden; }
+.shop-header { position: relative; top: auto; flex: none; }
+.shop-content { flex: 1; min-height: 0; width: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.shop-detail, .shop-filters { scroll-margin-top: 16px; }
+.shop-product-art { display: flex; flex-direction: column; gap: 12px; padding: 12px; background: radial-gradient(ellipse at 50% 25%, #41576a, #18222c 85%); border-bottom: 1px solid #627384; }
+.shop-product-art .shop-look { width: 90%; }
+.shop-detail { position: static; background: #18232d; }
+.shop-detail-copy { background: #302015; padding: 12px; }
+.shop-detail-heading { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; padding: 12px; }
+.shop-detail-heading > div { min-width: 0; }
+.shop-detail-heading h2 { margin: 4px 0 0; font: 700 1.25rem/1.2 "Fraunces", Georgia, serif; }
+.shop-detail-heading .shop-price { flex-direction: column; align-items: flex-end; gap: 2px; margin: 0; width: 96px; text-align: right; }
+.shop-detail-heading .shop-price strong { font-size: 1.35rem; }
+.shop-detail-heading .shop-price span { white-space: normal; }
+.shop-detail .shop-detail-copy > .shop-description { margin: 0 0 8px; font-size: .85rem; line-height: 1.45; }
+.shop-preview-stage { --inspector-board-size: clamp(130px, calc(100dvh - 620px), 210px); scroll-margin: 16px; }
+.shop-preview-stage .shop-look-large { width: var(--inspector-board-size); max-width: none; --board-size: var(--inspector-board-size); padding: 0; margin: 8px auto 16px; }
+.shop-preview-stage .shop-replay { margin-bottom: 6px; }
+.shop-preview-stage .shop-motion-note { margin-bottom: 10px; line-height: 1.4; }
+.shop-more-details { margin-bottom: 8px; }
+.shop-more-details summary { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 10px; border: 1px solid #92734c; border-radius: 8px; font-size: .85rem; color: #f1dab5; cursor: pointer; }
+.shop-more-details summary::before { content: "+"; font-size: 1.2em; }
+.shop-more-details[open] summary::before { content: "−"; }
+.shop-more-details summary:hover { background: #49321e; }
+.shop-more-details summary:active { background: #624626; }
+.shop-more-details summary:focus-visible { outline: 3px solid #ffe1a1; outline-offset: 3px; }
+.shop-extra-note { color: #cfbda5; font-size: .8rem; line-height: 1.5; }
+@media (min-width: 681px) {
+  .shop-detail[data-fits="true"] { position: sticky; top: 16px; }
+  .shop-detail .shop-preview-controls { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); padding-bottom: 8px; }
+  .shop-detail .shop-preview-controls button { min-width: 0; padding: 6px; font-size: .75rem; line-height: 1.35; }
+}
+.shop-look-large { margin: 10px auto 16px; }
+.shop-detail-heading { background: #202e3a; }
+.shop-product-tag { position: static; align-self: flex-start; width: fit-content; max-width: 100%; color: #272d32; background: #eee4d0; }
+.shop-disc-wrap { display: grid; place-items: center; width: 100%; height: 100%; }
+.shop-look[data-preview-flipped="true"] .shop-preview-board { rotate: 180deg; }
+.shop-look[data-preview-flipped="true"] .piece { rotate: 180deg; }
+.shop-look-playing .shop-preview-mover .shop-disc-wrap { animation: cosmetic-preview-move calc(800ms / var(--anim-speed, 1)) cubic-bezier(.22,.8,.3,1) both; }
+.shop-look[data-preview-owner="white"] { --preview-x: -100%; --preview-y: 100%; }
+@keyframes cosmetic-preview-move { from { transform: translate(0,0); } to { transform: translate(var(--preview-x, 100%), var(--preview-y, -100%)); } }
+.shop-asset-display { position: relative; width: 100%; min-height: 132px; display: flex; justify-content: center; align-items: center; gap: 12px; --board-size: 180px; }
+.shop-asset-display .piece { flex: none; width: 58px; height: 58px; }
+.shop-asset-pieces { transform: rotate(-10deg); }
+.shop-asset-pieces .piece-white { translate: 0 12px; }
+.shop-effect-emblem { position: absolute; width: 95px; height: 95px; border: 1.5px solid #edc975; border-radius: 50%; }
+.shop-effect-classic-effect { display: none; }
+.shop-effect-silk { border-color: #f4e0ae; }
+.shop-effect-coronation { border-width: 3px; border-style: double; }
+.shop-effect-comet { border-color: #97d4ff; }
+.shop-effect-petal { border-color: #e9aecb; }
+.shop-effect-ember { border-color: #e5a873; }
+.shop-asset-display .piece-king::before { font-size: 26px; }
+.shop-product-art:has(.shop-asset-display) { padding: 12px; }
+.shop-preview-toolbar { display: flex; justify-content: flex-end; margin: -8px 0 14px; }
+.shop-live-toggle { min-height: 44px; padding: 8px 12px; border: 1px solid #9d825b; border-radius: 8px; color: #f1d9af; background: #302218; font-size: .8rem; line-height: 1.4; }
+.shop-live-toggle:hover:not(:disabled) { background: #503924; }
+.shop-live-toggle:active:not(:disabled) { background: #715331; }
+.shop-live-toggle:disabled { color: #c3b6a1; border-color: #685844; cursor: default; }
+.shop-preview-controls { padding: 0 12px 12px; display: grid; gap: 8px; }
+.shop-preview-controls [role="group"] { display: flex; flex-wrap: wrap; gap: 6px; }
+.shop-preview-controls button, .shop-replay { min-height: 44px; padding: 8px 10px; border: 1px solid #708091; border-radius: 8px; background: #1a2530; color: #e7edf2; font-size: .8rem; line-height: 1.5; }
+.shop-preview-controls button { flex: 1; }
+.shop-preview-controls button[aria-pressed="true"] { background: #42596b; border-color: #d2b47d; color: #fff4d9; }
+.shop-preview-controls button:hover, .shop-replay:hover { background: #395064; }
+.shop-preview-controls button:active, .shop-replay:active { background: #566c7d; }
+.shop-replay { display: flex; justify-content: center; align-items: center; gap: 10px; width: calc(100% - 32px); margin: 0 16px 16px; }
+.shop-replay span { font-size: 1.3em; }
+.shop-motion-note { margin: 0 16px 16px; color: #cbd7e0; font-size: .75rem; line-height: 1.5; }
+.shop-ownership { padding: 10px 12px; border-left: 3px solid #ceb282; background: #211910; }
+.shop-intro .shop-demo-note { display: inline-block; padding: 6px 10px; margin: 0 0 24px; border: 1px solid #aa8e64; border-radius: 6px; font-size: .8rem; color: #f4dfba; }
+.shop-intro > p:nth-last-child(2) { margin-bottom: 14px; }
+@media (max-width: 680px) {
+  .shop-product-art:has(.shop-asset-display) { padding: 12px; }
+  .shop-asset-display { min-height: 120px; gap: 6px; }
+  .shop-asset-display .piece { width: 45px; height: 45px; }
+  .shop-asset-display .piece-king::before { font-size: 22px; }
+}
+/* Live previews reuse three fixed sparks. Only visible shop previews loop;
+   game effects retain their short, single-play animation above. */
+.shop-asset-display[data-card-live="true"] .cosmetic-fx,
+.shop-look[data-preview-mode="auto"][data-preview-active="true"] .shop-preview-mover .cosmetic-fx { animation: shop-live-orbit calc(2800ms / var(--anim-speed, 1)) ease-out infinite; }
+.shop-asset-display[data-card-live="true"] .cosmetic-fx-comet,
+.shop-look[data-preview-mode="auto"][data-preview-active="true"] .shop-preview-mover .cosmetic-fx-comet { animation-name: shop-live-comet; }
+.shop-asset-display[data-card-live="true"] .cosmetic-fx-petal,
+.shop-look[data-preview-mode="auto"][data-preview-active="true"] .shop-preview-mover .cosmetic-fx-petal { animation-name: shop-live-petals; }
+.shop-look[data-preview-mode="auto"][data-preview-active="true"] .shop-preview-mover .shop-disc-wrap { animation: shop-live-move calc(2800ms / var(--anim-speed, 1)) ease-in-out infinite; }
+.shop-look[data-preview-mode="replay"][data-preview-active="true"] .shop-preview-mover .shop-disc-wrap { animation: shop-replay-move calc(1000ms / var(--anim-speed, 1)) ease-out both; }
+.shop-look[data-preview-active="false"] .shop-disc-wrap,
+.shop-look[data-preview-active="false"] .cosmetic-fx { animation: none !important; }
+@keyframes shop-replay-move {
+  0% { opacity: 1; transform: translate(0, 0); }
+  65%, 82% { opacity: 1; transform: translate(var(--preview-x, 100%), var(--preview-y, -100%)); }
+  94% { opacity: 0; transform: translate(var(--preview-x, 100%), var(--preview-y, -100%)); }
+  100% { opacity: 0; transform: translate(0, 0); }
+}
+@keyframes shop-live-orbit {
+  0% { opacity: 0; transform: rotate(-65deg) scale(.7); }
+  10% { opacity: 1; }
+  28% { opacity: .85; }
+  38%, 100% { opacity: 0; transform: rotate(90deg) scale(1.3); }
+}
+@keyframes shop-live-comet {
+  0% { opacity: 0; transform: translate(-12%, 12%) scale(.8); }
+  10% { opacity: 1; }
+  38%, 100% { opacity: 0; transform: translate(-55%, 55%) scale(1.5); }
+}
+@keyframes shop-live-petals {
+  0% { opacity: 0; transform: translateY(5%) rotate(0); }
+  10% { opacity: 1; }
+  38%, 100% { opacity: 0; transform: translateY(-70%) rotate(65deg) scale(1.5); }
+}
+@keyframes shop-live-move {
+  0%, 8% { opacity: 1; transform: translate(0, 0); }
+  42%, 78% { opacity: 1; transform: translate(var(--preview-x, 100%), var(--preview-y, -100%)); }
+  86% { opacity: 0; transform: translate(var(--preview-x, 100%), var(--preview-y, -100%)); }
+  90% { opacity: 0; transform: translate(0, 0); }
+  100% { opacity: 1; transform: translate(0, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cosmetic-fx, .shop-disc-wrap { animation: none !important; }
+}
+:root[data-anim="off"] .cosmetic-fx, :root[data-anim="reduced"] .cosmetic-fx,
+:root[data-anim="off"] .shop-disc-wrap, :root[data-anim="reduced"] .shop-disc-wrap { animation: none !important; }
+/* An explicit Play once request overrides reduced motion for this selected
+   sample only. Cards, gameplay and the stored preference stay unchanged. */
+.shop-look[data-preview-mode="replay"][data-preview-explicit="true"][data-preview-active="true"] .shop-preview-mover .shop-disc-wrap { animation: shop-replay-move calc(1000ms / var(--anim-speed, 1)) ease-out both !important; }
+.shop-look[data-preview-mode="replay"][data-preview-explicit="true"][data-preview-active="true"] .shop-preview-mover .cosmetic-fx { animation: cosmetic-orbit calc(800ms / var(--anim-speed, 1)) ease-out both !important; }
+.shop-look[data-preview-mode="replay"][data-preview-explicit="true"][data-preview-active="true"] .shop-preview-mover .cosmetic-fx-comet { animation-name: cosmetic-comet !important; }
+.shop-look[data-preview-mode="replay"][data-preview-explicit="true"][data-preview-active="true"] .shop-preview-mover .cosmetic-fx-petal { animation-name: cosmetic-petals !important; }

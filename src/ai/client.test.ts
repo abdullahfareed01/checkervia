@@ -38,16 +38,22 @@ describe("callModel client", () => {
     });
   });
 
-  it("sets a timeout longer than the 60 second Netlify function limit", async () => {
-    expect(CLIENT_TIMEOUT_MS).toBeGreaterThan(60_000);
+  it("allows the provider deadline to arrive inside the total turn budget", async () => {
+    expect(CLIENT_TIMEOUT_MS).toBeGreaterThan(10_000);
+    expect(CLIENT_TIMEOUT_MS).toBeLessThan(12_000);
     const { fetchImpl, calls } = fakeFetch(ok({ text: "x" }));
     await createCallModel({ fetch: fetchImpl })("p");
     expect(calls[0]!.init.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it.each([400, 405, 429, 500, 502, 504])("throws on status %i", async (status) => {
+  it.each([502, 504])("throws on transient status %i from an older function", async (status) => {
     const { fetchImpl } = fakeFetch(ok({ error: "nope" }, status));
     await expect(createCallModel({ fetch: fetchImpl })("p")).rejects.toThrow(String(status));
+  });
+
+  it.each([[400, "access"], [401, "access"], [402, "credits"], [403, "access"], [405, "access"], [429, "rateLimit"], [500, "configuration"]])("stops retries on permanent status %i from an older function", async (status, code) => {
+    const { fetchImpl } = fakeFetch(ok({ error: "nope" }, Number(status)));
+    await expect(createCallModel({ fetch: fetchImpl })("p")).rejects.toMatchObject({ code, retryable: false });
   });
 
   it("throws on any status other than 200, even a success status like 204", async () => {
@@ -58,6 +64,34 @@ describe("callModel client", () => {
   it("throws if the network fails", async () => {
     const { fetchImpl } = fakeFetch(new TypeError("Failed to fetch"));
     await expect(createCallModel({ fetch: fetchImpl })("p")).rejects.toThrow("Could not reach");
+  });
+
+  it("uses only the safe service category and never provider error text", async () => {
+    const { fetchImpl } = fakeFetch(ok({ code: "credits", retryable: false, error: "PRIVATE PROVIDER DETAIL" }, 502));
+    const call = createCallModel({ fetch: fetchImpl });
+    await expect(call("p")).rejects.toMatchObject({ code: "credits", retryable: false });
+    const { fetchImpl: again } = fakeFetch(ok({ code: "credits", retryable: false, error: "PRIVATE PROVIDER DETAIL" }, 502));
+    await expect(createCallModel({ fetch: again })("p")).rejects.not.toThrow("PRIVATE PROVIDER DETAIL");
+  });
+
+  it("keeps a valid provider delay and rejects malformed delay values", async () => {
+    for (const [seconds, ms] of [[30, 30_000], ["30", 0], [-1, 0]] as const) {
+      const { fetchImpl } = fakeFetch(ok({ code: "busy", retryable: true, retryAfterSeconds: seconds }, 502));
+      await expect(createCallModel({ fetch: fetchImpl })("p")).rejects.toMatchObject({ code: "busy", retryable: true, retryAfterMs: ms });
+    }
+  });
+
+  it("forwards cancellation to fetch so an abandoned request does not keep running", async () => {
+    const controller = new AbortController();
+    let received: AbortSignal | null | undefined;
+    const send: typeof fetch = async (_input, init) => {
+      received = init?.signal;
+      return new Promise((_resolve, reject) => init?.signal?.addEventListener("abort", () => reject(init.signal!.reason), { once: true }));
+    };
+    const request = createCallModel({ fetch: send })("p", undefined, controller.signal);
+    controller.abort(new Error("Game changed"));
+    await expect(request).rejects.toThrow("Game changed");
+    expect(received?.aborted).toBe(true);
   });
 
   it("throws if the answer is not JSON", async () => {

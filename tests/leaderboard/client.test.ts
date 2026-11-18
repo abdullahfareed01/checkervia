@@ -213,10 +213,14 @@ describe("which games can count", () => {
     expect(qualifyingWin(state, gameId)).toEqual({ gameId, level: 4, colour: "black", moves: BLACK_WIN });
   });
 
-  it("an AI win, a resignation and a two player game never count", () => {
+  it("an AI win, the player's resignation and a two player game never count", () => {
     expect(qualifyingWin(finishedGame(BLACK_WIN, { winner: "white" }), gameId)).toBeNull();
-    expect(qualifyingWin(finishedGame(BLACK_WIN, { resignedBy: "white" }), gameId)).toBeNull();
+    expect(qualifyingWin(finishedGame(BLACK_WIN, { winner: "white", resignedBy: "black" }), gameId)).toBeNull();
     expect(qualifyingWin(finishedGame(BLACK_WIN, { mode: "two-player" }), gameId)).toBeNull();
+  });
+
+  it("the AI's resignation is the player's win and can count (D89: the server checks the proof)", () => {
+    expect(qualifyingWin(finishedGame(BLACK_WIN, { winner: "black", resignedBy: "white" }), gameId)).not.toBeNull();
   });
 
   it("a game that did not start from the normal position never counts", () => {
@@ -294,9 +298,24 @@ describe("the screens' markup", () => {
     };
     const html = renderToStaticMarkup(createElement(ProfileStats, { profile }));
     expect(html).toContain('<dt>Win rate</dt><dd class="lb-stat-number">63%</dd>');
-    expect(html).toContain('<caption class="sr-only">Wins and losses by level</caption>');
+    expect(html).toContain('<caption class="sr-only">Results by level</caption>');
     expect([...html.matchAll(/<th scope="row">.*?<\/span>(\w+)<\/th>/g)].map((m) => m[1])).toEqual(["Strongest", "Hard", "Medium", "Easy"]);
     expect(html).toContain('<span class="lb-stat-number">21</span> moves on Strongest');
+  });
+
+  it("shows draws separately from wins and losses, including old responses without draws", () => {
+    const profile: ProfileResponse = {
+      username: "Draw_Fan", country: null, avatar: null, gamesPlayed: 10, wins: 2, losses: 3, draws: 5, winRate: 0.2,
+      byLevel: [{ level: 4, wins: 2, losses: 3, draws: 5, resigned: 1 }], bestWin: null, weeklyStrongestRank: null,
+    };
+    const render = (value: ProfileResponse) => renderToStaticMarkup(createElement(ProfileStats, { profile: value }));
+    const html = render(profile);
+    expect(html).toContain('<dt>Draws</dt><dd class="lb-stat-number">5</dd>');
+    expect(html).toContain('<th scope="col">Draws</th>');
+    expect(html).toContain('<td>2</td><td>3</td><td>5</td><td>1</td>');
+    const old = render({ ...profile, draws: undefined, byLevel: [{ level: 4, wins: 2, losses: 3 }] });
+    expect(old).toContain('<dt>Draws</dt><dd class="lb-stat-number">0</dd>');
+    expect(old).toContain('<td>2</td><td>3</td><td>0</td><td>0</td>');
   });
 
   it("never calls the counters reported on screen (the Terms do)", () => {

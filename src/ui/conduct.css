@@ -82,3 +82,12 @@
   color: #ffb4a8;
   font-size: 0.85em;
 }
+
+/* How long the suspension has left (D102): one calm, clear line. */
+.conduct-body .conduct-days {
+  margin-top: 10px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--sheet-cream);
+  font-variant-numeric: tabular-nums;
+}

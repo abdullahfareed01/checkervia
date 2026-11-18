@@ -25,7 +25,7 @@ import { TIPS_DELAY_MS, revealAfter } from "./idleTimer";
 import type { EndLine } from "./usePersonality";
 
 interface ResultDialogProps {
-  winner: Player;
+  winner: Player | null; // null: a draw (D89)
   mode: GameMode;
   aiSide?: Player; // the AI's colour against the person (D81); White if left out
   reason: string; // e.g. "White has no pieces left."
@@ -47,10 +47,12 @@ interface ResultDialogProps {
   leaderboard?: ReactNode;
 }
 
-type Outcome = "victory" | "defeat" | "winner";
+type Outcome = "victory" | "defeat" | "winner" | "draw";
 
 // victory: you beat the AI. defeat: the AI beat you. winner: two players.
-function outcomeOf(mode: GameMode, winner: Player, aiSide: Player): Outcome {
+// draw: nobody won (D89).
+function outcomeOf(mode: GameMode, winner: Player | null, aiSide: Player): Outcome {
+  if (winner === null) return "draw";
   if (mode !== "vs-ai") return "winner";
   return winner === aiSide ? "defeat" : "victory";
 }
@@ -72,6 +74,7 @@ const TITLES: Record<Outcome, (winnerName: string) => string> = {
   victory: () => "You Win!",
   defeat: () => "AI Wins",
   winner: (name) => `${name} Wins`,
+  draw: () => "Draw",
 };
 
 // Shown in the pill when there is no AI line (two players).
@@ -79,21 +82,22 @@ const SUBTITLES: Record<Outcome, string> = {
   victory: "You outplayed the robot.",
   defeat: "The robot takes this one. Try again?",
   winner: "Well played, both of you.",
+  draw: "Nobody could break through. Well played, both of you.",
 };
 
 // The ribbon's colour (owner's choice, D51): red for the AI, green for you,
 // the winning side's colour in a two player game.
-function ribbonTone(outcome: Outcome, winner: Player): RibbonTone {
+function ribbonTone(outcome: Outcome, winner: Player | null): RibbonTone {
   if (outcome === "defeat") return "ai";
   if (outcome === "victory") return "you";
-  return winner;
+  return winner ?? "draw"; // a draw: bronze, nobody's colour
 }
 
 // Who is in the gold ring: the robot, you, or the winning side's piece.
-function Portrait({ outcome, winner }: { outcome: Outcome; winner: Player }) {
+function Portrait({ outcome, winner }: { outcome: Outcome; winner: Player | null }) {
   if (outcome === "defeat") return <RobotAvatar />;
   if (outcome === "victory") return <HumanIcon />;
-  return <PieceArt kind={winner === "black" ? "king" : "white"} />;
+  return <PieceArt kind={winner === "white" ? "white" : "king"} />;
 }
 
 // Falling confetti for a win. Positions are fixed per index (not random), so
@@ -141,8 +145,9 @@ export function ResultDialog(props: ResultDialogProps) {
   // result is the first thing seen.
   useEffect(() => playAgainRef.current?.focus({ preventScroll: true }), []);
 
-  // Both columns: the winner first.
-  const sides: Player[] = [winner, winner === "black" ? "white" : "black"];
+  // Both columns: the winner first (a draw: Black first).
+  const first: Player = winner ?? "black";
+  const sides: Player[] = [first, first === "black" ? "white" : "black"];
   const rows: StatRow[] = [
     { label: "Pieces left", icon: <PiecesIcon />, value: (p) => pieces[p] },
     { label: "Pieces captured", icon: <SwordsIcon />, value: (p) => stats[p].captured },
@@ -163,7 +168,7 @@ export function ResultDialog(props: ResultDialogProps) {
           if (event.key === "Escape") onClose();
         }}
       >
-        {outcome !== "defeat" && <Confetti />}
+        {outcome !== "defeat" && outcome !== "draw" && <Confetti />}
 
         <div className="result-hero">
           <div className="result-emblem" aria-hidden="true">
@@ -183,13 +188,15 @@ export function ResultDialog(props: ResultDialogProps) {
           <div className="result-banner">
             <Ribbon tone={tone} />
             <h2 id="result-title" className={`result-title result-title-${tone}`}>
-              {TITLES[outcome](nameOf(mode, winner, aiSide))}
+              {TITLES[outcome](winner ? nameOf(mode, winner, aiSide) : "")}
             </h2>
           </div>
         </div>
 
         {aiLine ? (
-          <p className={`result-line ${toneClasses(aiLine)}`}>{aiLine.text}</p>
+          <p className={`result-line ${toneClasses(aiLine)}${aiLine.text ? "" : " speech-typing"}`}>
+            {aiLine.text || <><span /><span /><span /></>}
+          </p>
         ) : (
           <p className="result-line result-subtitle">{SUBTITLES[outcome]}</p>
         )}

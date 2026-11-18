@@ -222,6 +222,7 @@ export function ProfileStats({ profile, tone = "gold" }: { profile: ProfileRespo
     { key: "games", label: "Games played", value: String(profile.gamesPlayed), icon: <LbGamepad tone={tone} /> },
     { key: "wins", label: "Wins", value: String(profile.wins), icon: <LbTrophy tone="gold" /> },
     { key: "losses", label: "Losses", value: String(profile.losses), icon: <LbSwords tone={tone} /> },
+    { key: "draws", label: "Draws", value: String(profile.draws ?? 0), icon: <LbGamepad tone={tone} /> },
     { key: "rate", label: "Win rate", value: profile.winRate === null ? "None yet" : percent(profile.winRate), icon: <LbTarget tone={tone} /> },
   ];
   return (
@@ -275,17 +276,18 @@ export function ProfileStats({ profile, tone = "gold" }: { profile: ProfileRespo
       <div className="lb-levels-title" aria-hidden="true">
         <span className="lb-levels-line" />
         <LbLaurel tone={tone} />
-        <span>Wins and losses by level</span>
+        <span>Results by level</span>
         <LbLaurel tone={tone} flip />
         <span className="lb-levels-line" />
       </div>
       <table className="lb-levels">
-        <caption className="sr-only">Wins and losses by level</caption>
+        <caption className="sr-only">Results by level</caption>
         <thead>
           <tr>
             <th scope="col">Level</th>
             <th scope="col">Wins</th>
             <th scope="col">Losses</th>
+            <th scope="col">Draws</th>
             <th scope="col">Resigned</th>
           </tr>
         </thead>
@@ -298,6 +300,7 @@ export function ProfileStats({ profile, tone = "gold" }: { profile: ProfileRespo
               </th>
               <td>{record.wins}</td>
               <td>{record.losses}</td>
+              <td>{record.draws ?? 0}</td>
               <td>{record.resigned ?? 0}</td>
             </tr>
           ))}

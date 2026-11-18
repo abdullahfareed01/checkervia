@@ -2,8 +2,9 @@
 // the model (a GET to the same endpoint; see netlify/aiMoveHandler.ts).
 import { ENDPOINT } from "./client";
 
-// ready: the key and model are set. offline: the function runs but is not
-// configured. unreachable: no function answered (for example `npm run dev`
+// ready: the function can serve engine play (or a verified legacy provider).
+// offline: an older proxy reported its provider unavailable.
+// unreachable: no function answered (for example `npm run dev`
 // without netlify dev, or no network).
 export type AiStatus = "ready" | "offline" | "unreachable";
 
