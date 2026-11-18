@@ -1,5 +1,13 @@
 # Progress Log
 
+## 19 Nov 2026: Remaining dashboard analytics completed (D108, phase 2c)
+- Saved the integrated source in local checkpoint `fd5aecc` before continuing. Its fresh suite passed all 2047 tests, strict TypeScript and both production builds. A commit is a local recovery point; no remote push or deployment has been performed for this continuation.
+- Implemented Countries, Who is winning, Resigned games and full Audit log using existing installed RPCs and the same guarded admin transport. Requests accept fixed UTC periods; rankings and resigner lists stop at 25. Current country totals, period counts, verified rankings, reported AI results and all time top winners are labelled distinctly.
+- Reused the dotted fading chart for daily resignations and abandonments by level, filling missing dates with zero and bounding all time charts to 90 days. Added searchable, filtered audit cursor pages with reasons and escaped details, without mutation controls.
+- Extended development samples without database inserts or production inclusion. Sample mode survives section navigation and reload. Found and fixed preview navigation losing its flag, and stabilized sample audit timestamps across pages. A native browser script checks navigation, filters, paging, response races, empty/error feedback and layouts without live writes. Early browser failures remain in their logs; the final passing report is `artifacts/dashboard-phase2-browser-verified.log`.
+- Verification: all 2085 tests in 108 files pass, strict TypeScript and both production builds pass. The browser passes 88 assertions across 24 states at 320 by 568, 844 by 390 and 1280 by 800 with normal and 200 percent text. Evidence: `artifacts/admin-phase2/checks.json`, screenshots in that directory, `artifacts/dashboard-phase2-tests.log` and `artifacts/dashboard-phase2-build.log`. No dependency, installed schema, gameplay rule or production deployment changed.
+- Continue with phase 3: Reports, Suspensions, Live and audited moderation actions. Real authenticator enrollment and the previously blocked Netlify draft upload remain separate release items.
+
 ## 19 Nov 2026: Owner requested a recoverable dashboard checkpoint
 - Added `dashboard-handoff.md` with completed features, review steps, installed migrations, release boundaries and the remaining phases. This game checkout is the integrated source of truth; the original separate admin worktree predates it.
 - Save the combined game and dashboard as a local Git checkpoint because their shared entry points and build configuration depend on each other. Dependencies, build output, credentials and browser artifacts remain ignored. Source credential scanning found only explicit fake fixtures, not live keys.

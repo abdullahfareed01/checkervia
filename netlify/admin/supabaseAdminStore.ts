@@ -23,6 +23,14 @@ function check<T>(result: { data: T; error: { code?: string } | null }): T {
 const iso = (value: unknown): string => new Date(String(value)).toISOString();
 const isoOrNull = (value: unknown): string | null => (value === null || value === undefined ? null : iso(value));
 const int = (value: unknown): number => Number(value ?? 0);
+const nullableText = (value: unknown): string | null => value === null || value === undefined ? null : String(value);
+const rowsOf = (result: Parameters<typeof check>[0]): Record<string, unknown>[] => (check(result) ?? []) as Record<string, unknown>[];
+const levelTotals = (row: Record<string, unknown>): LevelTotals => ({ level: int(row["level"]), games: int(row["games"]), wins: int(row["wins"]), losses: int(row["losses"]), draws: int(row["draws"]), resigned: int(row["resigned"]), abandoned: int(row["abandoned"]) });
+function headlineLevels(result: Parameters<typeof check>[0]): LevelTotals[] {
+  const headline = check(result) as Record<string, unknown> | null;
+  if (!headline) throw new AdminStoreError("noRow");
+  return ((headline["levels"] ?? []) as Record<string, unknown>[]).map(levelTotals);
+}
 
 /** A row of admin_players as the page receives it. */
 export function toPlayerRow(row: Record<string, unknown>): PlayerRow {
@@ -75,6 +83,32 @@ export function createSupabaseAdminStore(url: string, serviceRoleKey: string, fe
   });
 
   return {
+    async countries(range) {
+      const rows = rowsOf(await db.rpc("admin_countries", { p_since: range.since }));
+      return { range, rows: rows.map((row) => ({ country: String(row["country"] ?? ""), players: int(row["players"]), signups: int(row["signups"]), games: int(row["games"]), onlineNow: int(row["online_now"]) })) };
+    },
+    async winners(range, level) {
+      const [ranked, top, headline] = await Promise.all([
+        db.rpc("admin_rankings", { p_level: level, p_since: range.since, p_limit: 25 }),
+        db.rpc("admin_top_winners", { p_limit: 25 }),
+        db.rpc("admin_overview", { p_since: range.since }),
+      ]);
+      return { range, level, levels: headlineLevels(headline),
+        rows: rowsOf(ranked).map((row) => ({ rank: int(row["rank"]), playerId: String(row["player_id"]), username: String(row["username"]), country: nullableText(row["country"]), wins: int(row["wins"]), bestMoves: row["best_moves"] == null ? null : int(row["best_moves"]), games: int(row["games"]) })),
+        top: rowsOf(top).map((row) => ({ playerId: String(row["player_id"]), username: String(row["username"]), country: nullableText(row["country"]), hidden: row["hidden"] === true, wins: int(row["wins"]), games: int(row["games"]) })),
+      };
+    },
+    async resigned(range) {
+      const [headline, daily, players] = await Promise.all([
+        db.rpc("admin_overview", { p_since: range.since }),
+        db.rpc("admin_daily_levels", { p_from: range.from, p_to: range.to }),
+        db.rpc("admin_resigners", { p_since: range.since, p_limit: 25 }),
+      ]);
+      return { range, levels: headlineLevels(headline),
+        daily: rowsOf(daily).map((row) => ({ ...levelTotals(row), day: String(row["day"]).slice(0, 10) })),
+        rows: rowsOf(players).map((row) => ({ playerId: String(row["player_id"]), username: String(row["username"]), country: nullableText(row["country"]), resigned: int(row["resigned"]), abandoned: int(row["abandoned"]), games: int(row["games"]) })),
+      };
+    },
     async overview(range) {
       // Each query reads summary tables. All time changes headline totals;
       // daily charts remain bounded to the last 90 days and say so in the UI.

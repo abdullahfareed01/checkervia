@@ -1,9 +1,27 @@
 # Admin dashboard: owner runbook
 
-## Current integration status, 18 Nov 2026
-The dashboard is now included in the current game checkout, `Mentor's Project`, with its separate build under `dist/admin`. The slate theme, dotted fading charts, exact hover/touch/keyboard values, overview, Players and page exports are implemented. All 1983 tests in 102 files and both builds pass, with 54 latest browser states verified.
+## Current integration status, 19 Nov 2026
+The dashboard is included in the current game checkout, `Mentor's Project`, with its separate build under `dist/admin`. Overview, Players, Countries, Who is winning, Resigned games and Audit log are implemented, with the slate theme, dotted fading charts and exact hover/touch/keyboard values. All 2085 tests in 108 files and both builds pass; phase 2c browser verification passes 88 assertions across 24 layouts. Reports, Suspensions, Live and moderation actions remain phase 3. See `docs/04-production/dashboard-handoff.md` for the saved checkpoint and continuation order.
 
 For sample data, start the normal Vite server and open `/admin/?demo=app`. The Sample data banner makes the mode explicit; Use game data removes it and returns to the guarded login. Samples stay in `src/admin/dev`, never seed Supabase and are omitted from production. There is no persistent mock switch to clean up.
+
+Phase 2c adds Countries, Who is winning, Resigned games and the full Audit log.
+Countries separates current profiles and online devices from period registrations
+and games; flags are player choices. Rankings use the public leaderboard's
+visibility rules and verified wins, while the AI record uses reported results.
+The top 25 winners across all levels always cover all time and label hidden
+profiles. Resignations have per level totals and daily charts with missing days
+shown as zero; all time charts show the latest 90 days. The chart's level control
+does not change the top 25 resigner list, which covers every level in the chosen
+period. Abandoned games are always separate.
+
+The Audit log has search, exact action and player UUID filters, 25 entries per
+cursor page, reasons and expandable details. Displayed dates follow this device;
+details include exact UTC timestamps. It has no edit or delete operation. Sample
+mode survives section navigation and reload, and Use game data still removes it.
+Repeat the isolated browser review with `node scripts/check-admin.mjs 5190` while
+the local Vite preview is running. `&report=empty`, `&report=error`,
+`&report=slow` and `&report=race` exercise development states only.
 
 Production and deploy preview have the designated admin email and protected publishable Auth key configured. The owner created the confirmed dashboard Auth user and chose the password privately. The private allowlist contains only that account, public sign ups are disabled and email sign in is enabled. A one hour authenticator setup window was opened and audited. The owner still needs to scan the authenticator after the dashboard is deployed. Do not send the password or codes through chat.
 

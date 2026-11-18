@@ -6,6 +6,8 @@ import { replaceTransport } from "../api";
 import { ADMIN_API_PATH } from "../protocol";
 import { overviewRange } from "../analytics";
 import type { OverviewData, OverviewPeriod } from "../analytics";
+import type { CountriesData, ResignedData, WinnersData } from "../reports";
+import type { AuditQuery } from "../protocol";
 import type { AuditRow, PlayerRow, PlayerSort, PlayersQuery } from "../protocol";
 import { decodeCursor, encodeCursor } from "../protocol";
 import type { PlayerDetail } from "../players";
@@ -120,14 +122,58 @@ export function demoPlayerDetail(row: PlayerRow): PlayerDetail {
     reportsMade: [], adminHistory: [], rooms: false };
 }
 
+export function demoCountries(period: OverviewPeriod, empty = false): CountriesData {
+  const overview = demoOverview(period, empty);
+  if (empty) return { range: overview.range, rows: [] };
+  const countries = ["PK", "GB", ""];
+  const portion = (total: number, index: number) => index === 2 ? total - Math.floor(total * 0.45) - Math.floor(total * 0.35) : Math.floor(total * (index === 0 ? 0.45 : 0.35));
+  return { range: overview.range, rows: countries.map((country, index) => ({ country, players: 20,
+    signups: portion(overview.totals.newPlayers, index), games: portion(overview.totals.games, index), onlineNow: portion(overview.totals.onlineNow, index) })) };
+}
+export function demoWinners(period: OverviewPeriod, level: number, empty = false): WinnersData {
+  const overview = demoOverview(period, empty), totals = overview.totals.levels.find((row) => row.level === level);
+  const candidates = demoPlayers().filter((row) => !row.hidden).slice(0, 4);
+  return { range: overview.range, level, levels: overview.totals.levels,
+    rows: empty ? [] : candidates.map((row, i) => ({ rank: i + 1, playerId: row.id, username: row.username, country: row.country,
+      wins: Math.floor((totals?.wins ?? 0) * (4 - i) / 10), bestMoves: 20 + i * 3, games: Math.floor((totals?.games ?? 0) * (4 - i) / 10) })).filter((row) => row.wins > 0),
+    top: empty ? [] : demoPlayers().sort((a, b) => b.wins - a.wins).slice(0, 25).map((row) => ({ playerId: row.id, username: row.username, country: row.country, hidden: row.hidden, wins: row.wins, games: row.games })),
+  };
+}
+export function demoResigned(period: OverviewPeriod, empty = false): ResignedData {
+  const overview = demoOverview(period, empty);
+  return { range: overview.range, levels: overview.totals.levels,
+    daily: overview.daily.flatMap((row) => {
+      return [1, 2, 3, 4].map((level) => {
+        const games = Math.floor(row.games / 4) + (level <= row.games % 4 ? 1 : 0);
+        const wins = Math.floor(games * (0.75 - level * 0.12)), draws = Math.floor(games * 0.06), losses = games - wins - draws;
+        return { day: row.day, level, games, wins, losses, draws, resigned: Math.floor(losses * 0.18), abandoned: Math.floor(losses * 0.1) };
+      });
+    }),
+    rows: empty ? [] : demoPlayers().slice(0, 3).map((row, index) => ({ playerId: row.id, username: row.username, country: row.country,
+      resigned: Math.floor(overview.totals.resigned * (3 - index) / 6), abandoned: Math.floor(overview.totals.abandoned * (3 - index) / 6), games: Math.floor(overview.totals.games * (3 - index) / 6) })).filter((row) => row.resigned > 0),
+  };
+}
+export function demoAuditPage(query: AuditQuery, empty = false, now = new Date()) {
+  const base = activity();
+  const before = query.cursor ? Number(decodeCursor(query.cursor)?.[0]) : Infinity;
+  const rows = empty ? [] : Array.from({ length: 65 }, (_, i) => {
+    const row = base[i % base.length]!;
+    return { ...row, id: 65 - i, at: new Date(now.getTime() - i * 60_000).toISOString(), reason: i % 3 === 0 ? "Owner reviewed the requested change" : null };
+  }).filter((row) => row.id < before && (!query.action || row.action === query.action) && (!query.playerId || row.targetPlayer === query.playerId) &&
+    (!query.search || [row.action, row.adminEmail, row.targetLabel, row.reason].join(" ").toLowerCase().includes(query.search.toLowerCase())));
+  const shown = rows.slice(0, query.limit ?? 25);
+  return { rows: shown, next: rows.length > shown.length ? encodeCursor(shown.at(-1)!.id, "") : null };
+}
+
 export function startDemo(mode: string): void {
   let signedIn = mode === "app";
   let overviewAttempts = 0;
   const players = demoPlayers();
+  const auditNow = new Date();
   const session = () => ({ accessToken: "demo.token.value", expiresAt: Math.floor(Date.now() / 1000) + 3600, email: "owner.with.a.long.address@example.com" });
   replaceTransport(async (path, body) => {
     await new Promise((resolve) => setTimeout(resolve, 120));
-    const data = JSON.parse(body) as { action?: string; op?: string; params?: PlayersQuery & { period?: OverviewPeriod; id?: string } };
+    const data = JSON.parse(body) as { action?: string; op?: string; params?: PlayersQuery & AuditQuery & { period?: OverviewPeriod; id?: string } };
     if (path === ADMIN_API_PATH) {
       if (!signedIn) return json({ error: "Please sign in again.", code: "noSession" }, 401);
       if (data.op === "overview") {
@@ -147,6 +193,16 @@ export function startDemo(mode: string): void {
       if (data.op === "player") {
         const row = players.find((player) => player.id === data.params?.id);
         return row ? json(demoPlayerDetail(row)) : json({ error: "No player with this id.", code: "notFound" }, 404);
+      }
+      if (["countries", "winners", "resigned", "audit"].includes(data.op ?? "")) {
+        const state = new URLSearchParams(location.search).get("report");
+        if (state === "error") return json({ error: "Report could not be loaded. Try again.", code: "unavailable" }, 503);
+        if (state === "slow" || (state === "race" && data.params?.period === "7")) await new Promise((resolve) => setTimeout(resolve, 1000));
+        const period = data.params?.period ?? "30", empty = state === "empty";
+        if (data.op === "countries") return json(demoCountries(period, empty));
+        if (data.op === "winners") return json(demoWinners(period, data.params?.level ?? 1, empty));
+        if (data.op === "resigned") return json(demoResigned(period, empty));
+        return json(demoAuditPage(data.params ?? {}, empty, auditNow));
       }
       return json({ rows: activity(), next: null });
     }

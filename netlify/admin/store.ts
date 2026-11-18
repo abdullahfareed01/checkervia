@@ -49,6 +49,9 @@ export interface AuditFilter {
 }
 
 export interface AdminStore {
+  countries(range: import("../../src/admin/analytics").OverviewRange): Promise<import("../../src/admin/reports").CountriesData>;
+  winners(range: import("../../src/admin/analytics").OverviewRange, level: number): Promise<import("../../src/admin/reports").WinnersData>;
+  resigned(range: import("../../src/admin/analytics").OverviewRange): Promise<import("../../src/admin/reports").ResignedData>;
   overview(range: import("../../src/admin/analytics").OverviewRange): Promise<import("../../src/admin/analytics").OverviewData>;
   hitRateLimit(key: string, windowSeconds: number, limit: number): Promise<RateResult>;
   gate(userId: string, email: string): Promise<GateResult>;

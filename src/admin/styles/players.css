@@ -13,3 +13,6 @@
 .adm-records p { margin-top: 6px; }
 .adm-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 16px; }
 .adm-facts dd { max-width: 100%; }
+.adm-table-scroll { max-width: 100%; overflow-x: auto; }
+.adm-table-scroll:focus-visible { outline: 3px solid var(--adm-focus); outline-offset: 2px; }
+.adm-audit-details { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; }

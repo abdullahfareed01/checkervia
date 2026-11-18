@@ -14,6 +14,10 @@ here so the dashboard retains the current game, AI, marketplace and avatar work.
 - Overview with UTC periods, dotted fading charts and exact pointer, touch and
   keyboard values, plus accessible data tables.
 - Players with filters, sorting, cursor pages, audited details and page exports.
+- Countries, Who is winning and Resigned games reports with bounded UTC
+  periods, level controls, reported results and verified rankings kept distinct.
+- Full Audit log with search, exact action and player filters, cursor pages and
+  escaped entry details. Entries cannot be edited or deleted.
 - Development samples under `src/admin/dev`, excluded from production and never
   inserted into Supabase.
 - Efficient game visits and visible session heartbeats, with existing game
@@ -29,10 +33,9 @@ The sample banner's Use game data link returns to real authentication.
 
 ## Remaining work, in order
 
-1. Phase 2c: Countries, Who is winning, Resigned games and full Audit log.
-2. Phase 3: Reports, Suspensions, Live and guarded moderation actions with
+1. Phase 3: Reports, Suspensions, Live and guarded moderation actions with
    reasons and atomic audit entries. Traffic collection is already implemented.
-3. Release: approved Netlify draft upload, real authentication, private owner
+2. Release: approved Netlify draft upload, real authentication, private owner
    authenticator enrollment and acceptance checks before production publication.
 
 The confirmed dashboard account is `checkervia.games@gmail.com`. Never record
@@ -51,3 +54,10 @@ credentials and local browser artifacts are ignored and must stay out of Git.
 The checkpoint includes the combined game changes because the dashboard shares
 their entry points, server adapters and production build. No application upload
 or production deployment is part of saving this checkpoint.
+
+Foundation checkpoint: `fd5aecc`. Phase 2c is saved in the following analytics
+commit. Its full suite passes 2085 tests in 108 files; both production builds
+pass and local browser checks pass 88 assertions across 24 layout states.
+Repeat checks with `npm test -- --maxWorkers=2 --pool=threads`, `npm run build`
+and `node scripts/check-admin.mjs 5190`. Local evidence is under
+`artifacts/admin-phase2`; screenshots and logs stay ignored by Git.

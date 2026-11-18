@@ -8,6 +8,8 @@ import { signOut } from "../session";
 import { DataSourceBar } from "./DataSourceBar";
 import { Players } from "./Players";
 import { Overview } from "./Overview";
+import { Countries, Resigned, Winners } from "./AnalyticsReports";
+import { Audit } from "./Audit";
 import { pathOf, SECTIONS, sectionFromPath } from "./sections";
 import type { Section } from "./sections";
 
@@ -19,7 +21,7 @@ function useSection(): [Section, (section: Section) => void] {
     return () => removeEventListener("popstate", onPop);
   }, []);
   const go = useCallback((next: Section) => {
-    if (location.pathname !== pathOf(next)) history.pushState(null, "", pathOf(next));
+    if (location.pathname !== pathOf(next)) history.pushState(null, "", `${pathOf(next)}${location.search}`);
     setSection(next);
   }, []);
   return [section, go];
@@ -31,7 +33,7 @@ function NavList({ current, onGo }: { current: Section; onGo: (section: Section)
       {SECTIONS.map((section) => (
         <li key={section.id}>
           <a
-            href={pathOf(section)}
+            href={`${pathOf(section)}${location.search}`}
             className="adm-nav-link"
             aria-current={section.id === current.id ? "page" : undefined}
             onClick={(event) => {
@@ -118,6 +120,10 @@ export function Shell({ email }: { email: string }) {
   let content: ReactNode;
   if (section.id === "overview") content = <Overview email={email} onGo={open} />;
   else if (section.id === "players") content = <Players />;
+  else if (section.id === "countries") content = <Countries />;
+  else if (section.id === "winners") content = <Winners />;
+  else if (section.id === "resigned") content = <Resigned />;
+  else if (section.id === "audit") content = <Audit />;
   else content = <Empty section={section} />;
 
   return (

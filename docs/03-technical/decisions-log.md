@@ -2,6 +2,31 @@
 
 Format: decision, reason, consequence.
 
+## D108. Remaining analytics and full audit screens (19 Nov 2026)
+- Continue the owner's next dashboard phase after saving checkpoint `fd5aecc`.
+  Reuse migration 7's installed read functions with the existing same origin,
+  allowlist, TOTP and rate limit guard. No dependency or migration is added.
+- Countries reads all flag buckets, with current profiles and online devices
+  distinguished from selected period registrations and games. Flags are player
+  choices. Rankings and resignation lists are capped at 25 on the server.
+- Rankings follow the public leaderboard's visibility and verified win rules.
+  Reported games are a separate count, so no ratio of unlike counts is shown.
+  The top winners across all levels cover all time and include labelled hidden
+  profiles. The AI record reverses reported player wins and losses, retaining
+  draws for neither side.
+- Resignation headlines cover the selected period; daily level charts cover at
+  most 90 days and fill missing dates with zero. Level controls affect the chart
+  only. Abandonments never count as pressing Resign. Summary RPCs run in parallel
+  without downloading every player or raw game history.
+- The full append only Audit log reuses its existing filtered cursor operation.
+  It shows at most 25 entries, reasons, outcomes and escaped details; it offers no
+  mutation or bulk download. Filter changes hide stale data through useAdminRead.
+- Keep development samples in their excluded module. Preserve the removable
+  query flag across navigation and reload; hold sample audit timestamps stable
+  during a preview session. Browser checks use isolated local samples and make
+  no live writes. Production publication and private authenticator setup remain
+  separate release steps.
+
 ## D106 follow up. Visible live product previews (19 Nov 2026)
 - Owner requested automatic effects inside product cards, continued animation in the large preview and a correction to the circle near the Satin move trail label. The former decorative arc had an intentional transparent segment. Use a complete static base circle and reserve a separate layout row for each tag, including enlarged text.
 - Visible paid effect cards and the selected board preview reuse the actual cosmetic effect nodes in a calm CSS loop. Bundle thumbnails may preview their included effect. A native intersection observer and document visibility events stop previews outside the scroll viewport and in hidden tabs. No per frame React loop, extra particle allocation, timer or library is added.

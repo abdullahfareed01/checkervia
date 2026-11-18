@@ -1,8 +1,8 @@
 # Task Backlog
 
 ## Dashboard continuation and saved progress (19 Nov 2026)
-- [x] Save a Git checkpoint of the integrated dashboard and game, with `dashboard-handoff.md` as the continuation record. Both production builds pass; a fresh full suite is running before further completion claims.
-- [ ] Phase 2c: Countries, Who is winning, Resigned games and full Audit log. Continue in this checkout; live setup and deployment remain separate.
+- [x] Save the integrated dashboard and game in checkpoint `fd5aecc`, with `dashboard-handoff.md` as the continuation record. The checkpoint passed all 2047 tests and both production builds.
+- [x] D108, phase 2c: Countries, Who is winning, Resigned games and full Audit log. All 2085 tests in 108 files pass; both builds pass. Local browser review: 88 assertions across 24 layouts, including enlarged text, audit filters and cursor pages, sample navigation/reload, empty/error states and response races. No dependency, migration or deployment was added.
 - [ ] Phase 3: Reports, Suspensions, Live and moderation actions with mandatory reasons and atomic audit entries.
 
 ## Live shop previews (19 Nov 2026)
