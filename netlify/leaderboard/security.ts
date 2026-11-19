@@ -25,7 +25,7 @@ export async function sha256Hex(text: string): Promise<string> {
 }
 
 /** A keyed hash: `kind` keeps device and IP hashes apart even for the same text. */
-export async function saltedHash(salt: string, kind: "device" | "ip", value: string): Promise<string> {
+export async function saltedHash(salt: string, kind: "device" | "ip" | "email", value: string): Promise<string> {
   const key = await crypto.subtle.importKey("raw", encoder.encode(salt), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   return hex(await crypto.subtle.sign("HMAC", key, encoder.encode(`${kind}:${value}`)));
 }
