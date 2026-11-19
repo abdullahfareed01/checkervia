@@ -76,6 +76,8 @@ interface ProfileScreenProps {
   onClose: () => void;
   /** Before the first game: Save leads on to the board. */
   firstGame?: boolean;
+  /** What the first game is: against the AI, or online with a friend (D142). */
+  purpose?: "ai" | "online";
   onSaved?: (() => void) | undefined;
   onTerms: () => void;
 }
@@ -85,7 +87,7 @@ interface ProfileScreenProps {
 // anything extra (the rules (i) on the edit page), and Close.
 type Head = (title: string, options?: { back?: () => void; backLabel?: string; extra?: ReactNode }) => ReactNode;
 
-export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: ProfileScreenProps) {
+export function ProfileScreen({ onClose, firstGame = false, purpose = "ai", onSaved, onTerms }: ProfileScreenProps) {
   const { profile } = useLeaderboardProfile();
   // Chosen when the screen opens: a profile made here shows its saved state
   // first (the store changes before that), and only Done leads to editing.
@@ -139,6 +141,7 @@ export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: 
           <CreateProfile
             head={head}
             firstGame={firstGame}
+            purpose={purpose}
             onDone={() => (firstGame ? onSaved?.() : setCreating(false))}
             onBack={onClose}
             onTerms={onTerms}
@@ -374,12 +377,14 @@ function SaveLine({ state }: { state: SaveState }) {
 function CreateProfile({
   head,
   firstGame,
+  purpose,
   onDone,
   onBack,
   onTerms,
 }: {
   head: Head;
   firstGame: boolean;
+  purpose: "ai" | "online";
   onDone: () => void;
   onBack: () => void;
   onTerms: () => void;
@@ -400,7 +405,7 @@ function CreateProfile({
     return (
       <>
         {head("Create your profile")}
-        <Saved profile={profile} firstGame={firstGame} onDone={onDone} />
+        <Saved profile={profile} firstGame={firstGame} purpose={purpose} onDone={onDone} />
       </>
     );
   }
@@ -460,7 +465,11 @@ function CreateProfile({
     >
       {head("Create your profile")}
       <p className="pf-intro">
-        {firstGame ? "Before your first game against the AI, choose how you appear on the leaderboard. Your wins are then added automatically." : "Choose how you appear on the leaderboard."}
+        {!firstGame
+          ? "Choose how you appear on the leaderboard."
+          : purpose === "online"
+            ? "Before you play online, choose how you appear. Your friend sees your username, avatar and flag."
+            : "Before your first game against the AI, choose how you appear on the leaderboard. Your wins are then added automatically."}
       </p>
       <div className="pf-columns">
         <section className="pf-rows">
@@ -518,7 +527,7 @@ function DoneButton({ onDone }: { onDone: () => void }) {
   );
 }
 
-function Saved({ profile, firstGame, onDone }: { profile: Profile; firstGame: boolean; onDone: () => void }) {
+function Saved({ profile, firstGame, purpose = "ai", onDone }: { profile: Profile; firstGame: boolean; purpose?: "ai" | "online"; onDone: () => void }) {
   const doneRef = useRef<HTMLButtonElement>(null);
   useEffect(() => doneRef.current?.focus({ preventScroll: true }), []);
   return (
@@ -530,9 +539,13 @@ function Saved({ profile, firstGame, onDone }: { profile: Profile; firstGame: bo
         <Flag code={profile.country} decorative />
         <span className="lb-name">{profile.username}</span>
       </p>
-      <p className="pf-saved-text">Your profile is saved. Your wins against the AI are now added to the leaderboard automatically.</p>
+      <p className="pf-saved-text">
+        {purpose === "online" && firstGame
+          ? "Your profile is saved. Now make a room or join your friend's."
+          : "Your profile is saved. Your wins against the AI are now added to the leaderboard automatically."}
+      </p>
       <button ref={doneRef} type="button" className="lb-button lb-button-gold" onClick={onDone}>
-        {firstGame ? "Continue to the game" : "Done"}
+        {firstGame ? (purpose === "online" ? "Continue" : "Continue to the game") : "Done"}
       </button>
     </section>
   );

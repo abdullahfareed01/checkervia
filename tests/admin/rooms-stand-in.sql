@@ -1,4 +1,4 @@
--- A stand-in for migration 6's room tables (online rooms, D90 to D95), copied
+-- A stand-in for migration 6's room tables (online rooms, D140 to D145), copied
 -- from the online rooms work as it was on 16 Nov 2026, before it was merged.
 -- tests/admin/pg.ts uses docs/07-deployment/leaderboard-migration-6.sql
 -- instead as soon as that file exists in this branch.

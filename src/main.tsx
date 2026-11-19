@@ -18,6 +18,7 @@ import "./ui/leaderboard.css";
 import "./ui/focus.css";
 import "./ui/marketplace.css";
 import "./ui/cosmetics.css";
+import "./ui/online.css";
 import "./ui/touch.css";
 
 async function start() {
@@ -60,6 +61,13 @@ async function start() {
       createRoot(document.getElementById("root")!).render(<DevResultPreview />);
       return;
     }
+  }
+
+  // Development only: ?online=lobby|ready|game|disconnected|result runs the
+  // room functions in the browser with a scripted friend (devOnline.ts).
+  if (import.meta.env.DEV) {
+    const online = new URLSearchParams(window.location.search).get("online");
+    if (online) await (await import("./ui/online/devOnline")).startDevOnline(online);
   }
 
   createRoot(document.getElementById("root")!).render(

@@ -555,3 +555,16 @@
 - The final short preview sample at four times CPU throttling recorded 116 frames, a 33.4 ms 95th percentile gap and a 99.9 ms maximum gap. This is an observation on this computer, not a guarantee for physical phones. Results, timing and screenshots are under `artifacts/avatar-review`; full logs are `artifacts/avatar-morph-tests.log`, `artifacts/avatar-morph-build.log` and `artifacts/avatar-morph-browser.log`.
 - The interactive review page remains `/tests/fixtures/robot-face.html` on the local preview server. Changes are local; no deployment, database change or account operation was performed for this avatar correction.
 - Review follow up: added the missing Sleeping (Zzz) button to the preview, using the existing sleepy mood and floating letters. All 35 focused avatar tests pass. No in game timing or animation behavior changed.
+
+## 17 Nov 2026: Online rooms with a friend, phase 1 (D140 to D143, D145)
+- 2 Players now offers Same screen or Online with a friend. Online: a profile first, then Create a room (a 6 character code, Copy, Share with a link) or Join with a code; a ready screen with both players, their colours and 3, 2, 1; then the real game screen with the opponent's avatar, flag, username and presence, Resign and Leave, no undo and no AI. Disconnects get a 60 second countdown and a forfeit; a reload goes straight back into the room. The result panel names the winner and offers a rematch with the colours swapped.
+- The server decides everything: seven new functions on a new store, every move replayed with the rules engine, colours, turns, duplicates and replays checked. Polling through the functions, not Supabase Realtime (D141, with the free plan limits).
+- Migration 6 (not run). Online games never touch the AI's record or the leaderboard.
+- Tested: the room functions, migration 6 in PGlite, the Supabase adapter, the browser's sync and words, the screens; two real browser windows (headless Edge, one normal and one private context) on `npm run dev:online`: create, join by link, ready, moves both ways, reload mid game, disconnect and return, forfeit, resign, rematch.
+- Needs the owner: run `leaderboard-migration-6.sql` in Supabase before this goes live.
+
+## 20 Nov 2026: Online rooms merged into feature/leaderboard (D146)
+- Merged `feature/online-rooms` into `feature/leaderboard` in a separate worktree; the uncommitted admin dashboard work in the main folder was not touched or included.
+- Ten conflicts resolved (Terms dialog and notes, decision and progress logs, deployment guide, `package.json`, `main.tsx`, `Root.tsx`, `ResultDialog.tsx`, `vite.config.ts`), keeping both sides. Online decisions renumbered D140 to D145.
+- Online games now end in a draw by the D89 rules on the server and on screen; new room tests play a whole drawn game and check the replay refuses a move after it.
+- Checks: typecheck, the whole test suite and both production builds pass. Not done: a browser check of the online screens, and migration 6 (online) is still not run in Supabase.

@@ -48,7 +48,7 @@ interface MenuCardProps {
 
 // One menu card, as in the mockup: the icon in a dark well, a thin gold
 // line, the label and its hint, then a chevron (D66).
-function MenuCard({ icon, label, hint, onClick, className = "", badge }: MenuCardProps) {
+export function MenuCard({ icon, label, hint, onClick, className = "", badge }: MenuCardProps) {
   return (
     <button type="button" className={`menu-card ${className}`} onClick={onClick}>
       <span className="menu-icon" aria-hidden="true">
@@ -124,7 +124,7 @@ export function Home({ aiStatus, onPlay, onHowToPlay, onLearn, onRecheck, onTerm
             )}
           </div>
 
-          <MenuCard icon={<TwoPlayersIcon />} label="2 Players" hint="Two people take turns on one screen." onClick={() => onPlay("two-player")} />
+          <MenuCard icon={<TwoPlayersIcon />} label="2 Players" hint="On one screen, or online with a friend." onClick={() => onPlay("two-player")} />
 
           <MenuCard className="menu-card-learn" icon={<GradCapIcon />} label="Learn" hint="Watch two robots play out every rule." onClick={onLearn} />
 

@@ -6,6 +6,8 @@ import { CrownIcon, HumanIcon, InfoIcon } from "./icons";
 import { RobotFace } from "./RobotFace";
 import { avatarUrl } from "./leaderboard/Avatar";
 import { isAvatarId } from "../leaderboard/avatars";
+import type { Presence } from "../online/protocol";
+import { countryName, Flag } from "./leaderboard/Flag";
 
 // At most this many captured pieces are drawn in the stack; the number says
 // the rest.
@@ -28,7 +30,13 @@ interface PlayerCardProps {
   winner: boolean;
   placement: "top" | "bottom";
   action?: ReactNode; // focus mode's small Resign, after the turn (D88)
+  // Online (D142): the player's flag before their name (null: no flag), and
+  // whether they are here, with a dot on their picture.
+  flag?: string | null | undefined;
+  presence?: Presence | undefined;
 }
+
+const PRESENCE_TEXT: Record<Presence, string> = { online: "Online", away: "Away", offline: "Offline" };
 
 function sideName(player: Player): string {
   return player === "black" ? "Black" : "White";
@@ -78,6 +86,8 @@ export const PlayerCard = memo(function PlayerCard({
   winner,
   placement,
   action,
+  flag,
+  presence,
 }: PlayerCardProps) {
   const state = stateOf({ winner, thinking, toMove });
   const text = stateText(state, name);
@@ -94,7 +104,10 @@ export const PlayerCard = memo(function PlayerCard({
     .join(" ");
 
   return (
-    <section className={classes} aria-label={`${name}, ${sideName(player)}: ${text}. ${pieces} pieces left, took ${captured}.`}>
+    <section
+      className={classes}
+      aria-label={`${name}${flag ? `, ${countryName(flag)}` : ""}, ${sideName(player)}${presence ? `, ${PRESENCE_TEXT[presence].toLowerCase()}` : ""}: ${text}. ${pieces} pieces left, took ${captured}.`}
+    >
       <div className={`avatar${!robot && isAvatarId(portrait) ? " avatar-portrait" : ""}`}>
         {robot ? (
           <RobotFace mood={mood ?? (thinking ? "thinking" : "neutral")} />
@@ -104,9 +117,11 @@ export const PlayerCard = memo(function PlayerCard({
           <HumanIcon />
         )}
       </div>
+      {presence && <span className={`presence-dot presence-${presence}`} title={PRESENCE_TEXT[presence]} aria-hidden="true" />}
 
       <div className="card-text">
         <p className="card-name">
+          {flag !== undefined && <Flag code={flag} decorative />}
           <span className="card-name-text">{name}</span>
           {robot && <span className="badge">BOT</span>}
           {chips && (

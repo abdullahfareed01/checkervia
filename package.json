@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:online": "vite --mode online --port 5190 --strictPort --host",
     "build": "tsc --noEmit && vite build && vite build --config vite.admin.config.ts",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
