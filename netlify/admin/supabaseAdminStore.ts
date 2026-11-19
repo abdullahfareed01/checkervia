@@ -8,6 +8,8 @@ import type { AuditRow, PlayerRow } from "../../src/admin/protocol";
 import { withKeyHeaders } from "../leaderboard/supabaseStore";
 import type { DailyTotals, LevelTotals, OverviewTotals } from "../../src/admin/analytics";
 import type { AdminStore } from "./store";
+import type { LiveData, LivePlayer, ReportGroup, ReportRow } from "../../src/admin/moderation";
+import { REPORT_STATUSES } from "../../src/admin/moderation";
 
 export class AdminStoreError extends Error {
   constructor(readonly code: string) {
@@ -74,6 +76,45 @@ export function toAuditRow(row: Record<string, unknown>): AuditRow {
 }
 
 const isoArg = (date: Date | null) => date?.toISOString() ?? null;
+
+export function toReportRow(row: Record<string, unknown>): ReportRow {
+  const status = REPORT_STATUSES.find((value) => value === row["status"]) ?? "open";
+  return {
+    source: row["source"] === "room" ? "room" : "ai", key: String(row["key"]),
+    reportedId: String(row["reported_id"]), reported: String(row["reported"]),
+    reporterId: nullableText(row["reporter_id"]), reporter: String(row["reporter"] ?? "AI"),
+    reason: String(row["reason"]), detail: nullableText(row["detail"]), game: nullableText(row["game"]),
+    level: row["level"] == null ? null : int(row["level"]), createdAt: iso(row["created_at"]), status, reviewNote: nullableText(row["review_note"]),
+  };
+}
+
+export function toReportGroup(row: Record<string, unknown>): ReportGroup {
+  return {
+    playerId: String(row["player_id"]), username: String(row["username"]), country: nullableText(row["country"]),
+    reports: int(row["reports"]), reporters: int(row["reporters"]), open: int(row["open"]), lastAt: iso(row["last_at"]),
+    suspendedUntil: isoOrNull(row["suspended_until"]), hidden: row["hidden"] === true,
+  };
+}
+
+const counts = (value: unknown): Record<string, number> =>
+  Object.fromEntries(Object.entries((value ?? {}) as Record<string, unknown>).map(([key, n]) => [key, int(n)]));
+const livePlayer = (value: unknown): LivePlayer => {
+  const row = (value ?? {}) as Record<string, unknown>;
+  return { id: String(row["id"]), username: String(row["username"]), country: nullableText(row["country"]) };
+};
+/** admin_live's JSON: counts only, never the board of a game in progress. */
+export function toLiveData(raw: Record<string, unknown> | null): LiveData {
+  if (!raw) throw new AdminStoreError("noRow");
+  return {
+    online: int(raw["online"]), modes: counts(raw["modes"]), levels: counts(raw["levels"]),
+    countries: ((raw["countries"] ?? []) as Record<string, unknown>[]).map((row) => ({ country: String(row["country"] ?? ""), n: int(row["n"]), ai: int(row["ai"]), two: int(row["two"]), online: int(row["online"]) })),
+    roomGames: ((raw["roomGames"] ?? []) as Record<string, unknown>[]).map((row) => ({
+      id: String(row["id"]), number: int(row["number"]), startedAt: iso(row["started_at"]), moveCount: int(row["move_count"]),
+      black: livePlayer(row["black"]), white: livePlayer(row["white"]),
+    })),
+    rooms: raw["rooms"] === true,
+  };
+}
 
 export function createSupabaseAdminStore(url: string, serviceRoleKey: string, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): AdminStore {
   const key = serviceRoleKey.trim();
@@ -223,6 +264,54 @@ export function createSupabaseAdminStore(url: string, serviceRoleKey: string, fe
         }),
       ) as Record<string, unknown>[] | null;
       return (rows ?? []).map(toAuditRow);
+    },
+
+    async reports(filter) {
+      const rows = rowsOf(await db.rpc("admin_reports", {
+        p_status: filter.status, p_source: filter.source, p_player: filter.playerId,
+        p_before: filter.before?.at ?? null, p_before_key: filter.before?.key ?? null, p_limit: filter.limit,
+      }));
+      return rows.map(toReportRow);
+    },
+
+    async reportGroups(status, limit) {
+      return rowsOf(await db.rpc("admin_report_groups", { p_status: status, p_limit: limit })).map(toReportGroup);
+    },
+
+    async live() {
+      return toLiveData(check(await db.rpc("admin_live")) as Record<string, unknown> | null);
+    },
+
+    // Every action is one migration 7 function: the change and its audit row
+    // (with the reason) commit together, or neither does.
+    async setReportStatus(c, source, reportKey, status) {
+      return check(await db.rpc("admin_set_report_status", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_source: source, p_key: reportKey, p_status: status, p_note: c.reason })) === true;
+    },
+    async suspend(c, playerId, until, permanent, action) {
+      const end = check(await db.rpc("admin_suspend", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_player: playerId, p_until: isoArg(until), p_permanent: permanent, p_action: action, p_reason: c.reason }));
+      return isoOrNull(end);
+    },
+    async unsuspend(c, playerId) {
+      return check(await db.rpc("admin_unsuspend", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_player: playerId, p_reason: c.reason })) === true;
+    },
+    async deviceBan(c, playerId, ban) {
+      return check(await db.rpc("admin_device_ban", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_player: playerId, p_ban: ban, p_reason: c.reason })) === true;
+    },
+    async hidePlayer(c, playerId, hidden) {
+      return check(await db.rpc("admin_hide_player", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_player: playerId, p_hidden: hidden, p_reason: c.reason })) === true;
+    },
+    async hideWin(c, winId, hidden) {
+      return check(await db.rpc("admin_hide_win", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_win: winId, p_hidden: hidden, p_reason: c.reason })) === true;
+    },
+    async rename(c, playerId, username, usernameKey) {
+      const answer = check(await db.rpc("admin_force_rename", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_player: playerId, p_username: username, p_username_key: usernameKey, p_reason: c.reason }));
+      return answer === "renamed" || answer === "taken" ? answer : "notFound";
+    },
+    async resetProfile(c, playerId, field) {
+      return check(await db.rpc("admin_reset_profile", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_player: playerId, p_field: field, p_reason: c.reason })) === true;
+    },
+    async deletePlayer(c, playerId) {
+      return check(await db.rpc("admin_delete_player", { p_admin: c.adminId, p_ip_hash: c.ipHash, p_player: playerId, p_reason: c.reason })) === true;
     },
   };
 }

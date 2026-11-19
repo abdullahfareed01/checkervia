@@ -3,7 +3,12 @@
 ## Dashboard continuation and saved progress (19 Nov 2026)
 - [x] Save the integrated dashboard and game in checkpoint `fd5aecc`, with `dashboard-handoff.md` as the continuation record. The checkpoint passed all 2047 tests and both production builds.
 - [x] D108, phase 2c: Countries, Who is winning, Resigned games and full Audit log. All 2085 tests in 108 files pass; both builds pass. Local browser review: 88 assertions across 24 layouts, including enlarged text, audit filters and cursor pages, sample navigation/reload, empty/error states and response races. No dependency, migration or deployment was added.
-- [ ] Phase 3: Reports, Suspensions, Live and moderation actions with mandatory reasons and atomic audit entries.
+- [x] D109: smooth edge to edge charts drawn from the left (owner screenshot), a value and day pill, and a compact layout with 44px tap targets kept.
+- [x] D110, phase 3: Reports, Suspensions, Live and moderation actions with mandatory reasons and atomic audit entries. 2145 tests in 109 files, strict TypeScript and both builds pass.
+- [x] Browser check `node scripts/check-admin.mjs <port>`: 250 checks across 54 layout states pass, including chart edges, the pill, suspend, delete guard, dismiss and refusal flows.
+- [ ] Wire replays of finished or reported games (`admin_replay`, already installed) with a read only board view.
+- [ ] Owner review of phase 3 before release (planned stop).
+- [ ] Future, owner idea: send rewards from the dashboard to players with the most wins or loyalty perks. Needs, in order: server verified cosmetic ownership (the cosmetics production item below), a reward ledger and one audited `admin_grant_reward` function (a new migration, owner approval first), a notice the player sees in the game, and eligibility lists (top winners exist in Who is winning; loyalty can use days played from `daily_active`, kept about 400 days). Entry points: a Rewards section, and Send reward beside top winners and in player details.
 
 ## Live shop previews (19 Nov 2026)
 - [x] D106 follow up: effects animate automatically in visible product cards and the large preview, with Pause, Resume and visibility controls. Tags have their own row above complete circles. All 2046 tests in 107 files, strict TypeScript, both production builds, 24 layout states and 109 cosmetic browser assertions pass, including the phone screenshot regression at 200 percent text. No dependency or deployment was added.

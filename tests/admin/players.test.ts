@@ -5,7 +5,7 @@ import { handleAdminApi } from "../../netlify/admin/api";
 import { csvCell, playersCsv, statusLabels } from "../../src/admin/players";
 import type { PlayerRow } from "../../src/admin/protocol";
 import { encodeCursor } from "../../src/admin/protocol";
-import { PlayerCards, Players, playerQuery } from "../../src/admin/shell/Players";
+import { PlayerTable, Players, playerQuery } from "../../src/admin/shell/Players";
 import { PlayerDetailContent } from "../../src/admin/shell/PlayerDetail";
 import { demoPlayerDetail } from "../../src/admin/dev/demo";
 import { ADMIN_ID, NOW, adminToken, bearer, deps, fakeStore, request } from "./fakes";
@@ -96,7 +96,7 @@ describe("player screen", () => {
     expect(html).not.toContain('class="adm-player-name"');
   });
   it("keeps verified wins, reported games, draws, resignations, abandoned games and unique reporters distinct", () => {
-    const html = renderToStaticMarkup(createElement(PlayerCards, { rows: [row], now: NOW, onOpen: () => {} }));
+    const html = renderToStaticMarkup(createElement(PlayerTable, { rows: [row], now: NOW, onOpen: () => {} }));
     for (const text of ["View player Player_Two", "Pakistan", "Verified wins", "Draws", "Resigned", "Abandoned", "Unique reporters", "Strongest 4"]) expect(html).toContain(text);
   });
   it("shows read-only profile details, privacy markers and bounded history without moderation controls", () => {

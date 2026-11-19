@@ -1,0 +1,57 @@
+/* D109: smooth, solid area charts that span the panel edge to edge and draw
+   in from the left; a small value and date pill over a dotted crosshair. */
+.adm-chart { gap: 8px; padding: 12px 14px 8px; }
+.adm-chart-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; }
+.adm-chart-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; padding: 0; list-style: none; color: var(--adm-dim); font-size: 0.75rem; }
+.adm-chart-legend li { display: flex; align-items: center; gap: 6px; }
+.adm-chart-legend li span { color: currentColor; }
+.adm-chart-swatch { width: 14px; border-top: 2px solid currentColor; }
+.adm-series-1 .adm-chart-swatch { border-top-style: dashed; }
+.adm-series-2 .adm-chart-swatch { border-top-style: dotted; }
+.adm-series-0 { color: #6ce5ca; }
+.adm-series-1 { color: #84b4ff; }
+.adm-series-2 { color: #e7c27f; }
+
+.adm-chart-plot { position: relative; min-width: 0; margin: 0 -14px; }
+.adm-chart-max { position: absolute; top: 0; left: 14px; color: var(--adm-dim); font-size: 0.75rem; line-height: 1; pointer-events: none; }
+.adm-chart-svg { display: block; width: 100%; height: 132px; overflow: visible; cursor: crosshair; touch-action: pan-y; }
+.adm-chart-svg:focus-visible { outline: 2px solid var(--adm-focus); outline-offset: 2px; border-radius: 4px; }
+.adm-chart-grid { fill: none; stroke: #26364d; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.adm-chart-area { stroke: none; }
+.adm-chart-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.adm-series-1 .adm-chart-line { stroke-width: 1.75; stroke-dasharray: 6 4; }
+.adm-series-2 .adm-chart-line { stroke-width: 1.75; stroke-dasharray: 2 4; }
+/* The hover dot: a zero length path with a round cap stays a circle even
+   though the plot stretches (preserveAspectRatio none). */
+.adm-chart-point { fill: none; stroke: currentColor; stroke-width: 8; stroke-linecap: round; vector-effect: non-scaling-stroke; pointer-events: none; }
+.adm-chart-crosshair { fill: none; stroke: #8fa3bd; stroke-dasharray: 2 3; stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
+
+.adm-chart-reveal { animation: adm-chart-draw 0.9s cubic-bezier(0.33, 1, 0.68, 1) both; }
+@keyframes adm-chart-draw {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+.adm-chart-tooltip {
+  position: absolute; z-index: 2; top: -6px; left: 0;
+  display: flex; align-items: baseline; gap: 4px 10px; flex-wrap: wrap; max-width: calc(100% - 8px);
+  padding: 5px 10px; border: 1px solid #33445d; border-radius: 8px; background: #0b1322f2;
+  box-shadow: 0 6px 16px #0006; color: var(--adm-soft); font-size: 0.8rem; white-space: nowrap; pointer-events: none;
+}
+.adm-tip-value { display: inline-flex; align-items: center; gap: 5px; }
+.adm-tip-value strong { color: var(--adm-cream); font-size: 0.9rem; }
+.adm-tip-dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.adm-tip-date { color: var(--adm-dim); }
+
+.adm-chart-axis { display: flex; justify-content: space-between; gap: 8px; color: var(--adm-dim); font-size: 0.75rem; font-variant-numeric: tabular-nums; }
+.adm-chart-data { min-width: 0; }
+.adm-chart-data summary { display: inline-flex; align-items: center; min-height: 44px; color: var(--adm-gold); cursor: pointer; font-size: 0.8rem; list-style: none; }
+.adm-chart-data summary::-webkit-details-marker { display: none; }
+.adm-chart-data summary::before { content: "+"; width: 1em; }
+.adm-chart-data[open] summary::before { content: "\2212"; }
+.adm-chart-data summary:hover, .adm-chart-data summary:active { color: var(--adm-cream); }
+.adm-chart-data summary:focus-visible { outline: 3px solid var(--adm-focus); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .adm-chart-reveal { animation: none; }
+}

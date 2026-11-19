@@ -1,28 +1,39 @@
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { Chart, chartArea, chartPath, nearestChartIndex } from "../../src/admin/shell/Chart";
+import { Chart, chartArea, chartPath, dayLabel, nearestChartIndex } from "../../src/admin/shell/Chart";
 import { demoOverview, demoPlayers } from "../../src/admin/dev/demo";
 import { DataSourceBar } from "../../src/admin/shell/DataSourceBar";
 
 describe("interactive chart geometry", () => {
   it("selects the nearest date accurately across the plot and clamps edges", () => {
-    expect(nearestChartIndex(36, 7)).toBe(0); expect(nearestChartIndex(464, 7)).toBe(6);
+    expect(nearestChartIndex(0, 7)).toBe(0); expect(nearestChartIndex(500, 7)).toBe(6);
     expect(nearestChartIndex(250, 7)).toBe(3); expect(nearestChartIndex(-100, 7)).toBe(0);
     expect(nearestChartIndex(700, 7)).toBe(6); expect(nearestChartIndex(250, 1)).toBe(0);
     expect(nearestChartIndex(250, 0)).toBeNull(); expect(nearestChartIndex(NaN, 7)).toBeNull();
   });
   it("closes a faded area on the baseline without inventing extra data", () => {
     expect(chartArea([], 0)).toBe("");
-    expect(chartArea([0, 10], 10)).toBe("M36.0,146.0 L464.0,18.0 L464.0,146 L36.0,146 Z");
+    expect(chartArea([0, 10], 10)).toBe("M0.0,152.0 C166.7,104.0 333.3,56.0 500.0,8.0 L500.0,160 L0.0,160 Z");
     expect(chartPath([NaN, Infinity, -2], Infinity)).not.toMatch(/NaN|Infinity/);
+  });
+  it("runs edge to edge as a smooth curve that never overshoots the data (D109)", () => {
+    const path = chartPath([0, 10, 0, 4, 4, 9], 10);
+    expect(path.startsWith("M0.0,")).toBe(true); expect(path.endsWith("500.0,22.4")).toBe(true);
+    const ys = [...path.matchAll(/[\d.]+,([\d.]+)/g)].map((match) => Number(match[1]));
+    expect(Math.min(...ys)).toBeGreaterThanOrEqual(8); expect(Math.max(...ys)).toBeLessThanOrEqual(152);
+    // A flat stretch stays flat: both controls between equal points keep their height.
+    expect(path).toContain("C333.3,94.4 366.7,94.4 400.0,94.4");
+  });
+  it("names days for the pill and axis and leaves other labels alone", () => {
+    expect(dayLabel("2026-11-09")).toBe("Mon 9 Nov"); expect(dayLabel("Week 3")).toBe("Week 3");
   });
   it("provides isolated gradients, keyboard instructions and tables without inline styles", () => {
     const props = { title: "Games", labels: ["2026-11-17", "2026-11-18"], series: [{ label: "Wins", values: [2, 4] }] };
     const html = renderToStaticMarkup(createElement("div", null, createElement(Chart, props), createElement(Chart, props)));
     const ids = [...html.matchAll(/linearGradient id="([^"]+)"/g)].map((match) => match[1]);
     expect(ids).toHaveLength(2); expect(new Set(ids).size).toBe(2);
-    expect(html).toContain('stop-opacity="0.25"'); expect(html).toContain('stop-opacity="0"');
+    expect(html).toContain('stop-opacity="0.28"'); expect(html).toContain('stop-opacity="0"');
     expect(html).toContain('aria-roledescription="interactive chart"'); expect(html).toContain('tabindex="0"');
     expect(html).toContain("arrow keys"); expect(html).toContain("Show data"); expect(html).not.toContain("style=");
   });

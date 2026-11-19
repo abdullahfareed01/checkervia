@@ -8,8 +8,10 @@ import "./styles/base.css";
 import "./styles/auth.css";
 import "./styles/shell.css";
 import "./styles/overview.css";
+import "./styles/chart.css";
 import "./styles/players.css";
 import "./styles/refinement.css";
+import "./styles/lists.css";
 
 async function startAdmin() {
   // Development only: ?demo=signin|enroll|verify|app answers the admin

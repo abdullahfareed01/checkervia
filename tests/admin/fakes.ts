@@ -163,6 +163,18 @@ export function fakeStore(overrides: Partial<AdminStore> = {}): AdminStore & { s
     resigned: async (range) => ({ range, levels: [], daily: [], rows: [] }),
     playerDetail: async () => null,
     audit: async () => [],
+    reports: async () => [],
+    reportGroups: async () => [],
+    live: async () => ({ online: 0, modes: {}, levels: {}, countries: [], roomGames: [], rooms: false }),
+    setReportStatus: async () => true,
+    suspend: async (_c, _id, until) => until?.toISOString() ?? "9999-12-31T00:00:00.000Z",
+    unsuspend: async () => true,
+    deviceBan: async () => true,
+    hidePlayer: async () => true,
+    hideWin: async () => true,
+    rename: async () => "renamed",
+    resetProfile: async () => true,
+    deletePlayer: async () => true,
     ...overrides,
   };
 }

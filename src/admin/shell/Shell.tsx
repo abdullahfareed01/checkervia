@@ -4,12 +4,16 @@
 // browser's back button and reloads work.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { signOut } from "../session";
+import { signOut, useSession } from "../session";
+import { dateTime } from "./format";
 import { DataSourceBar } from "./DataSourceBar";
 import { Players } from "./Players";
 import { Overview } from "./Overview";
 import { Countries, Resigned, Winners } from "./AnalyticsReports";
 import { Audit } from "./Audit";
+import { Live } from "./Live";
+import { Reports } from "./Reports";
+import { Suspensions } from "./Suspensions";
 import { pathOf, SECTIONS, sectionFromPath } from "./sections";
 import type { Section } from "./sections";
 
@@ -50,11 +54,17 @@ function NavList({ current, onGo }: { current: Section; onGo: (section: Section)
 }
 
 function Account({ email }: { email: string }) {
+  const session = useSession();
   return (
     <div className="adm-account">
       <span className="adm-account-email" title={email}>
         {email}
       </span>
+      {session.status === "signedIn" ? (
+        <span className="adm-account-renews" title="You are signed out after 30 minutes without use, and after 12 hours in any case.">
+          Authenticator verified. Access renews {dateTime(new Date(session.expiresAt * 1000).toISOString())}
+        </span>
+      ) : null}
       <button type="button" className="adm-button adm-button-quiet" onClick={() => void signOut("You signed out.")}>
         Sign out
       </button>
@@ -98,16 +108,6 @@ function MenuSheet({ current, email, onGo, onClose }: { current: Section; email:
   );
 }
 
-function Empty({ section }: { section: Section }) {
-  return (
-    <section className="adm-panel adm-empty">
-      <h2 className="adm-panel-title">Not built yet</h2>
-      <p>{section.about}</p>
-      <p className="adm-dim">This section arrives in the next phase of the dashboard.</p>
-    </section>
-  );
-}
-
 export function Shell({ email }: { email: string }) {
   const [section, go] = useSection();
   const [menu, setMenu] = useState(false);
@@ -118,13 +118,15 @@ export function Shell({ email }: { email: string }) {
     main.current?.focus();
   };
   let content: ReactNode;
-  if (section.id === "overview") content = <Overview email={email} onGo={open} />;
+  if (section.id === "overview") content = <Overview />;
   else if (section.id === "players") content = <Players />;
   else if (section.id === "countries") content = <Countries />;
   else if (section.id === "winners") content = <Winners />;
   else if (section.id === "resigned") content = <Resigned />;
-  else if (section.id === "audit") content = <Audit />;
-  else content = <Empty section={section} />;
+  else if (section.id === "reports") content = <Reports />;
+  else if (section.id === "suspensions") content = <Suspensions />;
+  else if (section.id === "live") content = <Live />;
+  else content = <Audit />;
 
   return (
     <div className="adm-app">

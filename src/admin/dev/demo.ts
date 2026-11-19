@@ -11,6 +11,7 @@ import type { AuditQuery } from "../protocol";
 import type { AuditRow, PlayerRow, PlayerSort, PlayersQuery } from "../protocol";
 import { decodeCursor, encodeCursor } from "../protocol";
 import type { PlayerDetail } from "../players";
+import type { LiveData, ReportGroup, ReportRow, ReportStatus } from "../moderation";
 import { statusLabels } from "../players";
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -165,11 +166,57 @@ export function demoAuditPage(query: AuditQuery, empty = false, now = new Date()
   return { rows: shown, next: rows.length > shown.length ? encodeCursor(shown.at(-1)!.id, "") : null };
 }
 
+// ---------- Phase 3 samples (D110): reports, live play, actions ----------
+
+const ROOM_REASONS = ["Rude chat", "Stalling on purpose", "Offensive username", "Left the game"] as const;
+export function demoReports(players: readonly PlayerRow[], now = new Date()): ReportRow[] {
+  const statuses: readonly ReportStatus[] = ["open", "open", "open", "reviewed", "dismissed", "actioned"];
+  return Array.from({ length: 36 }, (_, i) => {
+    const reported = players[i % 12]!, reporter = players[(i * 7 + 3) % players.length]!;
+    const ai = i % 3 !== 1, game = `66666666-6666-4666-8666-${String(i + 1).padStart(12, "0")}`;
+    const status = statuses[i % statuses.length]!;
+    return { source: ai ? "ai" : "room", key: ai ? `${reported.id}:${game}` : `88888888-8888-4888-8888-${String(i + 1).padStart(12, "0")}`,
+      reportedId: reported.id, reported: reported.username, reporterId: ai ? null : reporter.id, reporter: ai ? "AI" : reporter.username,
+      reason: ai ? "abandoned" : ROOM_REASONS[i % ROOM_REASONS.length]!, detail: ai ? (i % 2 ? "middle" : "end") : null,
+      game: ai ? game : `ROOM${i}`, level: ai ? (i % 4) + 1 : null, createdAt: new Date(now.getTime() - i * 3_600_000 * 5).toISOString(),
+      status, reviewNote: status === "open" ? null : "Checked the game history" };
+  });
+}
+export function demoReportGroups(reports: readonly ReportRow[], players: readonly PlayerRow[], status?: ReportStatus): ReportGroup[] {
+  const byPlayer = new Map<string, ReportRow[]>();
+  for (const row of reports) byPlayer.set(row.reportedId, [...(byPlayer.get(row.reportedId) ?? []), row]);
+  return [...byPlayer].filter(([, rows]) => !status || rows.some((row) => row.status === status)).flatMap(([id, rows]) => {
+    const player = players.find((row) => row.id === id);
+    return player ? [{ playerId: id, username: player.username, country: player.country, reports: rows.length,
+      reporters: new Set(rows.map((row) => row.reporterId ?? "ai")).size, open: rows.filter((row) => row.status === "open").length,
+      lastAt: rows.map((row) => row.createdAt).sort().at(-1)!, suspendedUntil: player.suspendedUntil, hidden: player.hidden }] : [];
+  }).sort((a, b) => b.open - a.open || b.reporters - a.reporters || b.reports - a.reports || b.lastAt.localeCompare(a.lastAt));
+}
+export function demoReportPage(reports: readonly ReportRow[], query: { status?: unknown; source?: unknown; playerId?: unknown; cursor?: unknown; limit?: unknown }) {
+  const rows = reports.filter((row) => (!query.status || row.status === query.status) && (!query.source || row.source === query.source) && (!query.playerId || row.reportedId === query.playerId));
+  const after = typeof query.cursor === "string" ? decodeCursor(query.cursor) : null;
+  const start = after ? rows.findIndex((row) => row.key === after[1]) + 1 : 0;
+  const shown = rows.slice(start, start + (typeof query.limit === "number" ? query.limit : 25));
+  return { rows: shown, next: start + shown.length < rows.length && shown.length ? encodeCursor(shown.at(-1)!.createdAt, shown.at(-1)!.key) : null };
+}
+export function demoLive(players: readonly PlayerRow[], empty = false, now = new Date()): LiveData {
+  if (empty) return { online: 0, modes: {}, levels: {}, countries: [], roomGames: [], rooms: true };
+  const person = (row: PlayerRow) => ({ id: row.id, username: row.username, country: row.country });
+  return { online: 12, modes: { ai: 8, two: 1, online: 3 }, levels: { 1: 3, 2: 2, 3: 2, 4: 1 },
+    countries: [{ country: "PK", n: 6, ai: 4, two: 1, online: 1 }, { country: "GB", n: 4, ai: 3, two: 0, online: 1 }, { country: "", n: 2, ai: 1, two: 0, online: 1 }],
+    roomGames: [{ id: "99999999-9999-4999-8999-000000000001", number: 1, startedAt: new Date(now.getTime() - 420_000).toISOString(), moveCount: 23, black: person(players[2]!), white: person(players[4]!) }],
+    rooms: true };
+}
+
+const WRITES = ["reportStatus", "suspend", "unsuspend", "deviceBan", "hidePlayer", "hideWin", "rename", "resetProfile", "deletePlayer"];
+
 export function startDemo(mode: string): void {
   let signedIn = mode === "app";
   let overviewAttempts = 0;
-  const players = demoPlayers();
+  let players = demoPlayers();
+  let reports = demoReports(players);
   const auditNow = new Date();
+  const change = (id: unknown, update: (row: PlayerRow) => PlayerRow) => { players = players.map((row) => (row.id === id ? update(row) : row)); };
   const session = () => ({ accessToken: "demo.token.value", expiresAt: Math.floor(Date.now() / 1000) + 3600, email: "owner.with.a.long.address@example.com" });
   replaceTransport(async (path, body) => {
     await new Promise((resolve) => setTimeout(resolve, 120));
@@ -193,6 +240,44 @@ export function startDemo(mode: string): void {
       if (data.op === "player") {
         const row = players.find((player) => player.id === data.params?.id);
         return row ? json(demoPlayerDetail(row)) : json({ error: "No player with this id.", code: "notFound" }, 404);
+      }
+      const params = (data.params ?? {}) as Record<string, unknown>;
+      const moderation = new URLSearchParams(location.search).get("moderation");
+      if (data.op === "reports" || data.op === "reportGroups" || data.op === "live") {
+        if (moderation === "error") return json({ error: "This list could not be loaded. Try again.", code: "unavailable" }, 503);
+        const shown = moderation === "empty" ? [] : reports;
+        if (data.op === "live") return json(demoLive(players, moderation === "empty"));
+        if (data.op === "reportGroups") return json(demoReportGroups(shown, players, params["status"] as ReportStatus | undefined));
+        return json(demoReportPage(shown, params));
+      }
+      if (WRITES.includes(data.op ?? "")) {
+        const done = (message: string) => json({ done: true, message });
+        if (typeof params["reason"] !== "string" || params["reason"].trim().length < 3) return json({ error: "Write a reason of 3 to 500 characters.", code: "reason" }, 400);
+        if (moderation === "refuse") return json({ error: "Too many attempts. Please wait a moment.", code: "rateLimited" }, 429);
+        if (data.op === "reportStatus") {
+          reports = reports.map((row) => (row.key === params["key"] ? { ...row, status: params["status"] as ReportStatus, reviewNote: String(params["reason"]) } : row));
+          return done("Report updated.");
+        }
+        if (data.op === "suspend") {
+          const until = params["mode"] === "ban" ? "9999-12-31T00:00:00.000Z" : new Date(Date.now() + Number(params["days"]) * 86_400_000).toISOString();
+          change(params["playerId"], (row) => ({ ...row, suspendedUntil: until, suspensionKind: params["mode"] === "ban" ? "permanent" : "admin" }));
+          return done(params["mode"] === "ban" ? "Banned permanently." : `Suspended until ${until.slice(0, 10)} (UTC).`);
+        }
+        if (data.op === "unsuspend") { change(params["playerId"], (row) => ({ ...row, suspendedUntil: null, suspensionKind: null })); return done("Suspension lifted."); }
+        if (data.op === "deviceBan") { change(params["playerId"], (row) => ({ ...row, deviceBanned: params["ban"] === true })); return done(params["ban"] ? "Device banned." : "Device unbanned."); }
+        if (data.op === "hidePlayer") { change(params["playerId"], (row) => ({ ...row, hidden: params["hidden"] === true })); return done(params["hidden"] ? "Player hidden from public lists." : "Player shown again."); }
+        if (data.op === "rename") {
+          if (players.some((row) => row.username.toLowerCase() === String(params["username"]).toLowerCase())) return json({ error: "That username is taken or reserved.", code: "taken" }, 409);
+          change(params["playerId"], (row) => ({ ...row, username: String(params["username"]) }));
+          return done(`Renamed to ${String(params["username"])}.`);
+        }
+        if (data.op === "resetProfile") { change(params["playerId"], (row) => (params["field"] === "country" ? { ...row, country: null } : { ...row, avatar: null })); return done(params["field"] === "country" ? "Flag removed." : "Avatar reset."); }
+        if (data.op === "deletePlayer") {
+          players = players.filter((row) => row.id !== params["playerId"]);
+          reports = reports.filter((row) => row.reportedId !== params["playerId"]);
+          return done("Player deleted. The audit entry remains.");
+        }
+        return done(params["hidden"] ? "Win hidden from the ranking." : "Win counted again.");
       }
       if (["countries", "winners", "resigned", "audit"].includes(data.op ?? "")) {
         const state = new URLSearchParams(location.search).get("report");

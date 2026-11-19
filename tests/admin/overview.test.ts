@@ -114,17 +114,19 @@ describe("overview storage adapter", () => {
 
 describe("overview charts and numbers", () => {
   it("uses a finite chart for a zero series and a visible point for a single day", () => {
-    expect(chartPath([0, 0], 0)).toBe("M36.0,146.0 L464.0,146.0");
-    expect(chartPath([5], 10)).toBe("M250.0,82.0");
+    expect(chartPath([0, 0], 0)).toBe("M0.0,152.0 C166.7,152.0 333.3,152.0 500.0,152.0");
+    expect(chartPath([5], 10)).toBe("M250.0,80.0");
     expect(chartPath([NaN, Infinity, -2], 1)).not.toMatch(/NaN|Infinity/);
     const html = renderToStaticMarkup(createElement(Chart, { title: "One day", labels: ["2026-11-16"], series: [{ label: "Wins", values: [5] }] }));
-    expect(html).toContain('<circle cx="250"');
-    expect(html).toContain("Show data for one day");
+    expect(html).toContain('d="M250,8.0h0.01"');
+    expect(html).toContain("Show data"); expect(html).toContain(" for one day</span>");
     expect(html).toContain('scope="col">Wins');
     expect(html).toContain('scope="row">2026-11-16');
     expect(html).toContain(">5</td>");
     expect(html).not.toContain("style=");
-    expect(html).toContain('class="adm-chart-swatch"');
+    // One series is named by the title; a legend appears from two series.
+    expect(html).not.toContain('class="adm-chart-swatch"');
+    expect(renderToStaticMarkup(createElement(Chart, { title: "Two", labels: ["2026-11-16"], series: [{ label: "Wins", values: [5] }, { label: "Losses", values: [2] }] }))).toContain('class="adm-chart-swatch"');
   });
   it("reports empty days without inventing a chart", () => {
     const html = renderToStaticMarkup(createElement(Chart, { title: "Empty", labels: [], series: [] }));

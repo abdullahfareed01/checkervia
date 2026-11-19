@@ -11,16 +11,16 @@ export function OverviewNumbers({ data }: { data: OverviewData }) {
   const t = data.totals;
   const today = data.daily.find((row) => row.day === data.range.to);
   const metrics: readonly [string, number, string][] = [
-    ["Registered players", t.registered, "Profiles currently registered"],
-    ["New registrations", t.newPlayers, "In the selected period"],
-    ["Games against AI", t.games, "Reported results in the selected period"],
-    ["Active players today", today?.active ?? 0, "Players with a reported game today, UTC"],
-    ["Visitors", t.visitors, "Recorded device visits, counted once per UTC day"],
-    ["Online devices", t.onlineNow, "Heartbeats received in the last 75 seconds"],
-    ["Open reports", t.openReports, "Currently awaiting review"],
-    ["Suspended players", t.suspended, "Current suspensions and permanent bans"],
-    ["Resigned games", t.resigned, "Players who pressed Resign"],
-    ["Abandoned games", t.abandoned, "Reported separately from resignations"],
+    ["Registered players", t.registered, "Profiles now"],
+    ["New registrations", t.newPlayers, "In this period"],
+    ["Games against AI", t.games, "Reported in this period"],
+    ["Active players today", today?.active ?? 0, "Played today, UTC"],
+    ["Visitors", t.visitors, "Devices, once a day"],
+    ["Online devices", t.onlineNow, "Last 75 seconds"],
+    ["Open reports", t.openReports, "Awaiting review"],
+    ["Suspended players", t.suspended, "Suspensions and bans now"],
+    ["Resigned games", t.resigned, "Pressed Resign"],
+    ["Abandoned games", t.abandoned, "Separate from resignations"],
   ];
   return <dl className="adm-metrics">{metrics.map(([label, value, help]) => <div className="adm-panel adm-metric" key={label}>
     <dt>{label}</dt><dd><span className="adm-metric-value adm-num">{value.toLocaleString("en-GB")}</span><span className="adm-dim adm-small">{help}</span></dd>
@@ -29,7 +29,7 @@ export function OverviewNumbers({ data }: { data: OverviewData }) {
 
 export function OverviewCharts({ data }: { data: OverviewData }) {
   const days = data.daily.map((row) => row.day);
-  return <div className="adm-grid">
+  return <div className="adm-grid adm-grid-3">
     <Chart title="Registered players" labels={days} series={[{ label: "Profiles at day end", values: data.daily.map((row) => row.registered) }]} />
     <Chart title="Visitors and active players" labels={days} series={[
       { label: "Visitors", values: data.daily.map((row) => row.visitors) },
@@ -48,8 +48,7 @@ export function OverviewCharts({ data }: { data: OverviewData }) {
       note="Weeks start on Monday, UTC. Only days inside the chart period are counted; the first and last week may be partial." />
     <section className="adm-panel" aria-labelledby="adm-level-results">
       <h2 id="adm-level-results" className="adm-panel-title">Results by level</h2>
-      <p className="adm-dim adm-small">Players against the AI in the selected period. Resignations and abandoned games are included in losses.</p>
-      <table className="adm-data-table"><caption>Reported AI game results</caption><thead><tr><th scope="col">Level</th><th scope="col">Wins</th><th scope="col">Losses</th><th scope="col">Draws</th></tr></thead>
+      <table className="adm-data-table"><caption>Players against the AI in the selected period. Resignations and abandoned games count as losses.</caption><thead><tr><th scope="col">Level</th><th scope="col">Wins</th><th scope="col">Losses</th><th scope="col">Draws</th></tr></thead>
         <tbody>{["Easy", "Medium", "Hard", "Strongest"].map((name, index) => {
           const level = data.totals.levels.find((row) => row.level === index + 1);
           return <tr key={name}><th scope="row">{name}</th><td>{(level?.wins ?? 0).toLocaleString("en-GB")}</td><td>{(level?.losses ?? 0).toLocaleString("en-GB")}</td><td>{(level?.draws ?? 0).toLocaleString("en-GB")}</td></tr>;
@@ -74,16 +73,15 @@ export function OverviewStats() {
     return () => { active = false; };
   }, [period, revision]);
   return <section className="adm-overview" aria-label="Overview statistics" aria-busy={result.kind === "loading"}>
-    <div className="adm-panel-head">
+    <div className="adm-toolbar">
       <div className="adm-periods" role="group" aria-label="Statistics period">{PERIODS.map(([value, label]) => <button key={value} className="adm-button adm-button-quiet" type="button" aria-pressed={value === period} onClick={() => setPeriod(value)}>{label}</button>)}</div>
       <button className="adm-button adm-button-quiet" type="button" disabled={result.kind === "loading"} onClick={() => setRevision((value) => value + 1)}>Refresh statistics</button>
     </div>
-    <p className="adm-dim adm-small">Periods include today and use UTC days. Registered players, online devices, open reports and suspensions are current totals.</p>
-    <p className="adm-dim adm-small">Visits are counted once per device per UTC day. Online devices are visible games refreshed every 30 seconds and expire after 75 seconds.</p>
-    {period === "all" && <p className="adm-dim adm-small">All time headline totals. Daily and weekly charts show the latest 90 days.</p>}
     {result.kind === "loading" ? <p className="adm-dim" role="status">Loading statistics</p> : result.kind === "problem" ? <div className="adm-panel"><p className="adm-problem" role="alert">{result.text}</p><button className="adm-button adm-button-quiet" type="button" onClick={() => setRevision((value) => value + 1)}>Try statistics again</button></div> : <>
-      <p className="adm-dim adm-small">Charts: {result.data.range.from} to {result.data.range.to}, UTC.</p>
       <OverviewNumbers data={result.data} /><OverviewCharts data={result.data} />
     </>}
+    <details className="adm-chart-data adm-notes"><summary>About these numbers</summary>
+      <p className="adm-dim adm-small">{result.kind === "ok" ? `Charts: ${result.data.range.from} to ${result.data.range.to}, UTC. ` : ""}{period === "all" ? "All time headline totals; daily and weekly charts show the latest 90 days. " : ""}Periods include today and use UTC days. Registered players, online devices, open reports and suspensions are current totals. Visits are counted once per device per UTC day. Online devices are visible games refreshed every 30 seconds and expire after 75 seconds.</p>
+    </details>
   </section>;
 }

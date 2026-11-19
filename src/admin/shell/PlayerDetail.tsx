@@ -3,6 +3,9 @@ import { COUNTRY_NAMES } from "../../leaderboard/countries";
 import type { PlayerDetail as Detail, PlayerReport } from "../players";
 import { LEVEL_NAMES } from "../players";
 import { useAdminRead } from "../useAdminRead";
+import type { ActionRequest } from "./ActionDialog";
+import { useActions } from "./ActionDialog";
+import * as act from "./actions";
 import { actionLabel, date, dateTime } from "./format";
 
 function Facts({ rows }: { rows: readonly (readonly [string, string | number])[] }) {
@@ -17,11 +20,34 @@ function Reports({ title, rows }: { title: string; rows: readonly PlayerReport[]
     </li>)}</ul>}
   </section>;
 }
-export function PlayerDetailContent({ detail }: { detail: Detail }) {
+/** D110: the actions that fit the player's current state; each opens the reason dialog. */
+function Moderation({ detail, onAction }: { detail: Detail; onAction: (request: ActionRequest) => void }) {
+  const p = detail.player, target = { id: p.id, username: p.username };
+  const permanent = p.suspensionKind === "permanent";
+  const suspended = !permanent && p.suspendedUntil !== null && Date.parse(p.suspendedUntil) > Date.now();
+  const button = (label: string, request: ActionRequest, danger = false) =>
+    <button type="button" className={`adm-button ${danger ? "adm-button-danger" : "adm-button-quiet"}`} onClick={() => onAction(request)}>{label}</button>;
+  return <section className="adm-panel adm-wide" aria-labelledby="adm-moderation"><h3 id="adm-moderation" className="adm-panel-title">Actions</h3>
+    <p className="adm-dim adm-small">Each action asks for a reason and is saved in the audit log with the change.</p>
+    <div className="adm-filter-actions">
+      {suspended ? <>{button("Change suspension", act.suspend(target, true))}{button("Lift suspension", act.lift(target))}</> : permanent ? button("Lift ban", act.lift(target)) : button("Suspend", act.suspend(target))}
+      {!permanent && button("Ban permanently", act.ban(target), true)}
+      {button(p.deviceBanned ? "Unban device" : "Ban device", act.deviceBan(target, !p.deviceBanned))}
+      {button(p.hidden ? "Show in public lists" : "Hide from public lists", act.hidePlayer(target, !p.hidden))}
+      {button("Rename", act.rename(target))}
+      {p.avatar && button("Reset avatar", act.resetProfile(target, "avatar"))}
+      {p.country && button("Remove flag", act.resetProfile(target, "country"))}
+      {button("Delete player", act.deletePlayer(target), true)}
+    </div>
+  </section>;
+}
+
+export function PlayerDetailContent({ detail, onAction }: { detail: Detail; onAction?: (request: ActionRequest) => void }) {
   const p = detail.player;
   const stats = detail.stats;
   return <div className="adm-overview">
     <div className="adm-grid">
+      {onAction && <Moderation detail={detail} onAction={onAction} />}
       <section className="adm-panel"><h3 className="adm-panel-title">Profile</h3><Facts rows={[
         ["Username", p.username], ["Player ID", p.id], ["Country", p.country ? COUNTRY_NAMES[p.country] ?? p.country : "No flag"],
         ["Joined", date(p.createdAt)], ["Last seen", p.lastSeenAt ? dateTime(p.lastSeenAt) : "Not recorded"],
@@ -38,7 +64,7 @@ export function PlayerDetailContent({ detail }: { detail: Detail }) {
         ["Reason", p.suspensionReason ?? "None recorded"], ["Set by", p.suspendedBy ?? "None recorded"],
         ["Last revised", p.suspensionRevisedAt ? dateTime(p.suspensionRevisedAt) : "Not recorded"],
         ["Device banned", p.deviceBanned ? "Yes" : "No"],
-      ]} /><p className="adm-dim adm-small">Moderation actions are added in phase 3.</p></section>
+      ]} /></section>
       <section className="adm-panel"><h3 className="adm-panel-title">Device markers and reserved names</h3>
         <p className="adm-dim adm-small">Shortened markers identify devices without exposing full hashes or profile tokens.</p>
         <Facts rows={[["Profile device", p.device], ["IP marker", p.ip], ["Known devices", detail.devices.join(", ") || "None"]]} />
@@ -55,7 +81,8 @@ export function PlayerDetailContent({ detail }: { detail: Detail }) {
     <section className="adm-panel"><h3 className="adm-panel-title">Recent verified wins</h3>
       <p className="adm-dim adm-small">Latest 50 verified wins, including wins hidden from rankings.</p>
       {detail.wins.length === 0 ? <p className="adm-dim">No verified wins.</p> : <ul className="adm-records">{detail.wins.map((win) => <li key={win.id}>
-        <div className="adm-panel-head"><strong>{LEVEL_NAMES[win.level - 1] ?? win.level}, {win.move_count} moves{win.hidden ? ", hidden" : ""}</strong><span>{dateTime(win.created_at)}</span></div>
+        <div className="adm-panel-head"><strong>{LEVEL_NAMES[win.level - 1] ?? win.level}, {win.move_count} moves{win.hidden ? ", hidden" : ""}</strong><span>{dateTime(win.created_at)}</span>
+          {onAction && <button type="button" className="adm-button adm-button-quiet" onClick={() => onAction(act.hideWin({ id: p.id, username: p.username }, { id: win.id, label: `${LEVEL_NAMES[win.level - 1] ?? win.level} win in ${win.move_count} moves, ${dateTime(win.created_at)}` }, !win.hidden))}>{win.hidden ? "Count again" : "Hide win"}</button>}</div>
         <p className="adm-break adm-dim adm-small">Win {win.id}</p>
       </li>)}</ul>}
     </section>
@@ -71,11 +98,14 @@ export function PlayerDetailContent({ detail }: { detail: Detail }) {
 }
 export function PlayerDetails({ id, onBack }: { id: string; onBack: () => void }) {
   const [result, reload] = useAdminRead<Detail>("player", { id });
+  const actions = useActions(reload);
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, [id]);
   return <section className="adm-overview" aria-label="Player details" aria-busy={result.kind === "loading"}>
     <div className="adm-panel-head"><h2 ref={heading} tabIndex={-1} className="adm-panel-title">{result.kind === "ok" ? result.value.player.username : "Player details"}</h2><button type="button" className="adm-button adm-button-quiet" onClick={onBack}>Back to players</button></div>
     <p className="adm-dim adm-small">Opening these details is recorded in the admin audit log.</p>
-    {result.kind === "loading" ? <p role="status">Loading player details</p> : result.kind === "problem" ? <div className="adm-panel"><p className="adm-problem" role="alert">{result.text}</p><button type="button" className="adm-button adm-button-quiet" onClick={reload}>Try player again</button></div> : <PlayerDetailContent detail={result.value} />}
+    {actions.notice}
+    {result.kind === "loading" ? <p role="status">Loading player details</p> : result.kind === "problem" ? <div className="adm-panel"><p className="adm-problem" role="alert">{result.text}</p><button type="button" className="adm-button adm-button-quiet" onClick={reload}>Try player again</button></div> : <PlayerDetailContent detail={result.value} onAction={actions.open} />}
+    {actions.dialog}
   </section>;
 }

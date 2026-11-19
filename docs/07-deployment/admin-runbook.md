@@ -1,7 +1,19 @@
 # Admin dashboard: owner runbook
 
 ## Current integration status, 19 Nov 2026
-The dashboard is included in the current game checkout, `Mentor's Project`, with its separate build under `dist/admin`. Overview, Players, Countries, Who is winning, Resigned games and Audit log are implemented, with the slate theme, dotted fading charts and exact hover/touch/keyboard values. All 2085 tests in 108 files and both builds pass; phase 2c browser verification passes 88 assertions across 24 layouts. Reports, Suspensions, Live and moderation actions remain phase 3. See `docs/04-production/dashboard-handoff.md` for the saved checkpoint and continuation order.
+The dashboard is included in the current game checkout, `Mentor's Project`, with its separate build under `dist/admin`. All nine sections are built: Overview, Players, Reports, Suspensions, Live, Countries, Who is winning, Resigned games and Audit log, with smooth edge to edge charts and a compact layout (D109) and the moderation actions (D110). All 2145 tests in 109 files and both builds pass. See `docs/04-production/dashboard-handoff.md` for the saved checkpoint and continuation order.
+
+### Moderation actions (D110)
+Open a player from Players (or use Suspend in Reports) and choose an action in the Actions panel. Every action opens one dialog: it says what will happen and whether it can be undone, and it needs a reason of at least 3 characters. The reason is saved in the Audit log together with the change, in the same database step.
+
+- Suspend for 1 to 365 days (counted from now), Change suspension, Lift, or Ban permanently. Nothing is deleted while a player is suspended, and an expired suspension lifts by itself.
+- Ban device stops the device the profile was made on from making new profiles.
+- Hide from public lists keeps the username taken. Hide win removes one win from the ranking but keeps it recorded.
+- Rename follows the game's username rules; Reset avatar and Remove flag clear what the player chose.
+- Delete player cannot be undone and asks you to type the username first. Only the audit entry remains.
+- Reports: mark Reviewed, Dismiss, Actioned (after you acted on the player) or Open again. Live refreshes every 30 seconds and never shows the board of a game in progress.
+
+In sample mode, `&moderation=empty`, `&moderation=error` and `&moderation=refuse` show the empty, failed and refused states. Sample actions change only the page's memory and reset on reload.
 
 For sample data, start the normal Vite server and open `/admin/?demo=app`. The Sample data banner makes the mode explicit; Use game data removes it and returns to the guarded login. Samples stay in `src/admin/dev`, never seed Supabase and are omitted from production. There is no persistent mock switch to clean up.
 
