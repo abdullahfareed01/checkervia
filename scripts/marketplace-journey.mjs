@@ -47,7 +47,10 @@ export async function marketplaceJourney() {
   key("Escape"); await pause();
   assert(!document.querySelector(".marketplace") && !document.getElementById("root").inert, "Close restores background");
   assert(document.activeElement.classList.contains("home-shop"), "Close restores Home focus");
+  // "2 Players" opens the choice between this screen and online (D142).
   await click(".menu-card", "2 Players");
+  await click(".online-sheet .menu-card", "Same screen");
+  for (const end = Date.now() + 4000; !document.querySelector(".board .square-dark") && Date.now() < end;) await pause(50);
   const before = document.querySelector(".board").innerHTML;
   const boardColour = getComputedStyle(document.querySelector(".board .square-dark")).backgroundColor;
   assert(boardColour === "rgb(32, 87, 73)", "Real board uses Jade finish");

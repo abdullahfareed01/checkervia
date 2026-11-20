@@ -41,9 +41,9 @@ const toConduct = (row: ConductRow | null): Conduct =>
         ...("revised_at" in row ? { revisedAt: row.revised_at ? new Date(row.revised_at) : null } : {}),
       }
     : NO_CONDUCT;
-const PLAYER_COLUMNS = "id, username, username_key, country, avatar, hidden, username_changed_at";
+export const PLAYER_COLUMNS = "id, username, username_key, country, avatar, hidden, username_changed_at";
 
-class StoreError extends Error {
+export class StoreError extends Error {
   constructor(readonly code: string) {
     super(`storage error ${code}`);
   }
@@ -53,12 +53,12 @@ interface PostgrestError {
   readonly code?: string;
 }
 
-function check<T>(result: { data: T; error: PostgrestError | null }): T {
+export function check<T>(result: { data: T; error: PostgrestError | null }): T {
   if (result.error) throw new StoreError(result.error.code ?? "unknown");
   return result.data;
 }
 
-interface PlayerRow {
+export interface PlayerRow {
   id: string;
   username: string;
   username_key: string;
@@ -67,7 +67,7 @@ interface PlayerRow {
   hidden: boolean;
   username_changed_at: string | null;
 }
-const toPlayer = (row: PlayerRow): PlayerRecord => ({
+export const toPlayer = (row: PlayerRow): PlayerRecord => ({
   id: row.id,
   username: row.username,
   usernameKey: row.username_key,
@@ -123,13 +123,21 @@ export function withKeyHeaders(fetchImpl: typeof fetch, key: string): typeof fet
 }
 
 // `fetchImpl` lets the tests answer in place of the database.
-export function createSupabaseStore(url: string, serviceRoleKey: string, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): LeaderboardStore {
+/** A database client with the server's secret key; never sent to a browser. */
+export function serviceClient(url: string, serviceRoleKey: string, fetchImpl: typeof fetch): SupabaseClient {
   // A copied key often carries a space or a line break at its end.
   const key = serviceRoleKey.trim();
-  const db: SupabaseClient = createClient(url, key, {
+  return createClient(url, key, {
     auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
     global: { fetch: withKeyHeaders(fetchImpl, key) },
   });
+}
+
+// PostgREST's "no such table" (PGRST205) and Postgres's (42P01): before migration 9.
+const MISSING_TABLE = new Set(["PGRST205", "42P01"]);
+
+export function createSupabaseStore(url: string, serviceRoleKey: string, fetchImpl: typeof fetch = (input, init) => fetch(input, init)): LeaderboardStore {
+  const db = serviceClient(url, serviceRoleKey, fetchImpl);
 
   async function onePlayer(column: "username_key" | "token_hash", value: string): Promise<PlayerRecord | null> {
     const row = check(await db.from("players").select(PLAYER_COLUMNS).eq(column, value).maybeSingle<PlayerRow>());
@@ -138,7 +146,15 @@ export function createSupabaseStore(url: string, serviceRoleKey: string, fetchIm
 
   return {
     playerByKey: (usernameKey) => onePlayer("username_key", usernameKey),
-    playerByTokenHash: (tokenHash) => onePlayer("token_hash", tokenHash),
+    // The profile's first key, else a key from a login on another device (D150).
+    async playerByTokenHash(tokenHash) {
+      const first = await onePlayer("token_hash", tokenHash);
+      if (first) return first;
+      const answer = await db.from("player_tokens").select(`players (${PLAYER_COLUMNS})`).eq("token_hash", tokenHash).maybeSingle<{ players: PlayerRow | null }>();
+      if (answer.error && MISSING_TABLE.has(answer.error.code ?? "")) return null;
+      const row = check(answer);
+      return row?.players ? toPlayer(row.players) : null;
+    },
 
     async createPlayer(player) {
       const result = await db

@@ -127,5 +127,7 @@ export const resetProfileOperation = action(["playerId", "field"], async (params
 export const deletePlayerOperation = action(["playerId", "confirm"], async (params, context, deps) => {
   const playerId = uuid(params["playerId"]);
   if (!playerId || params["confirm"] !== true) return invalid();
-  return (await deps.store.deletePlayer(context, playerId)) ? done("Player deleted. The audit entry remains.") : gone();
+  if (!(await deps.store.deletePlayer(context, playerId))) return gone();
+  await deps.afterPlayerDeleted?.();
+  return done("Player deleted. The audit entry remains.");
 });

@@ -43,6 +43,8 @@ import { InfoButton, InfoDialog, ProfileRules } from "./InfoDialog";
 import { conductStore, useShownConduct } from "../conduct";
 import { longDate, reportsLeftText } from "../ConductDialogs";
 import { BackIcon, ChevronIcon } from "../icons";
+import { AccountSection, LoginEntry } from "./AccountSection";
+import { useAccountsEnabled } from "./accountClient";
 import { useUsernameCheck } from "./useUsernameCheck";
 import type { UsernameCheck } from "./useUsernameCheck";
 
@@ -76,6 +78,8 @@ interface ProfileScreenProps {
   onClose: () => void;
   /** Before the first game: Save leads on to the board. */
   firstGame?: boolean;
+  /** What the first game is: against the AI, or online with a friend (D142). */
+  purpose?: "ai" | "online";
   onSaved?: (() => void) | undefined;
   onTerms: () => void;
 }
@@ -85,7 +89,7 @@ interface ProfileScreenProps {
 // anything extra (the rules (i) on the edit page), and Close.
 type Head = (title: string, options?: { back?: () => void; backLabel?: string; extra?: ReactNode }) => ReactNode;
 
-export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: ProfileScreenProps) {
+export function ProfileScreen({ onClose, firstGame = false, purpose = "ai", onSaved, onTerms }: ProfileScreenProps) {
   const { profile } = useLeaderboardProfile();
   // Chosen when the screen opens: a profile made here shows its saved state
   // first (the store changes before that), and only Done leads to editing.
@@ -127,7 +131,7 @@ export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: 
     <div className="lb-backdrop pf-backdrop">
       <LbGradients />
       <div
-        className="lb-screen pf-screen"
+        className="lb-screen pf-screen gold-scroll"
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${ids}-title`}
@@ -139,6 +143,7 @@ export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: 
           <CreateProfile
             head={head}
             firstGame={firstGame}
+            purpose={purpose}
             onDone={() => (firstGame ? onSaved?.() : setCreating(false))}
             onBack={onClose}
             onTerms={onTerms}
@@ -374,12 +379,14 @@ function SaveLine({ state }: { state: SaveState }) {
 function CreateProfile({
   head,
   firstGame,
+  purpose,
   onDone,
   onBack,
   onTerms,
 }: {
   head: Head;
   firstGame: boolean;
+  purpose: "ai" | "online";
   onDone: () => void;
   onBack: () => void;
   onTerms: () => void;
@@ -400,7 +407,7 @@ function CreateProfile({
     return (
       <>
         {head("Create your profile")}
-        <Saved profile={profile} firstGame={firstGame} onDone={onDone} />
+        <Saved profile={profile} firstGame={firstGame} purpose={purpose} onDone={onDone} />
       </>
     );
   }
@@ -460,7 +467,11 @@ function CreateProfile({
     >
       {head("Create your profile")}
       <p className="pf-intro">
-        {firstGame ? "Before your first game against the AI, choose how you appear on the leaderboard. Your wins are then added automatically." : "Choose how you appear on the leaderboard."}
+        {!firstGame
+          ? "Choose how you appear on the leaderboard."
+          : purpose === "online"
+            ? "Before you play online, choose how you appear. Your friend sees your username, avatar and flag."
+            : "Before your first game against the AI, choose how you appear on the leaderboard. Your wins are then added automatically."}
       </p>
       <div className="pf-columns">
         <section className="pf-rows">
@@ -469,6 +480,7 @@ function CreateProfile({
           <div className="pf-row-country">
             <CountryPicker value={country} onChange={setCountry} disabled={saving} />
           </div>
+          <LoginEntry onLoggedIn={onDone} />
         </section>
 
         <div className="pf-column">
@@ -518,7 +530,7 @@ function DoneButton({ onDone }: { onDone: () => void }) {
   );
 }
 
-function Saved({ profile, firstGame, onDone }: { profile: Profile; firstGame: boolean; onDone: () => void }) {
+function Saved({ profile, firstGame, purpose = "ai", onDone }: { profile: Profile; firstGame: boolean; purpose?: "ai" | "online"; onDone: () => void }) {
   const doneRef = useRef<HTMLButtonElement>(null);
   useEffect(() => doneRef.current?.focus({ preventScroll: true }), []);
   return (
@@ -530,9 +542,13 @@ function Saved({ profile, firstGame, onDone }: { profile: Profile; firstGame: bo
         <Flag code={profile.country} decorative />
         <span className="lb-name">{profile.username}</span>
       </p>
-      <p className="pf-saved-text">Your profile is saved. Your wins against the AI are now added to the leaderboard automatically.</p>
+      <p className="pf-saved-text">
+        {purpose === "online" && firstGame
+          ? "Your profile is saved. Now make a room or join your friend's."
+          : "Your profile is saved. Your wins against the AI are now added to the leaderboard automatically."}
+      </p>
       <button ref={doneRef} type="button" className="lb-button lb-button-gold" onClick={onDone}>
-        {firstGame ? "Continue to the game" : "Done"}
+        {firstGame ? (purpose === "online" ? "Continue" : "Continue to the game") : "Done"}
       </button>
     </section>
   );
@@ -684,7 +700,7 @@ function ReportsPage({ server }: { server: ConductStatus | undefined }) {
 }
 
 type Stats = { kind: "loading" } | { kind: "problem"; problem: Problem } | { kind: "ready"; profile: ProfileResponse };
-type OwnPage = "levels" | "reports" | "edit" | "name" | "avatar";
+type OwnPage = "levels" | "reports" | "edit" | "name" | "avatar" | "account";
 
 function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile; onTerms: () => void }) {
   const [stats, setStats] = useState<Stats>({ kind: "loading" });
@@ -693,6 +709,7 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
   // D64a: the profile opens as a view; the pencil on the avatar opens the
   // edit page, whose username and avatar rows open pages of their own.
   const { page, open, back, onKeyDown } = usePages<OwnPage>({ name: "edit", avatar: "edit" });
+  const accountsOn = useAccountsEnabled();
   const [rulesOpen, setRulesOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [name, setName] = useState(profile.username);
@@ -863,6 +880,14 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
       </div>
     );
   }
+  if (page === "account") {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Saved progress", { back, backLabel: "Back to your profile" })}
+        <AccountSection profile={profile} />
+      </div>
+    );
+  }
   if (page === "reports" && ready) {
     return (
       <div className="pf-page" onKeyDown={onKeyDown}>
@@ -882,6 +907,11 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
             <p className="pf-save-line pf-save-saved pf-saved-note" role="status">
               Saved. Your profile is up to date.
             </p>
+          )}
+          {accountsOn && (
+            <div className="pf-rows">
+              <Row opens="account" label="Saved progress" value={profile.emailHint ?? "Not saved"} onOpen={() => open("account")} />
+            </div>
           )}
         </div>
         <div className="pf-column pf-stats">

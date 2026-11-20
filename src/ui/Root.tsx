@@ -2,6 +2,7 @@ import { useGameVisits } from "./telemetry/useGameTraffic";
 import { useCallback, useEffect, useState } from "react";
 import type { AiLevel, AiStatus } from "../ai";
 import type { GameMode, GameOptions } from "../state/gameReducer";
+import type { RoomView } from "../online/protocol";
 import { randomSide } from "../state/sides";
 import { syncConduct } from "./conduct";
 import { useSuspendedNotice } from "./ConductDialogs";
@@ -23,8 +24,15 @@ import { useProfileGate } from "./leaderboard/ProfileGate";
 import { ProfileScreen } from "./leaderboard/ProfileScreen";
 import { leaderboardStore } from "./leaderboard/profile";
 import { startQueueRetries } from "./leaderboard/winQueue";
+import { useAccountSync } from "./leaderboard/accountClient";
 import { Marketplace } from "./Marketplace";
 import { useCosmeticLook } from "./useMarketplace";
+import { roomCodeFromSearch } from "../online/protocol";
+import { RoomPage } from "./online/RoomPage";
+import { rememberedRoom } from "./online/roomMemory";
+import { TwoPlayerSheet } from "./online/TwoPlayerSheet";
+import type { SheetStep } from "./online/TwoPlayerSheet";
+import { useOnlineGate } from "./online/useOnlineGate";
 
 // Which screen is showing. A game gets a fresh `id` each time one is started
 // from the menu, so the board always starts clean.
@@ -32,7 +40,9 @@ export type Screen =
   | { name: "home" }
   | { name: "rules" }
   | { name: "learn" }
-  | { name: "game"; options: GameOptions; id: number };
+  | { name: "game"; options: GameOptions; id: number }
+  // An online room with a friend (D142); `first` is null after a reload.
+  | { name: "room"; code: string; first: RoomView | null };
 
 interface RootProps {
   // Development preview scenarios open straight on the game.
@@ -46,6 +56,8 @@ interface RootProps {
 export function Root({ initial, checkAi }: RootProps) {
   useGameVisits();
   useCosmeticLook();
+  // A profile saved to an email keeps its shop and settings in step (D150).
+  useAccountSync();
   const ai = useAiStatus(checkAi);
   useInterfaceFeedback(); // audio unlock on the first tap, button clicks
   // The animation level and speed (motion.css) and the board options
@@ -69,9 +81,12 @@ export function Root({ initial, checkAi }: RootProps) {
   // A recorded test win (?testwin, D60) without a profile goes through the
   // profile step first, like any game against the AI.
   const gateInitial = initial?.record !== undefined && initial.mode === "vs-ai" && leaderboardStore.get().profile === null;
-  const [screen, setScreen] = useState<Screen>(() =>
-    initial && !gateInitial ? { name: "game", options: initial, id: 0 } : { name: "home" },
-  );
+  // A room this browser is in comes back after a reload or in a new tab (D142).
+  const [screen, setScreen] = useState<Screen>(() => {
+    if (initial && !gateInitial) return { name: "game", options: initial, id: 0 };
+    const remembered = rememberedRoom();
+    return remembered && leaderboardStore.get().profile ? { name: "room", code: remembered, first: null } : { name: "home" };
+  });
 
   const [askLevel, setAskLevel] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
@@ -101,11 +116,24 @@ export function Root({ initial, checkAi }: RootProps) {
       id: current.name === "game" ? current.id + 1 : 1,
     }));
   };
-  // Playing the AI first asks for its level; two players start at once.
+  // Playing the AI first asks for its level; two players choose between
+  // one screen and online with a friend (D142).
+  const [sheet, setSheet] = useState<SheetStep | null>(null);
   const play = (mode: GameMode) => {
-    if (mode !== "vs-ai") start(mode);
+    if (mode !== "vs-ai") setSheet({ kind: "choose" });
     else if (!notifySuspended()) setAskLevel(true);
   };
+  const [requireOnline, onlineGate] = useOnlineGate(() => setTermsOpen(true));
+  // A shared link (/?room=CODE) goes straight to joining that room. The code
+  // is taken out of the address, so a reload does not join again.
+  useEffect(() => {
+    const linked = roomCodeFromSearch(window.location.search);
+    if (!linked) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete("room");
+    window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+    requireOnline(() => setSheet({ kind: "join", code: linked, autoJoin: true }));
+  }, []);
   const startAt = useCallback(
     (level: AiLevel) => {
       setAiLevel(level);
@@ -148,6 +176,24 @@ export function Root({ initial, checkAi }: RootProps) {
       {screen.name === "rules" && <HowToPlay onBack={home} onPlay={play} onLearn={() => setScreen({ name: "learn" })} />}
       {screen.name === "learn" && <Learn onMenu={home} />}
       {screen.name === "game" && <App key={screen.id} initial={screen.options} onMenu={home} onAiLevel={setAiLevel} />}
+      {screen.name === "room" && <RoomPage key={screen.code} code={screen.code} first={screen.first} onHome={home} />}
+      {sheet && (
+        <TwoPlayerSheet
+          step={sheet}
+          onStep={setSheet}
+          onSameScreen={() => {
+            setSheet(null);
+            start("two-player");
+          }}
+          onOnline={() => requireOnline(() => setSheet({ kind: "online" }))}
+          onRoom={(room) => {
+            setSheet(null);
+            setScreen({ name: "room", code: room.code, first: room });
+          }}
+          onClose={() => setSheet(null)}
+        />
+      )}
+      {onlineGate}
       {askLevel && <LevelDialog initial={aiLevel} onStart={startVsAi} onCancel={() => setAskLevel(false)} />}
       {consent}
       {profileGate}

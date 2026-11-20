@@ -23,6 +23,21 @@ import {
 } from "./icons";
 import { TIPS_DELAY_MS, revealAfter } from "./idleTimer";
 import type { EndLine } from "./usePersonality";
+import { avatarUrl } from "./leaderboard/Avatar";
+import { isAvatarId } from "../leaderboard/avatars";
+
+/**
+ * An online game with a friend (D143): "You" and the opponent's username,
+ * the winner's picture in the ring, the room's own buttons (Rematch, Leave
+ * room) in place of Play Again and Review.
+ */
+export interface OnlineResult {
+  readonly me: Player;
+  readonly names: Readonly<Record<Player, string>>;
+  readonly avatars: Readonly<Record<Player, string | null>>;
+  readonly subtitle: string;
+  readonly actions: ReactNode;
+}
 
 interface ResultDialogProps {
   winner: Player | null; // null: a draw (D89)
@@ -45,6 +60,7 @@ interface ResultDialogProps {
   onTipsShown?: ((tips: readonly string[]) => void) | undefined; // the AI voice may read them
   // After a win that can go on the leaderboard: its form (D57).
   leaderboard?: ReactNode;
+  online?: OnlineResult | undefined;
 }
 
 type Outcome = "victory" | "defeat" | "winner" | "draw";
@@ -100,6 +116,11 @@ function Portrait({ outcome, winner }: { outcome: Outcome; winner: Player | null
   return <PieceArt kind={winner === "white" ? "white" : "king"} />;
 }
 
+// Online (D143): the winner's chosen picture, a person without one.
+function OnlinePortrait({ id }: { id: string | null }) {
+  return isAvatarId(id) ? <img className="result-avatar" src={avatarUrl(id)} alt="" width={96} height={96} decoding="async" draggable={false} /> : <HumanIcon />;
+}
+
 // Falling confetti for a win. Positions are fixed per index (not random), so
 // the popup looks the same every time and renders the same on the server.
 function Confetti() {
@@ -133,7 +154,10 @@ interface StatRow {
 export function ResultDialog(props: ResultDialogProps) {
   const { winner, mode, reason, stats, pieces, totalMoves, durationMs, onPlayAgain, onReview, onClose, aiLine, tips } = props;
   const aiSide = props.aiSide ?? "white";
-  const outcome = outcomeOf(mode, winner, aiSide);
+  const online = props.online;
+  // Online: "victory" for your win, "winner" for your friend's, a draw as everywhere (D89).
+  const outcome: Outcome = online && winner ? (winner === online.me ? "victory" : "winner") : outcomeOf(mode, winner, aiSide);
+  const label = (side: Player) => online?.names[side] ?? nameOf(mode, side, aiSide);
   const tone = ribbonTone(outcome, winner);
   const playAgainRef = useRef<HTMLButtonElement>(null);
   // The tips fade in after about 5 seconds; "Show tips now" skips the wait.
@@ -168,7 +192,7 @@ export function ResultDialog(props: ResultDialogProps) {
           if (event.key === "Escape") onClose();
         }}
       >
-        {outcome !== "defeat" && outcome !== "draw" && <Confetti />}
+        {outcome !== "defeat" && outcome !== "draw" && (!online || winner === online.me) && <Confetti />}
 
         <div className="result-hero">
           <div className="result-emblem" aria-hidden="true">
@@ -179,7 +203,7 @@ export function ResultDialog(props: ResultDialogProps) {
               <LaurelIcon />
             </span>
             <span className={`result-portrait result-portrait-${outcome}`}>
-              <Portrait outcome={outcome} winner={winner} />
+              {online && winner ? <OnlinePortrait id={online.avatars[winner]} /> : <Portrait outcome={outcome} winner={winner} />}
             </span>
             <span className="result-laurel result-laurel-right">
               <LaurelIcon flip />
@@ -188,7 +212,7 @@ export function ResultDialog(props: ResultDialogProps) {
           <div className="result-banner">
             <Ribbon tone={tone} />
             <h2 id="result-title" className={`result-title result-title-${tone}`}>
-              {TITLES[outcome](winner ? nameOf(mode, winner, aiSide) : "")}
+              {TITLES[outcome](winner ? label(winner) : "")}
             </h2>
           </div>
         </div>
@@ -198,7 +222,7 @@ export function ResultDialog(props: ResultDialogProps) {
             {aiLine.text || <><span /><span /><span /></>}
           </p>
         ) : (
-          <p className="result-line result-subtitle">{SUBTITLES[outcome]}</p>
+          <p className="result-line result-subtitle">{online?.subtitle ?? SUBTITLES[outcome]}</p>
         )}
         <p className="result-reason">
           <span>{reason}</span>
@@ -213,7 +237,7 @@ export function ResultDialog(props: ResultDialogProps) {
               {sides.map((side) => (
                 <th key={side} scope="col" className={side === winner ? "result-col-winner" : undefined}>
                   <span className={`disc disc-${side}`} aria-hidden="true" />
-                  {nameOf(mode, side, aiSide)}
+                  {label(side)}
                 </th>
               ))}
             </tr>
@@ -248,16 +272,20 @@ export function ResultDialog(props: ResultDialogProps) {
           )}
         </p>
 
-        <div className="result-actions">
-          <button ref={playAgainRef} type="button" className="result-play" onClick={onPlayAgain}>
-            <PlayIcon />
-            Play Again
-          </button>
-          <button type="button" className="result-review" onClick={onReview}>
-            <ListIcon />
-            Review Game
-          </button>
-        </div>
+        {online ? (
+          online.actions
+        ) : (
+          <div className="result-actions">
+            <button ref={playAgainRef} type="button" className="result-play" onClick={onPlayAgain}>
+              <PlayIcon />
+              Play Again
+            </button>
+            <button type="button" className="result-review" onClick={onReview}>
+              <ListIcon />
+              Review Game
+            </button>
+          </div>
+        )}
 
         {props.leaderboard}
 

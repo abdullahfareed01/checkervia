@@ -20,6 +20,13 @@ export interface MemoryStore extends LeaderboardStore {
   hideWin(gameId: string): void;
   /** What a test may inspect: never returned by any handler. */
   readonly players: readonly StoredPlayer[];
+  // Device keys of saved profiles (D150), for memoryAccountStore.ts.
+  playerById(playerId: string): PlayerRecord | null;
+  addDeviceToken(playerId: string, tokenHash: string): void;
+  removeDeviceToken(tokenHash: string): boolean;
+  replaceFirstToken(playerId: string, tokenHash: string): void;
+  /** As deleting the row: its device keys go with it. */
+  deletePlayer(playerId: string): void;
 }
 
 export function createMemoryStore(now: () => number = Date.now): MemoryStore {
@@ -29,6 +36,7 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
   const windows = new Map<string, { hits: number; end: number }>(); // key and window start
   const reservations = new Map<string, { playerId: string; until: number }>(); // key: username key
   const reports = new Set<string>(); // player id and game id (D85)
+  const deviceTokens = new Map<string, string>(); // token hash to player id (D150)
   const conducts = new Map<string, { reports: number; totalReports: number; suspendedUntil: number | null }>();
   const conductOf = (playerId: string): Conduct => {
     const stored = conducts.get(playerId) ?? { reports: 0, totalReports: 0, suspendedUntil: null };
@@ -69,13 +77,31 @@ export function createMemoryStore(now: () => number = Date.now): MemoryStore {
     hideWin(gameId) {
       wins = wins.map((win) => (win.gameId === gameId ? { ...win, hidden: true } : win));
     },
+    playerById(playerId) {
+      const player = players.find((stored) => stored.id === playerId);
+      return player ? publicRecord(player) : null;
+    },
+    addDeviceToken(playerId, tokenHash) {
+      deviceTokens.set(tokenHash, playerId);
+    },
+    removeDeviceToken(tokenHash) {
+      return deviceTokens.delete(tokenHash);
+    },
+    replaceFirstToken(playerId, tokenHash) {
+      players = players.map((player) => (player.id === playerId ? { ...player, tokenHash } : player));
+    },
+    deletePlayer(playerId) {
+      players = players.filter((player) => player.id !== playerId);
+      for (const [hash, owner] of deviceTokens) if (owner === playerId) deviceTokens.delete(hash);
+    },
 
     async playerByKey(usernameKey) {
       const player = players.find((stored) => stored.usernameKey === usernameKey);
       return player ? publicRecord(player) : null;
     },
     async playerByTokenHash(tokenHash) {
-      const player = players.find((stored) => stored.tokenHash === tokenHash);
+      const deviceOwner = deviceTokens.get(tokenHash);
+      const player = players.find((stored) => stored.tokenHash === tokenHash || stored.id === deviceOwner);
       return player ? publicRecord(player) : null;
     },
     async reservedFor(usernameKey) {

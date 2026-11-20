@@ -66,7 +66,7 @@
 .shop-detail-heading > div { min-width: 0; }
 .shop-detail-heading > div:first-child { flex: 1 1 9rem; }
 .shop-detail-heading h2 { margin: 4px 0 0; font: 700 1.25rem/1.2 "Fraunces", Georgia, serif; }
-.shop-detail-heading .shop-price { flex: 0 1 6rem; flex-direction: column; align-items: flex-end; gap: 2px; margin: 0 0 0 auto; max-width: 100%; text-align: right; }
+.shop-detail-heading .shop-price { flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 2px; margin: 0 0 0 auto; min-width: 6rem; max-width: 100%; text-align: right; } /* grows with a large text size and wraps under the title, so the price is never cut off */
 .shop-detail-heading .shop-price strong { font-size: 1.35rem; }
 .shop-detail-heading .shop-price span { white-space: normal; }
 .shop-detail .shop-detail-copy > .shop-description { margin: 0 0 8px; font-size: .85rem; line-height: 1.45; }

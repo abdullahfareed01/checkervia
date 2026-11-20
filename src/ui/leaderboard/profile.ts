@@ -30,6 +30,8 @@ export interface Profile {
   readonly country: string | null;
   readonly avatar: string | null; // null for profiles from before avatars
   readonly token: string;
+  /** Set once the profile is saved to an email (D150): "a•••@g•••.com". */
+  readonly emailHint?: string;
 }
 
 export interface QualifyingWin {
@@ -75,6 +77,7 @@ function asProfile(value: unknown): Profile | null {
     country: isCountryCode(data.country) ? data.country : null,
     avatar: isAvatarId(data.avatar) ? data.avatar : null,
     token: data.token,
+    ...(typeof data.emailHint === "string" && data.emailHint.length > 0 ? { emailHint: data.emailHint.slice(0, 80) } : {}),
   };
 }
 
@@ -136,6 +139,8 @@ export const leaderboardStore = {
     return () => listeners.delete(listener);
   },
   setProfile: (profile: Profile | null) => change({ profile }),
+  /** Another profile on this device (a login or a log out, D150): the old profile's unsent wins go too. */
+  switchProfile: (profile: Profile | null) => change({ profile, queue: [] }),
   /** After an edit on the server: the parts that changed. */
   updateProfile: (changes: Partial<Omit<Profile, "token">>) => {
     const profile = current().profile;

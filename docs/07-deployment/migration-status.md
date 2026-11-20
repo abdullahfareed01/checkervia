@@ -1,5 +1,7 @@
 # Supabase migration status
 
+Migration 9 (`accounts-migration-9.sql`, D150, saved progress) is prepared on `feature/accounts` and **not applied**. It needs migrations 1 to 8 and explicit owner approval. Its PGlite tests are in `tests/leaderboard/account-migration.test.ts`.
+
 Verified 17 Nov 2026 against the app's configured Checkervia project through authenticated Supabase MCP.
 
 | Migration | Status | Evidence |
@@ -50,3 +52,6 @@ Three [mutable search path findings](https://supabase.com/docs/guides/database/d
 A live service role transaction verified visitor deduplication, a heartbeat appearing in the overview and its rate limited removal. It was rolled back; no test visitor, session or rate row remains, and record checksums still match. The advisor now reports no warning or error, only 17 informational [RLS without policies notices](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy), consistent with the server only model.
 
 Evidence: `artifacts/admin-live-migration-verification.json`. The owner has now created the confirmed dashboard Auth user and private password. It is the sole allowlisted account; public sign ups are disabled. Private authenticator enrollment remains to be completed. Application deployment is separate from database installation.
+
+## Online rooms migration (`leaderboard-migration-6.sql`): not applied
+Merged on 20 Nov 2026 (D146). It is a different file from `ai-migration-6.sql` above and has not been run. Until it is, the room functions answer 503 and the rest of the site works. Its `online_matches.reason` check now also allows `repetition` and `noProgress` (online draws). Steps: the Online rooms setup in the deployment guide.

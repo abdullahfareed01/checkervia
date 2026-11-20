@@ -109,6 +109,9 @@
 
 .settings-body {
   display: grid;
+  /* One column no wider than the sheet: an implicit auto column grew to the
+     voice row's full name and cut the page off on small phones. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   padding-top: 6px;
 }

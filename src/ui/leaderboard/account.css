@@ -1,0 +1,74 @@
+/* Saving progress (D150): the section on the Profile screen and the email
+   and code popup. Built on the leaderboard's own buttons, inputs and popup. */
+.acct-section {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid #7a5a35;
+  border-radius: 14px;
+  background: #1f150c;
+}
+.acct-state {
+  margin: 0 0 10px;
+  font-size: 15px;
+  line-height: 1.45;
+  color: #f1dfc0;
+}
+.acct-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.acct-buttons .lb-button {
+  flex: 1 1 11rem;
+}
+/* Two classes: .link-button (menu.css) sets font: inherit, and must not win
+   by load order. */
+.link-button.acct-link {
+  min-height: 44px;
+  padding: 8px 4px;
+  font-size: 15px;
+}
+.acct-body p {
+  line-height: 1.5;
+}
+.acct-field {
+  display: block;
+  margin: 12px 0 6px;
+  font-weight: 700;
+}
+.acct-input {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+}
+.acct-code {
+  font-size: 22px;
+  letter-spacing: 0.3em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.acct-problem {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-left: 3px solid #e7a35b;
+  background: #3a1f12;
+  color: #ffe2c4;
+}
+.acct-dialog {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+/* Two buttons side by side, each on its own row when a name or large text needs it. */
+.acct-actions {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 14px 0 6px;
+  gap: 8px;
+}
+.lb-info.acct-dialog .acct-actions .lb-button {
+  flex: 1 1 9rem;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

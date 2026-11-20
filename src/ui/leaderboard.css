@@ -2824,8 +2824,9 @@ html[data-anim="off"] .cp-panel {
 }
 
 /* ---------- The compact Profile screen (like the Settings sheet) ----------
-   The screen is a sheet sized to what it shows, centred, and never scrolls:
-   longer things are rows that open a page inside it (ProfileScreen.tsx).
+   The screen is a sheet sized to what it shows, centred, and longer things
+   are rows that open a page inside it (ProfileScreen.tsx). Only when a page
+   cannot fit (the smallest phones, or large text) does the sheet scroll.
    Two columns on short, wide windows (phones held sideways). Placed last,
    so it refines the full height screen and the edit card above. */
 
@@ -2843,14 +2844,22 @@ html[data-anim="off"] .cp-panel {
   margin: 0;
   padding: 12px 14px 14px;
   border-radius: 24px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+/* While the country list or a popup is open, only that scrolls. */
+.pf-screen:has(.cp-panel, .lb-info-backdrop) {
+  overflow-y: hidden;
 }
 
+/* The slide in keeps no transform once it ends (backwards, not both), so
+   the country list and popups inside a page stay fixed to the window. */
 .pf-page {
   display: grid;
   gap: 10px;
   min-width: 0;
-  animation: pf-page-in 0.2s ease-out both;
+  animation: pf-page-in 0.2s ease-out backwards;
 }
 
 @keyframes pf-page-in {
@@ -3347,6 +3356,24 @@ html[data-anim="off"] .cp-panel {
   }
   .pf-screen .pf-intro {
     display: none;
+  }
+}
+
+/* Wide windows: the country list cannot drop below its button here (the
+   compact sheet would cut it off), so it opens in the middle of the window,
+   over a dimmed sheet. */
+@media (min-width: 700px) and (min-height: 560px) {
+  .pf-screen .cp-backdrop {
+    background: rgba(10, 6, 2, 0.6);
+  }
+  .pf-screen .cp-panel {
+    position: fixed;
+    inset: 0;
+    bottom: 0 !important;
+    width: min(420px, 100% - 32px);
+    height: fit-content;
+    max-height: min(420px, 100% - 32px);
+    margin: auto;
   }
 }
 

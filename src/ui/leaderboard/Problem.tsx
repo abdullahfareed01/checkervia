@@ -56,8 +56,8 @@ function ServerIcon() {
   );
 }
 
-/** The calm panel for a problem, with Try again. `compact` inside the profile sheet. */
-export function ProblemPanel({ problem, onRetry, compact = false }: { problem: Problem; onRetry: () => void; compact?: boolean }) {
+/** The calm panel for a problem, with Try again. `compact` inside the profile sheet; `text` for words of its own (online play). */
+export function ProblemPanel({ problem, onRetry, compact = false, text }: { problem: Problem; onRetry: () => void; compact?: boolean; text?: string }) {
   return (
     <div className={`lb-state${compact ? " lb-state-compact" : ""} lb-state-${problem.kind}`} role="status">
       {!compact && (
@@ -65,7 +65,7 @@ export function ProblemPanel({ problem, onRetry, compact = false }: { problem: P
           {problem.kind === "offline" ? <OfflineIcon /> : problem.kind === "server" ? <ServerIcon /> : <HourglassIcon />}
         </span>
       )}
-      <p className="lb-state-text">{problemText(problem)}</p>
+      <p className="lb-state-text">{text ?? problemText(problem)}</p>
       <button type="button" className="button button-primary" onClick={onRetry}>
         Try again
       </button>

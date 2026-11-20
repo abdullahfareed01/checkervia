@@ -95,6 +95,13 @@ const clickText = (selector, text) => `await (async () => {
   }
   throw new Error("no " + ${JSON.stringify(selector)} + " with " + ${JSON.stringify(text)});
 })();`;
+// Types into a React input (the value setter React listens to, then an input event).
+const typeInto = (selector, text) => `await (async () => {
+  const input = ${find(selector)};
+  Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, ${JSON.stringify(text)});
+  input.dispatchEvent(new Event("input", { bubbles: true }));
+  await new Promise(r => setTimeout(r, 100));
+})();`;
 // Plays the first legal move for Black: a piece, then a square it can go to.
 const playMove = `await (async () => {
   for (const piece of document.querySelectorAll('.board button[aria-label*="black"]')) {
@@ -142,6 +149,11 @@ const SCREENS = {
   "profile-edit": { query: "?lb=populated", steps: click(".home-profile") + click(".pf-id-edit") + until(".pf-edit-card"), layer: ".pf-backdrop" },
   "profile-rules": { query: "?lb=populated", steps: click(".home-profile") + click(".pf-id-edit") + click(".pf-edit-card .lb-info-button") + until(".lb-info-backdrop"), layer: ".lb-info-backdrop" },
   "country-picker": { query: "?lb=populated", steps: click(".home-profile") + click(".pf-id-edit") + click(".pf-edit-card .cp-button") + until(".cp-panel"), layer: ".cp-panel" },
+  // Saving progress (D150): the email step, the code step and the replace warning.
+  "account-page": { query: "?lb=populated", steps: click(".home-profile") + click('.pf-row[data-opens="account"]') + until(".acct-section"), layer: ".pf-backdrop" },
+  "account-email": { query: "?lb=populated", steps: click(".home-profile") + click('.pf-row[data-opens="account"]') + click(".acct-section .lb-button-gold") + until(".acct-dialog input[type=email]"), layer: ".lb-info-backdrop" },
+  "account-code": { query: "?lb=populated", steps: click(".home-profile") + click('.pf-row[data-opens="account"]') + click(".acct-section .lb-button-gold") + typeInto(".acct-dialog input[type=email]", "player@example.com") + click('.acct-dialog button[type="submit"]') + until(".acct-code"), layer: ".lb-info-backdrop" },
+  "account-replace": { query: "?lb=populated", steps: click(".home-profile") + click('.pf-row[data-opens="account"]') + click(".acct-section .acct-link") + until(".acct-dialog .acct-actions"), layer: ".lb-info-backdrop" },
   "profile-create": { query: "?lb=new", steps: click(".home-profile") + until(".pf-backdrop input"), layer: ".pf-backdrop" },
   result: { query: "?lb=populated&result=1", steps: until(".result-backdrop .dialog, .result-backdrop [role=dialog]"), layer: ".result-backdrop" },
   "game-ai": { query: "?lb=populated&scenario=react", steps: until(".board"), layer: ".app" },
@@ -160,6 +172,15 @@ const SCREENS = {
   "game-focus": { query: "?lb=populated&scenario=react", focus: true, steps: until(".app-focus .board"), layer: ".app" },
   "game-focus-over": { query: "?lb=populated&testwin=strongest", focus: true, steps: until(".result-backdrop") + `document.querySelector(".result-backdrop").click(); await new Promise(r => setTimeout(r, 500));` + until(".focus-hint"), layer: ".app" },
   "game-rules": { query: "?lb=populated&scenario=duel", steps: click(".menu > .bar-button") + clickText(".menu-tile", "How to play") + until(".rules-dialog"), layer: ".rules-dialog" },
+  // Online rooms with a friend (D142, D143), on the ?online= preview with its scripted friend (D145).
+  "online-sheet": { query: "?lb=populated", steps: clickText(".menu-card", "2 Players") + until(".online-sheet"), layer: ".online-backdrop" },
+  "online-choice": { query: "?online=lobby", steps: clickText(".menu-card", "2 Players") + clickText(".menu-card", "Online with a friend") + until(".online-note"), layer: ".online-backdrop" },
+  "online-join": { query: "?online=lobby", steps: clickText(".menu-card", "2 Players") + clickText(".menu-card", "Online with a friend") + clickText(".menu-card", "Join with a code") + until(".online-code-input"), layer: ".online-backdrop" },
+  "online-waiting": { query: "?online=lobby", steps: clickText(".menu-card", "2 Players") + clickText(".menu-card", "Online with a friend") + clickText(".menu-card", "Create a room") + until(".online-code", 8000), layer: ".online-page" },
+  "online-ready": { query: "?online=ready", steps: until(".ready-panel", 8000), layer: ".ready-backdrop" },
+  "online-game": { query: "?online=game", steps: until(".app-online .board", 8000) + `await new Promise(r => setTimeout(r, 1500));`, layer: ".app" },
+  "online-disconnected": { query: "?online=disconnected", steps: until(".status-pill-warn", 8000), layer: ".app" },
+  "online-result": { query: "?online=result", steps: until(".result-backdrop .result", 10000), layer: ".result-backdrop" },
 };
 // --part 1/2 or 2/2: the first or second half of the screens (smaller runs).
 const [partIndex, partCount] = (args.part ?? "1/1").split("/").map(Number);
@@ -494,6 +515,8 @@ async function checkState(browser, [width, height], variantName, screenName) {
   const setup = [
     screenName.startsWith("shop") ? `for (const key of Object.keys(localStorage)) if (key.startsWith("checkervia.marketplace.demo.v1")) localStorage.removeItem(key);` : "",
     `localStorage.setItem("checkervia.settings", ${JSON.stringify(JSON.stringify(settings))});`,
+    // No online room from an earlier screen (?online= remembers one, D142).
+    `localStorage.removeItem("checkervia.online.room");`,
     screenName === "consent" ? `for (const key of Object.keys(localStorage)) if (/consent/i.test(key)) localStorage.removeItem(key);` : "",
     variant.text !== 100 ? `document.addEventListener("DOMContentLoaded", () => { const st = document.createElement("style"); st.textContent = "html{font-size:${variant.text}%}"; document.head.prepend(st); });` : "",
   ].join("\n");
