@@ -862,7 +862,7 @@ Format: decision, reason, consequence.
 - Merged by hand: `netlify/leaderboard/netlify.ts` keeps the online split (`leaderboardDeps`, `supabaseConfig`, one `leaderboardRequest`), which the account function also uses; `api.ts` keeps `call` exported for the rooms and adds the account's `message` option; the Terms keep Online play with a friend, then Saving your progress, then Moderation; both logs keep every entry.
 - Migrations: rooms (`leaderboard-migration-6.sql`) and saved progress (`accounts-migration-9.sql`) now sit on the same branch. Neither has been run; the order is in `docs/07-deployment/migrations-run-order.md`.
 
-## D148. merge/online-rooms brought into feature/leaderboard (20 Nov 2026)
+## D148. `merge/online-rooms` brought into `feature/leaderboard` (20 Nov 2026)
 - Reason: the owner asked to save the leftover robot and shop work on feature/leaderboard, then bring in `merge/online-rooms` (online rooms, admin D111 to D113 and saved progress D150).
 - The leftover work was committed first (wink loop and all 15 preview reactions; the rest of the shop Replay and inspector correction; their docs), so the merge could not fast forward and was done as a real merge.
 - Numbering: nothing collided. The leftover work only adds D95 and D106 follow ups; the merged branch adds D140 to D147 and D150.
