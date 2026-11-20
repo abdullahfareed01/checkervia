@@ -23,6 +23,7 @@ import { useProfileGate } from "./leaderboard/ProfileGate";
 import { ProfileScreen } from "./leaderboard/ProfileScreen";
 import { leaderboardStore } from "./leaderboard/profile";
 import { startQueueRetries } from "./leaderboard/winQueue";
+import { useAccountSync } from "./leaderboard/accountClient";
 import { Marketplace } from "./Marketplace";
 import { useCosmeticLook } from "./useMarketplace";
 
@@ -46,6 +47,8 @@ interface RootProps {
 export function Root({ initial, checkAi }: RootProps) {
   useGameVisits();
   useCosmeticLook();
+  // A profile saved to an email keeps its shop and settings in step (D150).
+  useAccountSync();
   const ai = useAiStatus(checkAi);
   useInterfaceFeedback(); // audio unlock on the first tap, button clicks
   // The animation level and speed (motion.css) and the board options

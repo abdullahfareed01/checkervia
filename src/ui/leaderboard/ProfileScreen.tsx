@@ -43,6 +43,7 @@ import { InfoButton, InfoDialog, ProfileRules } from "./InfoDialog";
 import { conductStore, useShownConduct } from "../conduct";
 import { longDate, reportsLeftText } from "../ConductDialogs";
 import { BackIcon, ChevronIcon } from "../icons";
+import { AccountSection, LoginEntry } from "./AccountSection";
 import { useUsernameCheck } from "./useUsernameCheck";
 import type { UsernameCheck } from "./useUsernameCheck";
 
@@ -483,6 +484,7 @@ function CreateProfile({
             <button type="button" className="link-button lb-terms" onClick={onTerms}>
               Read the Terms and notices
             </button>
+            <LoginEntry onLoggedIn={onDone} />
           </section>
 
           <div className="pf-status">
@@ -883,6 +885,7 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
               Saved. Your profile is up to date.
             </p>
           )}
+          <AccountSection profile={profile} />
         </div>
         <div className="pf-column pf-stats">
           {stats.kind === "loading" && (

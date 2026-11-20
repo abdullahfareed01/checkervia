@@ -44,6 +44,13 @@ function useCollectionKey() {
   return resolved.token === token ? resolved.key : token ? ownerKeys.get(token) ?? null : MARKET_KEY;
 }
 
+/** The collection store of a profile, by its token (D150: restoring a saved collection). */
+export async function collectionStoreFor(token: string) {
+  const key = ownerKeys.get(token) ?? (await profileCollectionKey(token));
+  ownerKeys.set(token, key);
+  return collectionStore(key);
+}
+
 export function useMarketplace() {
   const key = useCollectionKey();
   const store = collectionStore(key ?? "memory:pending");
