@@ -6,6 +6,7 @@ import { handleAdminApi } from "../../netlify/admin/api";
 import { createSupabaseAdminStore, toLiveData, toReportRow } from "../../netlify/admin/supabaseAdminStore";
 import { demoLive, demoPlayers, demoReportGroups, demoReportPage, demoReports } from "../../src/admin/dev/demo";
 import { reasonOf, REPORT_GROUPS_MAX } from "../../src/admin/moderation";
+import { LEVEL_NAMES } from "../../src/admin/players";
 import { decodeCursor } from "../../src/admin/protocol";
 import { ActionDialog } from "../../src/admin/shell/ActionDialog";
 import * as act from "../../src/admin/shell/actions";
@@ -246,7 +247,12 @@ describe("phase 3 screens", () => {
   });
   it("shows live counts by mode, level and flag, and says when rooms are not installed", () => {
     const html = renderToStaticMarkup(createElement(LiveContent, { data: demoLive(players, false, NOW) }));
-    for (const text of ["In a game now", "Against the AI", "AI, Strongest", "Pakistan", "No flag", players[2]!.username]) expect(html).toContain(text);
+    for (const text of ["In a game now", "Against the AI", "Strongest", "Pakistan", "No flag", players[2]!.username, "devices, last seen within 75 seconds"]) expect(html).toContain(text);
+    // D113: the four AI levels are a breakdown inside the Against the AI tile, each with its count.
+    const data = demoLive(players, false, NOW);
+    const tile = /<div class="adm-stat[^"]*adm-tile-wide">([\s\S]*?)<\/dd><\/div>/.exec(html)?.[1] ?? "";
+    expect(tile).toContain("Against the AI");
+    LEVEL_NAMES.forEach((name, index) => expect(tile).toContain(`>${name}</span><strong class="adm-num">${data.levels[String(index + 1)] ?? 0}</strong>`));
     expect(renderToStaticMarkup(createElement(LiveContent, { data: { ...demoLive(players, true), rooms: false } }))).toContain("not installed yet");
   });
   it("makes every action ask for a reason, and guards renames and deletes on the page too", () => {

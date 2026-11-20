@@ -4,7 +4,7 @@
 // to that sign in step after any password; app starts signed in.
 import { replaceTransport } from "../api";
 import { ADMIN_API_PATH } from "../protocol";
-import { overviewRange } from "../analytics";
+import { overviewRange, periodSums, previousRange } from "../analytics";
 import type { OverviewData, OverviewPeriod } from "../analytics";
 import type { CountriesData, ResignedData, WinnersData } from "../reports";
 import type { AuditQuery } from "../protocol";
@@ -37,14 +37,18 @@ function activity(): AuditRow[] {
 // Fake counts stay inside the development-only chunk, never the live API.
 export function demoOverview(period: OverviewPeriod, empty = false, now = new Date()): OverviewData {
   const range = overviewRange(period, now);
-  const fullRange = overviewRange("90", now);
+  // 180 days, so a 90 day window also has the window before it (D111).
+  const start = new Date(`${overviewRange("90", now).from}T00:00:00.000Z`); start.setUTCDate(start.getUTCDate() - 90);
   let registered = 0;
-  const records = Array.from({ length: 90 }, (_, index) => {
-    const day = new Date(`${fullRange.from}T00:00:00.000Z`); day.setUTCDate(day.getUTCDate() + index);
-    const registrations = empty || index % 3 === 0 ? 0 : 1; registered += registrations;
-    const wave = (Math.sin(index * 0.43) + 1) * 0.5;
-    const active = empty ? 0 : Math.min(registered, Math.round(8 + wave * 16 + index / 7));
-    const games = active * (2 + index % 3);
+  const records = Array.from({ length: 180 }, (_, index) => {
+    const day = new Date(start); day.setUTCDate(day.getUTCDate() + index);
+    // The last 90 days (i from 0) are the samples from before D111; the 90
+    // days before them only have play, so the 60 sample profiles stay 60.
+    const i = index - 90;
+    const registrations = empty || i < 0 || i % 3 === 0 ? 0 : 1; registered += registrations;
+    const wave = (Math.sin(i * 0.43) + 1) * 0.5;
+    const active = empty ? 0 : i < 0 ? Math.round(6 + wave * 12) : Math.min(registered, Math.round(8 + wave * 16 + i / 7));
+    const games = active * (2 + (i % 3 + 3) % 3);
     const levels = [1, 2, 3, 4].map((level) => {
       const played = Math.floor(games / 4) + (level <= games % 4 ? 1 : 0);
       const wins = Math.floor(played * (0.75 - level * 0.12));
@@ -54,10 +58,12 @@ export function demoOverview(period: OverviewPeriod, empty = false, now = new Da
     });
     const sum = (key: "wins" | "losses" | "draws" | "resigned" | "abandoned") => levels.reduce((total, row) => total + row[key], 0);
     return { day: day.toISOString().slice(0, 10), registrations, deletions: 0, registered,
-      visitors: empty ? 0 : Math.round(30 + wave * 95 + index * 1.2), active, games,
+      visitors: empty ? 0 : Math.max(12, Math.round(30 + wave * 95 + i * 1.2)), active, games,
       wins: sum("wins"), losses: sum("losses"), draws: sum("draws"), resigned: sum("resigned"), abandoned: sum("abandoned"), onlineGames: Math.floor(games / 6), levels };
   });
   const selected = records.filter((row) => row.day >= range.from);
+  const before = previousRange(range);
+  const earlier = before ? records.filter((row) => row.day >= before.from && row.day <= before.to).map(({ levels: _levels, ...row }) => row) : null;
   const sum = (key: "registrations" | "visitors" | "games" | "resigned" | "abandoned" | "onlineGames") => selected.reduce((total, row) => total + row[key], 0);
   const weeks = new Map<string, number>();
   selected.forEach((row) => {
@@ -65,7 +71,7 @@ export function demoOverview(period: OverviewPeriod, empty = false, now = new Da
     const week = monday.toISOString().slice(0, 10);
     weeks.set(week, Math.max(weeks.get(week) ?? 0, Math.min(row.registered, row.active + (empty ? 0 : 8))));
   });
-  return { range, daily: selected.map(({ levels: _levels, ...row }) => row), weekly: [...weeks].map(([week, active]) => ({ week, active })), totals: {
+  return { range, previous: earlier && periodSums(earlier), daily: selected.map(({ levels: _levels, ...row }) => row), weekly: [...weeks].map(([week, active]) => ({ week, active })), totals: {
     registered, newPlayers: sum("registrations"), visitors: sum("visitors"), visitorsToday: selected.at(-1)?.visitors ?? 0,
     onlineNow: empty ? 0 : 12, games: sum("games"), onlineGames: sum("onlineGames"), resigned: sum("resigned"), abandoned: sum("abandoned"),
     openReports: empty ? 0 : 8, suspended: empty ? 0 : 5,

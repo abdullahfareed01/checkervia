@@ -1,10 +1,16 @@
-/** Demo is selected by one development-only URL parameter, never stored. */
+// D111: as in the owner's mockup, a yellow line says when the dashboard shows
+// sample data, and it can be closed. Demo is selected by one development
+// only URL parameter, never stored. Game data needs no banner.
+import { useState } from "react";
+import { Icon } from "./icons";
+
 export function DataSourceBar() {
   const sample = import.meta.env.DEV && typeof location !== "undefined" && new URLSearchParams(location.search).has("demo");
-  return <div className={`adm-source-bar${sample ? " adm-source-sample" : ""}`} aria-label="Dashboard data source">
-    <div className="adm-source-description"><strong className="adm-source-label">{sample ? "Sample data" : "Game data"}</strong>
-      <span className="adm-dim adm-small">{sample ? "Preview only. Your game and players are untouched." : "Private access to your game records."}</span></div>
-    <div className="adm-source-actions">{sample && <a className="adm-button adm-button-quiet" href="/admin/">Use game data</a>}
-      <a className="adm-button adm-button-quiet" href="/" target="_blank" rel="noopener noreferrer">Open game</a></div>
+  const [shown, setShown] = useState(true);
+  if (!sample || !shown) return null;
+  return <div className="adm-source-bar adm-source-sample" role="note" aria-label="Dashboard data source">
+    <Icon name="info" className="adm-source-icon" />
+    <p className="adm-source-description"><strong className="adm-source-label">Sample data</strong><span>Preview only. Your game and players are untouched.</span></p>
+    <button type="button" className="adm-source-close" aria-label="Close the sample data note" onClick={() => setShown(false)}><Icon name="close" /></button>
   </div>;
 }

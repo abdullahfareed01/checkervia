@@ -2,18 +2,19 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import type { AuditQuery, AuditRow, Page } from "../protocol";
 import { useAdminRead } from "../useAdminRead";
-import { actionLabel, dateTime } from "./format";
+import { actionLabel } from "./format";
+import { Badge, EmptyState, toneOf, When } from "./ui";
 
 const OUTCOME = { ok: "Done", refused: "Refused", failed: "Failed" } as const;
 /** D109: one compact row per entry; the raw details open on demand. */
 export function AuditRows({ rows }: { rows: readonly AuditRow[] }) {
   return rows.length ? <div className="adm-panel adm-flush"><ol className="adm-log adm-records">{rows.map((row) => <li key={row.id}>
-    <span className={`adm-badge adm-badge-${row.outcome}`}>{OUTCOME[row.outcome]}</span>
+    <Badge tone={toneOf(row.outcome)}>{OUTCOME[row.outcome]}</Badge>
     <h2 className="adm-log-title">{actionLabel(row.action)}</h2>
-    <time className="adm-log-time adm-num" dateTime={row.at}>{dateTime(row.at)}</time>
+    <span className="adm-log-time"><When iso={row.at} /></span>
     <p className="adm-log-meta adm-break">{row.targetLabel || row.targetPlayer ? <>Player: {row.targetLabel ?? row.targetPlayer} | </> : null}Reason: {row.reason ?? "No reason recorded"} | {row.adminEmail ?? "No authenticated admin"} | Entry {row.id}</p>
     <details className="adm-chart-data"><summary>Entry details</summary><p className="adm-small adm-break">Action: {row.action} | Time: {row.at}{row.targetPlayer ? ` | Player ID: ${row.targetPlayer}` : ""}</p><pre className="adm-audit-details">{JSON.stringify(row.details, null, 2)}</pre></details>
-  </li>)}</ol></div> : <p className="adm-panel adm-dim">No audit entries match these filters.</p>;
+  </li>)}</ol></div> : <div className="adm-panel adm-flush"><EmptyState title="No audit entries match these filters." text="Sign ins and admin actions appear here as they happen, newest first." icon="file" /></div>;
 }
 export function Audit() {
   const [search, setSearch] = useState(""), [action, setAction] = useState(""), [playerId, setPlayerId] = useState("");

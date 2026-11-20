@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuditRow, PlayerRow } from "../../src/admin/protocol";
 import { withKeyHeaders } from "../leaderboard/supabaseStore";
+import { periodSums, previousRange } from "../../src/admin/analytics";
 import type { DailyTotals, LevelTotals, OverviewTotals } from "../../src/admin/analytics";
 import type { AdminStore } from "./store";
 import type { LiveData, LivePlayer, ReportGroup, ReportRow } from "../../src/admin/moderation";
@@ -153,10 +154,13 @@ export function createSupabaseAdminStore(url: string, serviceRoleKey: string, fe
     async overview(range) {
       // Each query reads summary tables. All time changes headline totals;
       // daily charts remain bounded to the last 90 days and say so in the UI.
-      const [headline, daily, weekly] = await Promise.all([
+      // D111: the window just before (same length) feeds the change arrows.
+      const before = previousRange(range);
+      const [headline, daily, weekly, earlier] = await Promise.all([
         db.rpc("admin_overview", { p_since: range.since }),
         db.rpc("admin_daily", { p_from: range.from, p_to: range.to }),
         db.rpc("admin_weekly_active", { p_from: range.from, p_to: range.to }),
+        before ? db.rpc("admin_daily", { p_from: before.from, p_to: before.to }) : Promise.resolve(null),
       ]);
       const raw = check(headline) as Record<string, unknown> | null;
       if (!raw) throw new AdminStoreError("noRow");
@@ -184,15 +188,17 @@ export function createSupabaseAdminStore(url: string, serviceRoleKey: string, fe
         weeklyActive.push({ week, active: weekValues.get(week) ?? 0 });
         monday.setUTCDate(monday.getUTCDate() + 7);
       }
+      const toDaily = (row: Record<string, unknown>): DailyTotals => ({
+        day: String(row["day"]).slice(0, 10), registrations: int(row["registrations"]), deletions: int(row["deletions"]),
+        registered: int(row["registered"]), visitors: int(row["visitors"]), active: int(row["active"]),
+        games: int(row["games"]), wins: int(row["wins"]), losses: int(row["losses"]), draws: int(row["draws"]),
+        resigned: int(row["resigned"]), abandoned: int(row["abandoned"]), onlineGames: int(row["online_games"]),
+      });
       return {
         range, totals,
-        daily: days.map((row): DailyTotals => ({
-          day: String(row["day"]).slice(0, 10), registrations: int(row["registrations"]), deletions: int(row["deletions"]),
-          registered: int(row["registered"]), visitors: int(row["visitors"]), active: int(row["active"]),
-          games: int(row["games"]), wins: int(row["wins"]), losses: int(row["losses"]), draws: int(row["draws"]),
-          resigned: int(row["resigned"]), abandoned: int(row["abandoned"]), onlineGames: int(row["online_games"]),
-        })),
+        daily: days.map(toDaily),
         weekly: weeklyActive,
+        previous: earlier ? periodSums(((check(earlier) ?? []) as Record<string, unknown>[]).map(toDaily)) : null,
       };
     },
     async hitRateLimit(rateKey, windowSeconds, limit) {

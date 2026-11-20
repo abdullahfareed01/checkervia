@@ -3,35 +3,51 @@
 // Counts and names only: never the board of a game being played.
 import { useEffect, useRef } from "react";
 import { LEVEL_NAMES } from "../players";
-import type { LiveData } from "../moderation";
+import type { LiveCountry, LiveData, LiveRoomGame } from "../moderation";
 import { useAdminRead } from "../useAdminRead";
-import { countryName } from "./AnalyticsReports";
-import { dateTime } from "./format";
+import { PageActions } from "./frame";
+import { Icon } from "./icons";
+import { Breakdown, DataTable, EmptyState, FlagName, HeroTile, number, SectionCard, StatTile, TileGrid, When } from "./ui";
+import type { Column } from "./ui";
 
-const MODES: readonly [string, string][] = [["ai", "Against the AI"], ["two", "Two players, one device"], ["online", "Online rooms"]];
-const count = (value: number | undefined) => (value ?? 0).toLocaleString("en-GB");
+const count = (value: number | undefined) => number(value ?? 0);
+const FLAGS: readonly Column<LiveCountry>[] = [
+  { label: "Flag", head: true, cell: (row) => <FlagName code={row.country || null} /> },
+  { label: "In a game", numeric: true, cell: (row) => count(row.n) },
+  { label: "Against the AI", numeric: true, cell: (row) => count(row.ai) },
+  { label: "Two players", numeric: true, cell: (row) => count(row.two) },
+  { label: "Online rooms", numeric: true, cell: (row) => count(row.online) },
+];
 
-export function LiveContent({ data }: { data: LiveData }) {
+/** D113: one hero number, the three ways to play under it (the AI levels inside their tile), then the tables. */
+export function LiveContent({ data, now }: { data: LiveData; now?: number }) {
+  const rooms: readonly Column<LiveRoomGame>[] = [
+    { label: "Black", head: true, cell: (game) => game.black.username },
+    { label: "White", cell: (game) => game.white.username },
+    { label: "Started", cell: (game) => <When iso={game.startedAt} now={now} /> },
+    { label: "Moves", numeric: true, cell: (game) => count(game.moveCount) },
+  ];
   return <>
-    <dl className="adm-metrics">
-      <div className="adm-panel adm-metric"><dt>In a game now</dt><dd><span className="adm-metric-value adm-num">{count(data.online)}</span><span className="adm-dim adm-small">Devices, last 75 seconds</span></dd></div>
-      {MODES.map(([mode, label]) => <div className="adm-panel adm-metric" key={mode}><dt>{label}</dt><dd><span className="adm-metric-value adm-num">{count(data.modes[mode])}</span></dd></div>)}
-      {LEVEL_NAMES.map((name, index) => <div className="adm-panel adm-metric" key={name}><dt>AI, {name}</dt><dd><span className="adm-metric-value adm-num">{count(data.levels[String(index + 1)])}</span></dd></div>)}
-    </dl>
+    <HeroTile icon="live" label="In a game now" value={data.online}
+      note={`${count(data.online)} ${data.online === 1 ? "device" : "devices"}, last seen within 75 seconds`}
+      aside={<><span className="adm-live-pill"><span aria-hidden="true" />Live</span><span className="adm-hero-meta">Updates every 30 seconds while this page is open.</span></>} />
+    <TileGrid className="adm-tiles">
+      <StatTile icon="gamepad" label="Against the AI" value={data.modes["ai"] ?? 0} className="adm-tile-wide">
+        <Breakdown label="Against the AI by level" parts={LEVEL_NAMES.map((name, index) => ({ label: name, value: data.levels[String(index + 1)] ?? 0 }))} />
+      </StatTile>
+      <StatTile icon="users" label="Two players, one device" value={data.modes["two"] ?? 0} />
+      <StatTile icon="wifi" label="Online rooms" value={data.modes["online"] ?? 0} />
+    </TileGrid>
     <div className="adm-grid">
-      <section className="adm-panel" aria-labelledby="adm-live-flags"><h2 id="adm-live-flags" className="adm-panel-title">By flag</h2>
-        {data.countries.length ? <div className="adm-table-scroll"><table className="adm-data-table"><caption className="adm-sr">Devices in a game now, by flag</caption>
-          <thead><tr><th scope="col">Flag</th><th scope="col">Now</th><th scope="col">AI</th><th scope="col">Two players</th><th scope="col">Online</th></tr></thead>
-          <tbody>{data.countries.map((row) => <tr key={row.country}><th scope="row">{countryName(row.country || null)}</th><td>{count(row.n)}</td><td>{count(row.ai)}</td><td>{count(row.two)}</td><td>{count(row.online)}</td></tr>)}</tbody>
-        </table></div> : <p className="adm-dim">No one is in a game right now.</p>}
-      </section>
-      <section className="adm-panel" aria-labelledby="adm-live-rooms"><h2 id="adm-live-rooms" className="adm-panel-title">Online room games</h2>
-        {!data.rooms ? <p className="adm-dim">Online rooms are not installed yet. Their games appear here once they are.</p>
-          : data.roomGames.length ? <div className="adm-table-scroll"><table className="adm-data-table"><caption className="adm-sr">Room games in progress</caption>
-            <thead><tr><th scope="col">Black</th><th scope="col" className="adm-left">White</th><th scope="col">Started</th><th scope="col">Moves</th></tr></thead>
-            <tbody>{data.roomGames.map((game) => <tr key={game.id}><th scope="row">{game.black.username}</th><td className="adm-left">{game.white.username}</td><td className="adm-num">{dateTime(game.startedAt)}</td><td>{count(game.moveCount)}</td></tr>)}</tbody>
-          </table></div> : <p className="adm-dim">No room games in progress.</p>}
-      </section>
+      <SectionCard title="By flag" icon="flag" flush>
+        <DataTable label="Devices in a game now, by flag" columns={FLAGS} rows={data.countries} rowKey={(row) => row.country || "none"}
+          empty={{ title: "No one is in a game right now.", text: "Each device in a game shows here under its chosen flag within 30 seconds.", icon: "live" }} />
+      </SectionCard>
+      <SectionCard title="Online room games" icon="wifi" flush>
+        {!data.rooms ? <EmptyState title="Online rooms are not installed yet." text="Their games appear here once they are." />
+          : <DataTable label="Room games in progress" columns={rooms} rows={data.roomGames} rowKey={(game) => game.id}
+            empty={{ title: "No room games in progress.", text: "Games in online rooms appear here while they are being played.", icon: "wifi" }} />}
+      </SectionCard>
     </div>
   </>;
 }
@@ -51,7 +67,7 @@ export function Live() {
   }, []);
   const shown = result.kind === "ok" ? result.value : result.kind === "loading" ? last.current : null;
   return <section className="adm-overview" aria-label="Live" aria-busy={result.kind === "loading"}>
-    <div className="adm-toolbar"><p className="adm-dim adm-small">Updates every 30 seconds while this page is open.</p><button type="button" className="adm-button adm-button-quiet" disabled={result.kind === "loading"} onClick={reload}>Refresh now</button></div>
+    <PageActions><button type="button" className="adm-button adm-button-quiet" disabled={result.kind === "loading"} onClick={reload}><Icon name="refresh" /><span className="adm-button-label">Refresh now</span></button></PageActions>
     {shown ? <LiveContent data={shown} /> : result.kind === "problem" ? <div className="adm-panel"><p className="adm-problem" role="alert">{result.text}</p><button type="button" className="adm-button adm-button-quiet" onClick={reload}>Try again</button></div> : <p role="status">Loading live play</p>}
   </section>;
 }

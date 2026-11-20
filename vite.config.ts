@@ -15,7 +15,7 @@ function adminPages(): Plugin {
         // Typed by hand: the project has no @types/node.
         const incoming = request as unknown as { url?: string };
         const [path, query] = (incoming.url ?? "").split("?");
-        if (path && /^\/admin(\/[a-z]*)?\/?$/.test(path)) incoming.url = `/admin/index.html${query ? `?${query}` : ""}`;
+        if (path && /^\/admin(\/[a-z-]*)?\/?$/.test(path)) incoming.url = `/admin/index.html${query ? `?${query}` : ""}`;
         next();
       });
     },
@@ -79,6 +79,10 @@ export default defineConfig({
     // request" (DEV-008).
     port: 5173,
     strictPort: true,
+    // artifacts/ holds generated logs, screenshots, browser profiles and
+    // other sessions' worktrees. Watching it reloaded open pages whenever
+    // one of those changed (D112).
+    watch: { ignored: ["**/artifacts/**"] },
   },
   test: {
     // Engine tests are pure TypeScript, so no browser environment is needed.

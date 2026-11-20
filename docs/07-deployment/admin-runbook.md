@@ -1,7 +1,7 @@
 # Admin dashboard: owner runbook
 
 ## Current integration status, 19 Nov 2026
-The dashboard is included in the current game checkout, `Mentor's Project`, with its separate build under `dist/admin`. All nine sections are built: Overview, Players, Reports, Suspensions, Live, Countries, Who is winning, Resigned games and Audit log, with smooth edge to edge charts and a compact layout (D109) and the moderation actions (D110). All 2145 tests in 109 files and both builds pass. See `docs/04-production/dashboard-handoff.md` for the saved checkpoint and continuation order.
+The dashboard is included in the current game checkout, `Mentor's Project`, with its separate build under `dist/admin`. All 13 sections are built, grouped as in the owner's mockup (D111): Overview; All Players, Live Players, Leaderboard; AI Games, Game Results, Activity & Retention; Reports, Suspensions, Resignations; Countries, Audit Log, Settings. They have smooth charts (D109), the moderation actions (D110) and the mockup's cream and green look with change arrows on the previous period (D111). All 2167 tests in 110 files and both builds pass. See `docs/04-production/dashboard-handoff.md` for the saved checkpoint and continuation order.
 
 ### Moderation actions (D110)
 Open a player from Players (or use Suspend in Reports) and choose an action in the Actions panel. Every action opens one dialog: it says what will happen and whether it can be undone, and it needs a reason of at least 3 characters. The reason is saved in the Audit log together with the change, in the same database step.
@@ -30,7 +30,7 @@ period. Abandoned games are always separate.
 The Audit log has search, exact action and player UUID filters, 25 entries per
 cursor page, reasons and expandable details. Displayed dates follow this device;
 details include exact UTC timestamps. It has no edit or delete operation. Sample
-mode survives section navigation and reload, and Use game data still removes it.
+mode survives section navigation and reload; removing `?demo=app` from the address leaves it.
 Repeat the isolated browser review with `node scripts/check-admin.mjs 5190` while
 the local Vite preview is running. `&report=empty`, `&report=error`,
 `&report=slow` and `&report=race` exercise development states only.

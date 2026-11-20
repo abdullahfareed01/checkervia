@@ -1,8 +1,8 @@
-/* The dashboard's frame (D100). Phones (and short windows): a top bar with
-   Menu, which opens the sections as a sheet; the page is the one scroll.
-   From 960px wide and 600px tall: the sections in a side bar that stays
-   put (it fits without scrolling), the content beside it. Panels sit in a
-   grid of one column, two from 720px. No sideways scroll from 320px up. */
+/* The dashboard's frame (D100), redrawn from the owner's mockup (D111).
+   Phones (and short windows): a dark green top bar with Menu, which opens
+   the sections as a sheet; the page is the one scroll. From 960px wide and
+   600px tall: the dark green side bar with grouped sections stays put, the
+   cream page beside it. No sideways scroll from 320px up. */
 
 .adm-app {
   min-height: 100dvh;
@@ -20,84 +20,495 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 52px;
-  padding: 4px 16px;
-  padding-top: calc(4px + env(safe-area-inset-top));
-  border-bottom: 1px solid var(--adm-line-soft);
-  background: var(--adm-panel);
+  min-height: 56px;
+  flex-wrap: wrap;
+  padding: 6px 16px;
+  padding-top: calc(6px + env(safe-area-inset-top));
+  background: var(--adm-side-bg);
+  color: #fff;
 }
 
-.adm-brand-small {
-  font-size: 1rem;
+.adm-top .adm-brand img,
+.adm-sheet .adm-brand img {
+  width: 36px;
+  height: auto;
+}
+
+.adm-top .adm-brand-name,
+.adm-sheet .adm-brand-name {
+  font-size: 1.15rem;
+}
+
+.adm-menu-button {
+  flex: none;
+  margin-left: auto;
 }
 
 .adm-main {
   width: 100%;
-  max-width: 1200px;
-  padding: 12px 16px calc(24px + env(safe-area-inset-bottom));
+  max-width: 1600px;
+  min-width: 0;
+  padding: 14px 16px calc(28px + env(safe-area-inset-bottom));
+  container: adm-page / inline-size;
+}
+
+/* ---------- Brand ---------- */
+
+.adm-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.adm-brand img {
+  flex: none;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.35));
+}
+
+.adm-brand-text {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.adm-brand-name {
+  color: #fdf6e6;
+  font-family: var(--lb-serif);
+  font-size: 1.55rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.adm-brand-pill {
+  padding: 1px 10px 2px;
+  border-radius: 8px;
+  background: linear-gradient(180deg, #f6cd5c, #e5aa2c);
+  color: #3a2606;
+  font-family: var(--adm-sans);
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+/* ---------- The page header ---------- */
+
+.adm-page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.adm-page-heading {
+  min-width: 0;
+}
+
+.adm-crumbs {
+  color: var(--adm-crumb);
+  font-size: var(--adm-type-label);
+  font-weight: 600;
+}
+
+.adm-crumbs span {
+  margin: 0 0.35em;
 }
 
 .adm-title {
-  margin-bottom: 10px;
-  color: var(--adm-cream);
+  margin: 1px 0 0;
+  color: var(--adm-ink);
   font-family: var(--lb-serif);
-  font-size: 1.35rem;
+  font-size: 1.85rem;
+  font-weight: 900;
   line-height: 1.15;
+}
+
+.adm-subtitle {
+  margin-top: 4px;
+  color: var(--adm-soft);
+  font-size: 1rem;
+}
+
+.adm-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.adm-page-actions {
+  display: contents;
+}
+
+.adm-head-actions .adm-button,
+.adm-head-actions .adm-toolbar .adm-button {
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+}
+
+.adm-open-game {
+  text-decoration: none;
+}
+
+.adm-open-game .adm-icon {
+  width: 18px;
+  height: 18px;
+}
+
+/* The period: a native select dressed as the mockup's button. */
+.adm-select-button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  border: 1px solid var(--adm-line);
+  border-radius: 10px;
+  background: var(--adm-button-bg);
+  box-shadow: var(--adm-shadow-small);
+  color: var(--adm-text);
+}
+
+.adm-select-button:hover {
+  border-color: var(--adm-line-strong);
+}
+
+.adm-select-button > .adm-icon {
+  position: absolute;
+  left: 13px;
+  pointer-events: none;
+}
+
+.adm-select-button > .adm-select-chevron {
+  left: auto;
+  right: 12px;
+  width: 18px;
+  height: 18px;
+}
+
+.adm-select-button select {
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 0 40px 0 42px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  appearance: none;
+}
+
+.adm-select-button select:focus-visible {
+  outline: 3px solid var(--adm-focus);
+  outline-offset: 2px;
+}
+
+.adm-bell,
+.adm-avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.adm-bell {
+  border: 1px solid var(--adm-line);
+  background: var(--adm-button-bg);
+  box-shadow: var(--adm-shadow-small);
+  color: var(--adm-ink);
+}
+
+.adm-bell:hover {
+  border-color: var(--adm-line-strong);
+}
+
+.adm-bell .adm-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.adm-bell-dot {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border: 2px solid var(--adm-bg);
+  border-radius: 999px;
+  background: var(--adm-red);
+  color: var(--adm-on-red);
+  font-size: var(--adm-type-meta);
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.adm-avatar {
+  border: 2px solid #fff6dc;
+  background: radial-gradient(circle at 35% 30%, #5c3a12, #2c1a06);
+  box-shadow: 0 0 0 2px #d9a33a, var(--adm-shadow-small);
+  color: #f4c24a;
+  font: inherit;
+}
+
+.adm-avatar .adm-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.adm-account-menu {
+  position: relative;
+}
+
+.adm-account-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  display: grid;
+  gap: 8px;
+  width: min(300px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--adm-line);
+  border-radius: 12px;
+  background: var(--adm-panel);
+  box-shadow: var(--adm-shadow-pop);
+}
+
+/* Phones: the header controls in two tidy rows. The period, Refresh and
+   Export (icons, their names kept for screen readers); then Open Game
+   across the width with the bell. */
+@media (max-width: 599px) {
+  .adm-page-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .adm-head-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 8px;
+  }
+
+  .adm-head-actions .adm-button-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .adm-head-actions .adm-button:has(.adm-button-label) {
+    width: 44px;
+    padding: 0;
+  }
+
+  .adm-select-button {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .adm-select-button select {
+    width: 100%;
+  }
+
+  .adm-head-actions .adm-open-game {
+    grid-column: 1 / 3;
+  }
+
+  .adm-head-actions .adm-bell {
+    grid-column: 3;
+  }
+
+  .adm-head-actions:not(:has(.adm-select-button)) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .adm-head-actions:not(:has(.adm-select-button)) .adm-open-game {
+    grid-column: 1;
+  }
+
+  .adm-head-actions:not(:has(.adm-select-button)) .adm-bell {
+    grid-column: 2;
+  }
+
+  .adm-title {
+    font-size: 1.75rem;
+  }
+}
+
+/* With the top bar, the account is in the menu sheet. */
+@media not ((min-width: 960px) and (min-height: 600px)) {
+  .adm-head-actions .adm-account-menu {
+    display: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .adm-account-panel {
+    position: fixed;
+    top: calc(64px + env(safe-area-inset-top));
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
 }
 
 /* ---------- The sections ---------- */
 
+.adm-nav-groups {
+  display: grid;
+  gap: 8px;
+}
+
+.adm-nav-group + .adm-nav-group {
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.adm-nav-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 2px 8px 4px;
+  color: #f0bb45;
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+
+.adm-nav-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .adm-nav-list {
   display: grid;
-  gap: 2px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .adm-nav-link {
+  position: relative;
   display: flex;
   align-items: center;
-  min-height: 44px;
-  padding: 8px 12px;
+  gap: 12px;
+  min-height: 42px;
+  padding: 7px 10px 7px 14px;
   border-radius: 10px;
-  color: var(--adm-soft);
+  color: #eef5f0;
+  font-size: 1rem;
+  line-height: 1.3;
   text-decoration: none;
   user-select: none;
 }
 
+/* A 44px tap target around the 42px look. */
+.adm-nav-link::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+}
+
+.adm-nav-link .adm-icon {
+  flex: none;
+  width: 21px;
+  height: 21px;
+  color: #d9e7df;
+}
+
+.adm-nav-label {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
 .adm-nav-link:hover {
-  background: rgba(244, 197, 92, 0.07);
-  color: var(--adm-cream);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .adm-nav-link:active {
-  background: rgba(244, 197, 92, 0.16);
+  background: rgba(255, 255, 255, 0.14);
 }
 
 .adm-nav-link[aria-current="page"] {
-  background: rgba(244, 197, 92, 0.13);
-  box-shadow: inset 3px 0 0 var(--adm-gold);
-  color: var(--adm-gold);
+  background: var(--adm-nav-active-bg);
+  box-shadow: var(--adm-nav-active-shadow);
+  color: var(--adm-nav-active-text);
+  font-weight: 700;
 }
 
-.adm-nav-link[aria-current="page"]:active {
-  background: rgba(244, 197, 92, 0.24);
+.adm-nav-link[aria-current="page"] .adm-icon {
+  color: var(--adm-nav-active-text);
 }
+
+.adm-nav-badge {
+  flex: none;
+  margin-left: auto;
+  min-width: 32px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  color: #fff;
+  font-size: var(--adm-type-label);
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+}
+
+.adm-nav-badge-green {
+  background: var(--adm-badge-green);
+}
+
+.adm-nav-badge-red {
+  background: var(--adm-red);
+}
+
+.adm-side :focus-visible,
+.adm-sheet :focus-visible,
+.adm-top :focus-visible {
+  outline-color: #f6cd5c;
+}
+
+/* ---------- The account lines ---------- */
 
 .adm-account {
   display: grid;
-  gap: 8px;
-  padding-top: 14px;
-  border-top: 1px solid var(--adm-line-soft);
+  gap: 6px;
 }
 
 .adm-account-email {
   overflow: hidden;
-  color: var(--adm-dim);
-  font-size: 0.9rem;
+  color: var(--adm-ink);
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.adm-account-renews {
+  color: var(--adm-dim);
+  font-size: var(--adm-type-meta);
 }
 
 /* ---------- The phone menu sheet ---------- */
@@ -106,7 +517,7 @@
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(10, 5, 2, 0.65);
+  background: var(--adm-backdrop);
 }
 
 .adm-sheet {
@@ -116,14 +527,14 @@
   display: grid;
   align-content: start;
   gap: 14px;
-  width: min(340px, 100%);
+  width: min(320px, 100%);
   height: 100dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+  padding: 12px 14px calc(16px + env(safe-area-inset-bottom));
   padding-top: calc(12px + env(safe-area-inset-top));
-  border-left: 1px solid var(--adm-line);
-  background: var(--lb-panel);
+  background: var(--adm-side-bg);
+  color: #e9f1ec;
   scrollbar-width: thin;
 }
 
@@ -131,12 +542,34 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
 }
 
-.adm-sheet-title {
-  color: var(--adm-cream);
-  font-family: var(--lb-serif);
-  font-size: 1.2rem;
+.adm-sheet .adm-account {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.adm-sheet .adm-account-email {
+  color: #fdf6e6;
+}
+
+.adm-sheet .adm-account-renews {
+  color: #b9cec2;
+}
+
+.adm-top .adm-button-quiet,
+.adm-sheet .adm-button-quiet {
+  border-color: rgba(255, 255, 255, 0.3);
+  background: transparent;
+  box-shadow: none;
+  color: #fdf6e6;
+}
+
+.adm-top .adm-button-quiet:hover:not(:disabled),
+.adm-sheet .adm-button-quiet:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 /* ---------- Wide screens: the side bar ---------- */
@@ -144,7 +577,7 @@
 @media (min-width: 960px) and (min-height: 600px) {
   .adm-app {
     display: grid;
-    grid-template-columns: 212px minmax(0, 1fr);
+    grid-template-columns: clamp(248px, 15.5rem, 34vw) minmax(0, 1fr);
     align-items: start;
   }
 
@@ -153,15 +586,47 @@
     top: 0;
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 16px;
     height: 100dvh;
-    padding: 14px 10px;
-    border-right: 1px solid var(--adm-line-soft);
-    background: var(--adm-panel);
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 18px 14px 24px;
+    container: adm-side / inline-size;
+    background: var(--adm-side-bg);
+    color: #e9f1ec;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.25) transparent;
   }
 
-  .adm-side .adm-account {
-    margin-top: auto;
+  .adm-side > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* The checkered floor of the mockup, fading upwards. */
+  .adm-side::after {
+    content: "";
+    position: absolute;
+    left: -20%;
+    right: -20%;
+    bottom: 0;
+    height: 150px;
+    background: repeating-conic-gradient(rgba(255, 255, 255, 0.075) 0 25%, transparent 0 50%) 0 0 / 44px 44px;
+    -webkit-mask-image: linear-gradient(to top, #000, transparent);
+    mask-image: linear-gradient(to top, #000, transparent);
+    transform: perspective(260px) rotateX(38deg);
+    transform-origin: bottom;
+    pointer-events: none;
+  }
+
+  .adm-side .adm-brand {
+    padding: 0 6px;
+  }
+
+  /* The word mark follows the side bar's width, so a large text size never
+     pushes it past the edge. */
+  .adm-side .adm-brand-name {
+    font-size: min(1.55rem, 11cqi);
   }
 
   .adm-top {
@@ -169,11 +634,11 @@
   }
 
   .adm-main {
-    padding: 16px 24px 32px;
+    padding: 18px 20px 32px;
   }
 
   .adm-title {
-    font-size: 1.5rem;
+    font-size: var(--adm-type-title);
   }
 }
 
@@ -181,7 +646,7 @@
 
 .adm-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 @media (min-width: 720px) {
@@ -197,12 +662,13 @@
 .adm-panel {
   display: grid;
   align-content: start;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  padding: 14px;
+  padding: 14px 16px;
   border: 1px solid var(--adm-line-soft);
-  border-radius: 12px;
+  border-radius: 14px;
   background: var(--adm-panel);
+  box-shadow: var(--adm-shadow);
 }
 
 .adm-panel-head {
@@ -214,9 +680,24 @@
 }
 
 .adm-panel-title {
-  color: var(--adm-cream);
-  font-size: 1.05rem;
-  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  color: var(--adm-ink);
+  font-size: var(--adm-type-card);
+  font-weight: 700;
+}
+
+.adm-panel-title .adm-icon {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  color: var(--adm-icon);
+}
+
+.adm-panel-title .adm-icon-gold {
+  color: var(--adm-gold-icon);
 }
 
 .adm-facts {
@@ -230,6 +711,8 @@
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 4px 16px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--adm-line-soft);
 }
 
 .adm-facts dt {
@@ -239,65 +722,8 @@
 .adm-facts dd {
   margin: 0;
   min-width: 0;
-  color: var(--adm-cream);
+  color: var(--adm-ink);
+  font-weight: 600;
 }
 
-/* ---------- Recent activity ---------- */
-
-.adm-activity {
-  display: grid;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.adm-activity-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 0;
-  border-top: 1px solid var(--adm-line-soft);
-}
-
-.adm-activity-what {
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
-
-.adm-activity-time {
-  color: var(--adm-dim);
-  font-size: 0.85rem;
-  white-space: nowrap;
-}
-
-@media (max-width: 420px) {
-  .adm-activity-row {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .adm-activity-time {
-    grid-column: 2;
-    white-space: normal;
-  }
-}
-
-.adm-badge {
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 800;
-  white-space: nowrap;
-}
-
-.adm-badge-ok {
-  background: var(--adm-ok-bg);
-  color: var(--adm-ok);
-}
-
-.adm-badge-refused,
-.adm-badge-failed {
-  background: var(--adm-danger-bg);
-  color: var(--adm-danger);
-}
 

@@ -6,6 +6,10 @@
 - [x] D109: smooth edge to edge charts drawn from the left (owner screenshot), a value and day pill, and a compact layout with 44px tap targets kept.
 - [x] D110, phase 3: Reports, Suspensions, Live and moderation actions with mandatory reasons and atomic audit entries. 2145 tests in 109 files, strict TypeScript and both builds pass.
 - [x] Browser check `node scripts/check-admin.mjs <port>`: 250 checks across 54 layout states pass, including chart edges, the pill, suspend, delete guard, dismiss and refusal flows.
+- [x] D111: the dashboard redrawn from the owner's mockup (grouped green side bar, header controls, six cards with change arrows, donut, columns, level bars, AI Games, Game Results, Activity & Retention, Settings). 2167 tests, both builds and 365 browser checks pass.
+- [x] D112: dark mode and small screen wrapping; 486 browser checks pass.
+- [x] D113: readability redesign (type scale, shared components, Live Players hero and tiles, tables); 1972 browser checks across 299 states pass. Owner approved on 20 Nov 2026.
+- [ ] Owner review of the D111 redesign against the mockup (`/admin/?demo=app` on the dev server).
 - [ ] Wire replays of finished or reported games (`admin_replay`, already installed) with a read only board view.
 - [ ] Owner review of phase 3 before release (planned stop).
 - [ ] Future, owner idea: send rewards from the dashboard to players with the most wins or loyalty perks. Needs, in order: server verified cosmetic ownership (the cosmetics production item below), a reward ledger and one audited `admin_grant_reward` function (a new migration, owner approval first), a notice the player sees in the game, and eligibility lists (top winners exist in Who is winning; loyalty can use days played from `daily_active`, kept about 400 days). Entry points: a Rewards section, and Send reward beside top winners and in player details.
