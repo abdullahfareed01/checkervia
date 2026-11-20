@@ -72,6 +72,10 @@ function smile(from: Point, control: Point, to: Point, width = 1.8): FacePath {
 }
 
 const roundEye = oval(19.5, 21.25, 2.5, 2.75);
+export const WINK_OPEN_EYE = roundEye;
+export const WINK_CLOSED_EYE = oval(19.5, 21.25, 2.8, 0.3);
+export const WINK_MS = 2600;
+export const WINK_TIMES = [0, 0.09, 0.2, 0.32, 1] as const;
 const happyEye = contour([[16, 23], [17.6, 20.5], [19.5, 19.7], [21.4, 20.5], [23, 23], [21.3, 23.6], [19.5, 21.7], [17.7, 23.6]]);
 const laughEye = contour([[16, 19.3], [16.35, 17.4], [22.1, 19.6], [22.7, 20.6], [22.1, 21.6], [17.25, 23.8], [16, 23.1], [19.1, 20.6]], 0.08);
 const angryEye = contour([[16.7, 22.2], [16.6, 20.4], [19.5, 21.3], [22.4, 22.2], [22.3, 23.2], [22.2, 24.6], [19.5, 24.4], [16.8, 24.2]], 0.06);
@@ -93,7 +97,7 @@ export function robotPose(mood: AiMood): RobotPose {
   let mouth = oval(24, 31.1, 3.5, 0.9, 12);
   let browOpacity = 0;
   if (mood === "happy" || mood === "proud" || mood === "wink") {
-    leftEye = happyEye;
+    leftEye = mood === "wink" ? WINK_CLOSED_EYE : happyEye;
     rightEye = mood === "wink" ? shift(roundEye, 9) : shift(happyEye, 9);
     mouth = happyMouth;
   } else if (mood === "laughing") {
@@ -165,4 +169,14 @@ export function betweenPaths(from: FacePath, to: FacePath, progress: number): Fa
   }
   const eased = t * t * (3 - 2 * t);
   return { closed: to.closed, points: to.points.map((value, i) => from.points[i]! + (value - from.points[i]!) * eased) };
+}
+
+/** One eye closes, holds briefly, reopens, then rests before the next wink. */
+export function winkEyeAt(elapsed: number): FacePath {
+  if (elapsed < 0) return WINK_OPEN_EYE;
+  const phase = (elapsed % WINK_MS) / WINK_MS;
+  if (phase < WINK_TIMES[1]) return betweenPaths(WINK_OPEN_EYE, WINK_CLOSED_EYE, phase / WINK_TIMES[1]);
+  if (phase < WINK_TIMES[2]) return WINK_CLOSED_EYE;
+  if (phase < WINK_TIMES[3]) return betweenPaths(WINK_CLOSED_EYE, WINK_OPEN_EYE, (phase - WINK_TIMES[2]) / (WINK_TIMES[3] - WINK_TIMES[2]));
+  return WINK_OPEN_EYE;
 }

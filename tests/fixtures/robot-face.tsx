@@ -12,6 +12,8 @@ const reactions: readonly (readonly [AiMood, string])[] = [
   ["laughing", "Laughing"], ["shocked", "Double capture"],
   ["alarmed", "Triple capture"], ["defeated", "Lost"], ["thinking", "Thinking"],
   ["sleepy", "Sleeping (Zzz)"],
+  ["wink", "Wink"], ["smug", "Smug"], ["nervous", "Nervous"],
+  ["proud", "Proud"], ["annoyed", "Annoyed"], ["starstruck", "Star eyes"],
 ];
 
 function Harness() {
@@ -20,7 +22,7 @@ function Harness() {
   return (
     <main style={{ maxWidth: 520, margin: "24px auto", padding: 16, color: "#f3f6fa", fontFamily: "system-ui, sans-serif" }}>
       <h1 style={{ fontSize: 24, margin: "0 0 12px" }}>Avatar preview</h1>
-      <p style={{ lineHeight: 1.5 }}>The eyes, brows and mouth now bend into each expression. Switch quickly between Happy and Angry to check an interrupted transition. Choose Sleeping for the Zzz animation, or leave Lost on to see the sad idle animation.</p>
+      <p style={{ lineHeight: 1.5 }}>The eyes, brows and mouth now bend into each expression. Switch quickly between Happy and Angry to check an interrupted transition. Leave Wink selected to watch one eye close and reopen. Choose Sleeping for Zzz, or Lost for the sad idle animation.</p>
       <div style={{ display: "flex", alignItems: "center", gap: 24, background: "#1b2631", padding: 20, borderRadius: 16, margin: "20px 0" }}>
         <div style={{ width: 96, height: 96 }}><RobotFace mood={mood} /></div>
         <div style={{ width: 48, height: 48 }}><RobotFace mood={mood} /></div>

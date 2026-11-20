@@ -110,6 +110,37 @@ try {
       for (const key of ['leftEye', 'rightEye', 'mouth']) check(distance(before[key], samples(paths[key])) < 0.035, 'rapid reversal ' + i + ': continues ' + key);
       check(face.querySelectorAll('.robot-expression').length === 1, 'rapid reversal ' + i + ': no replacement layer');
     }
+    // A wink is a temporal action, not just an asymmetric static smile.
+    setRobotMood('wink');
+    let winkStart = face.getCurrentTime();
+    check(!!paths.leftEye.querySelector('[data-wink]'), 'wink: one persistent native eye cycle');
+    check(!paths.rightEye.querySelector('[data-wink]'), 'wink: other eye has no closing cycle');
+    face.setCurrentTime(winkStart + 0.43);
+    check(paths.leftEye.getBBox().height > 5, 'wink: starts fully open');
+    check(paths.rightEye.getBBox().height > 5, 'wink: other eye stays open');
+    face.setCurrentTime(winkStart + 0.42 + 2.6 * 0.14);
+    check(paths.leftEye.getBBox().height < 0.8, 'wink: closes to a clear narrow lid');
+    check(paths.rightEye.getBBox().height > 5, 'wink: holds the other eye open during closure');
+    face.setCurrentTime(winkStart + 0.42 + 2.6 * 0.4);
+    check(paths.leftEye.getBBox().height > 5, 'wink: reopens');
+    face.setCurrentTime(winkStart + 0.42 + 2.6 * 1.14);
+    check(paths.leftEye.getBBox().height < 0.8, 'wink: repeats after the open rest');
+    const heldWink = samples(paths.leftEye);
+    setRobotMood('angry');
+    face.setCurrentTime(face.getCurrentTime());
+    check(distance(heldWink, samples(paths.leftEye)) < 0.035, 'wink: interruption starts at the closed eye without jumping');
+    setRobotMood('wink'); winkStart = face.getCurrentTime();
+    face.setCurrentTime(winkStart + 0.43);
+    document.documentElement.dataset.anim = 'off'; await wait(0);
+    check(paths.leftEye.getBBox().height < 0.8 && paths.rightEye.getBBox().height > 5, 'wink: motion off keeps a recognizable static wink');
+    face.setCurrentTime(face.getCurrentTime() + 4);
+    check(paths.leftEye.getBBox().height < 0.8, 'wink: motion off stops the repeating cycle');
+    document.documentElement.dataset.anim = 'standard'; await wait(0);
+    winkStart = face.getCurrentTime();
+    face.setCurrentTime(winkStart + 0.43);
+    check(paths.leftEye.getBBox().height > 5, 'wink: restoring motion reopens the eye');
+    face.setCurrentTime(winkStart + 0.42 + 2.6 * 0.14);
+    check(paths.leftEye.getBBox().height < 0.8, 'wink: restoring motion resumes the wink');
     for (const level of ['off', 'reduced']) {
       document.documentElement.dataset.anim = level;
       setRobotMood('alarmed');
@@ -166,9 +197,15 @@ try {
   writeFileSync(resolve(out, "frame-sample.json"), JSON.stringify(frames, null, 2));
   console.log("Throttled preview frame sample: " + JSON.stringify(frames));
   await s("Emulation.setDeviceMetricsOverride", { width: 900, height: 600, deviceScaleFactor: 1, mobile: false });
-  for (const mood of ["happy", "angry", "laughing", "alarmed"]) {
+  for (const mood of ["happy", "angry", "laughing", "alarmed", "wink"]) {
     await evaluate(`setRobotMood('${mood}')`);
     await wait(650);
+    if (mood === "wink") await evaluate(`document.querySelectorAll('.robot-face').forEach(face => {
+      face.pauseAnimations();
+      const cycle = face.querySelector('[data-wink]');
+      face.setCurrentTime(parseFloat(cycle.getAttribute('begin')) + 2.6 * .14);
+      face.getAnimations({ subtree: true }).forEach(animation => { animation.pause(); animation.currentTime = 0; });
+    })`);
     const shot = await s("Page.captureScreenshot", { format: "png" });
     writeFileSync(resolve(out, `${mood}.png`), Buffer.from(shot.data, "base64"));
   }

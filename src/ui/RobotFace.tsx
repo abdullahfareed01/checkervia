@@ -2,16 +2,17 @@
 // paths between poses. No face swaps, cleanup timers or React frame loop.
 import { memo, useMemo } from "react";
 import type { AiMood } from "./aiMood";
-import { MORPH_MS, pathData, robotPose } from "./robotGeometry";
+import { MORPH_MS, WINK_MS, WINK_TIMES, pathData, robotPose } from "./robotGeometry";
 import type { FacePath } from "./robotGeometry";
 import { useRobotMorph } from "./useRobotMorph";
 
-function MorphPath({ name, shape, className, fill, stroke, opacity = 1 }: {
-  name: string; shape: FacePath; className?: string; fill: string; stroke?: string; opacity?: number;
+function MorphPath({ name, shape, className, fill, stroke, opacity = 1, wink = false }: {
+  name: string; shape: FacePath; className?: string; fill: string; stroke?: string; opacity?: number; wink?: boolean;
 }) {
   return (
     <path data-morph={name} className={`robot-morph-path ${className ?? ""}`} d={pathData(shape)} fill={fill} stroke={stroke} strokeWidth={stroke ? 1.5 : undefined} strokeLinecap="round" opacity={opacity}>
       <animate attributeName="d" begin="indefinite" dur={`${MORPH_MS}ms`} calcMode="spline" keyTimes="0;1" keySplines=".33 0 .67 1" fill="remove" />
+      {wink && <animate data-wink="true" attributeName="d" begin="indefinite" dur={`${WINK_MS}ms`} calcMode="spline" keyTimes={WINK_TIMES.join(";")} keySplines=".33 0 .67 1;.33 0 .67 1;.33 0 .67 1;.33 0 .67 1" repeatCount="indefinite" fill="remove" />}
     </path>
   );
 }
@@ -25,7 +26,7 @@ function star(cx: number): string {
 
 export const RobotFace = memo(function RobotFace({ mood }: { mood: AiMood }) {
   const pose = useMemo(() => robotPose(mood), [mood]);
-  const ref = useRobotMorph(pose.paths);
+  const ref = useRobotMorph(pose.paths, mood === "wink");
   const alarmed = mood === "alarmed", surprised = alarmed || mood === "shocked";
   const laughing = mood === "laughing", open = laughing || mood === "starstruck";
   return (
@@ -43,7 +44,7 @@ export const RobotFace = memo(function RobotFace({ mood }: { mood: AiMood }) {
           <rect x="13" y="14" width="22" height="13" rx="6" fill="#1b2631" />
           <g ref={ref} className={`robot-expression robot-expression-${mood}`}>
             <g className={`robot-eyes${mood === "annoyed" ? " robot-roll" : ""}`}>
-              <MorphPath name="leftEye" shape={pose.paths.leftEye} fill={pose.eyeColor} className={mood === "wink" ? "robot-wink" : undefined} opacity={mood === "starstruck" ? 0 : 1} />
+              <MorphPath name="leftEye" shape={pose.paths.leftEye} fill={pose.eyeColor} className={mood === "wink" ? "robot-wink" : undefined} opacity={mood === "starstruck" ? 0 : 1} wink />
               <MorphPath name="rightEye" shape={pose.paths.rightEye} fill={pose.eyeColor} opacity={mood === "starstruck" ? 0 : 1} />
               <g className={`robot-pupils${alarmed ? " robot-alarm-pupils" : ""}`} opacity={surprised ? 1 : 0}>
                 <MorphPath name="leftPupil" shape={pose.paths.leftPupil} fill="#1b2631" />

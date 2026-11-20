@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { AiMood } from "../src/ui/aiMood";
-import { betweenPaths, MORPH_MS, pathData, robotPose } from "../src/ui/robotGeometry";
+import { betweenPaths, MORPH_MS, WINK_MS, WINK_OPEN_EYE, WINK_CLOSED_EYE, pathData, robotPose, winkEyeAt } from "../src/ui/robotGeometry";
 import { sampleFace } from "../src/ui/useRobotMorph";
 
 const moods: readonly AiMood[] = ["neutral", "thinking", "happy", "laughing", "angry", "shocked", "alarmed", "smug", "nervous", "defeated", "wink", "starstruck", "proud", "annoyed", "sleepy"];
@@ -53,5 +53,35 @@ describe("continuous robot geometry", () => {
     expect(pathData(betweenPaths(from, to, 10))).toBe(pathData(to));
     betweenPaths(from, to, 0.3);
     expect(from).toEqual(snapshot);
+  });
+
+  it("makes the static wink unmistakable with one narrow eye and one fully open eye", () => {
+    const { leftEye, rightEye } = robotPose("wink").paths;
+    const height = (points: readonly number[]) => {
+      const y = points.filter((_, i) => i % 2 === 1);
+      return Math.max(...y) - Math.min(...y);
+    };
+    expect(height(leftEye.points)).toBeLessThan(0.8);
+    expect(height(rightEye.points)).toBeGreaterThan(5);
+  });
+
+  it("closes, holds, reopens and meets the next wink at the same open pose", () => {
+    expect(winkEyeAt(0)).toEqual(WINK_OPEN_EYE);
+    expect(winkEyeAt(WINK_MS * 0.14)).toEqual(WINK_CLOSED_EYE);
+    expect(winkEyeAt(WINK_MS * 0.25)).not.toEqual(WINK_CLOSED_EYE);
+    expect(winkEyeAt(WINK_MS * 0.4)).toEqual(WINK_OPEN_EYE);
+    expect(winkEyeAt(WINK_MS)).toEqual(winkEyeAt(0));
+    expect(winkEyeAt(WINK_MS * 1.14)).toEqual(WINK_CLOSED_EYE);
+  });
+
+  it("leaves a closed wink from its displayed shape, without closing the other eye", () => {
+    const paths = { ...robotPose("wink").paths, leftEye: WINK_OPEN_EYE };
+    const frame = { from: paths, to: paths, started: 1000, wink: true };
+    const now = 1000 + MORPH_MS + WINK_MS * 0.14;
+    const shown = sampleFace(frame, now);
+    expect(shown.leftEye).toEqual(WINK_CLOSED_EYE);
+    expect(shown.rightEye).toEqual(paths.rightEye);
+    const exit = { from: shown, to: robotPose("angry").paths, started: now };
+    expect(sampleFace(exit, now)).toEqual(shown);
   });
 });
