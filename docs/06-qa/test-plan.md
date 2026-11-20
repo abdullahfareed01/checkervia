@@ -16,6 +16,7 @@
 | Proxy | `tests/aiMoveHandler.test.ts` | Key never leaked, request limits, rate limit, structured output fallback, health check |
 | Provider readiness | `tests/ai-health.test.ts` | Key and account balances, metadata failures, cache expiry and concurrent checks; no model request |
 | Draw migration | `tests/leaderboard/draw-migration.test.ts` | Existing data preserved, draw counts, constraints, ranking, permissions, repeat refusal and rollback |
+| Saved progress (D150) | `tests/leaderboard/account*.test.ts`, `tests/admin/player-session.test.ts`, `tests/admin/delete-erasure.test.ts` | Every limit with its number, 10 minute codes and 5 wrong tries, one email per profile, a second device, log out, email removal and clean up, migration 9 rights and cascades, the Auth client's keys and instant sign out, a full save and restore round trip, the replace warning, and that no player session reaches any admin function |
 | Learn | `src/learn/*.test.ts` | Every scripted move legal; each lesson shows what its caption says |
 | UI (render) | `tests/*.test.ts` | Menu, level dialog, speech bubble, popups, cards, history, CSS guards |
 | Performance guards | `tests/long-game-perf.test.ts` | Move list items reused; the list never scrolls the page |

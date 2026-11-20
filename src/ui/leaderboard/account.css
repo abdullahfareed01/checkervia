@@ -53,7 +53,20 @@
   background: #3a1f12;
   color: #ffe2c4;
 }
+.acct-dialog {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+/* Two buttons side by side, each on its own row when a name or large text needs it. */
 .acct-actions {
+  display: flex;
+  flex-wrap: wrap;
   margin: 14px 0 6px;
   gap: 8px;
+}
+.lb-info.acct-dialog .acct-actions .lb-button {
+  flex: 1 1 9rem;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }

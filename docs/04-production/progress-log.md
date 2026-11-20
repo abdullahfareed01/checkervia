@@ -1,5 +1,9 @@
 # Progress Log
 
+## 20 Nov 2026: Optional email login to save progress (D150)
+- Built on `feature/accounts` (worktree `artifacts/accounts-worktree`): migration 9, the `account` function (codes, link, login, save, load, log out, remove email), Supabase Auth for players with an in memory fake, device keys for a second device, the clean up of removed emails, the profile screen section, the email and code popup with the replace warning, background sync of the shop and settings, and the Terms section "Saving your progress".
+- Validation: see the backlog entry of the same day. Owner setup (domain, Resend, Supabase SMTP and template, migration 9, `ACCOUNTS_ENABLED`) is listed in `docs/07-deployment/accounts-setup.md`.
+
 ## 19 Nov 2026: Dashboard phase 3, smooth charts and a compact layout (D109, D110)
 - Owner request: charts like the supplied screenshot (smooth, left to right), a compact dashboard without bad UI, and phase 3. Charts are now monotone smooth curves from edge to edge that draw in from the left, with a value and day pill over a dotted crosshair. The overview went from about three screens to one and a half at 1440 by 900; Players is a dense table (25 rows in one screen and a half instead of six).
 - Phase 3 built: Reports (players with reports and the queue, with Reviewed, Dismiss, Actioned and Open again), Suspensions (suspended, banned and device banned, with days left), Live (play by mode, level, flag and room games, refreshing every 30 seconds) and the Actions panel in player details (suspend, change, lift, ban, device ban, hide, rename, reset avatar or flag, delete, hide or count a win). Every action takes a reason and is saved with its audit row in one database step, through migration 7's installed functions.

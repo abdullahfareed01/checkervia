@@ -3,6 +3,7 @@
 // Logging in on a device that already has another profile first says
 // exactly what happens to it, and nothing changes until the player agrees.
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { ReactNode } from "react";
 import { CODE_MINUTES, normalEmail } from "../../leaderboard/account";
 import type { AccountPurpose } from "../../leaderboard/account";
@@ -24,7 +25,10 @@ export function AccountShell({ title, children, onClose }: { title: string; chil
     closeRef.current?.focus({ preventScroll: true });
     return () => before?.focus?.({ preventScroll: true });
   }, []);
-  return (
+  // Drawn at the Profile screen's level: a moving column around the button
+  // would otherwise carry the fixed popup off the window.
+  const host = typeof document === "undefined" ? null : document.querySelector(".pf-screen") ?? document.body;
+  const popup = (
     <div className="lb-info-backdrop" onClick={onClose}>
       <div className="lb-info acct-dialog" role="dialog" aria-modal="true" aria-labelledby={`${ids}-title`} onClick={(event) => event.stopPropagation()}
         onKeyDown={(event) => { if (event.key === "Escape") { event.stopPropagation(); onClose(); } }}>
@@ -37,6 +41,7 @@ export function AccountShell({ title, children, onClose }: { title: string; chil
       </div>
     </div>
   );
+  return host ? createPortal(popup, host) : popup;
 }
 
 /** The exact warning before a login replaces this device's profile (D150, point 2). */

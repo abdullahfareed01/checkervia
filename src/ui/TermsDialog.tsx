@@ -69,7 +69,7 @@ export const TERMS_SECTIONS: readonly { title: string; points: readonly string[]
     points: [
       "Saving your progress is optional. If you save it, our server keeps your email address only to send you login codes and to find your profile when you log in on another device. It is never public and never used for marketing.",
       "With a saved profile our server also keeps your shop unlocks and settings, and a scrambled key for each device you log in on.",
-      "Login codes are sent through our email provider, Resend, and our database and sign in provider, Supabase, stores your email. Codes expire after 10 minutes.",
+      "Login codes are sent through our email provider, Resend. Your email itself is kept by the service that runs our database and sign in. Codes expire after 10 minutes.",
       "You can remove your saved email at any time in your profile. Removing a profile also removes its email and saved data.",
     ],
   },

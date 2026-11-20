@@ -1,5 +1,7 @@
 # Supabase migration status
 
+Migration 9 (`accounts-migration-9.sql`, D150, saved progress) is prepared on `feature/accounts` and **not applied**. It needs migrations 1 to 8 and explicit owner approval. Its PGlite tests are in `tests/leaderboard/account-migration.test.ts`.
+
 Verified 17 Nov 2026 against the app's configured Checkervia project through authenticated Supabase MCP.
 
 | Migration | Status | Evidence |
