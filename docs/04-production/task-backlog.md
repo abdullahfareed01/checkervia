@@ -1,5 +1,8 @@
 # Task Backlog
 
+## Shop replay and inspector (19 Nov 2026)
+- [x] D106 follow up: inspected the recording, separated Replay from autoplay, added explicit Play once under reduced motion and compacted the adaptive product inspector with More details. Validation: 2085 tests, 63 final focused tests, strict TypeScript, both builds, 32 main layout states, 12 final control wrapping states and 132 cosmetic browser assertions pass. No gameplay, entitlement or deployment change.
+
 ## Dashboard continuation and saved progress (19 Nov 2026)
 - [x] Save the integrated dashboard and game in checkpoint `fd5aecc`, with `dashboard-handoff.md` as the continuation record. The checkpoint passed all 2047 tests and both production builds.
 - [x] D108, phase 2c: Countries, Who is winning, Resigned games and full Audit log. All 2085 tests in 108 files pass; both builds pass. Local browser review: 88 assertions across 24 layouts, including enlarged text, audit filters and cursor pages, sample navigation/reload, empty/error states and response races. No dependency, migration or deployment was added.
@@ -18,6 +21,8 @@
 - [x] D106 follow up: effects animate automatically in visible product cards and the large preview, with Pause, Resume and visibility controls. Tags have their own row above complete circles. All 2046 tests in 107 files, strict TypeScript, both production builds, 24 layout states and 109 cosmetic browser assertions pass, including the phone screenshot regression at 200 percent text. No dependency or deployment was added.
 
 ## Current avatar correction (19 Nov 2026)
+- [x] Wink review: one eye closes, holds and reopens on a native SVG loop; interruptions stay continuous and motion off shows a clear static wink. All 2088 tests in 108 files, strict typecheck, both builds and 363 browser assertions pass.
+- [x] Expand the preview to all 15 existing reactions, including Wink, Smug, Nervous, Proud, Annoyed and Star eyes. All 35 focused tests and strict typecheck pass.
 - [x] Preview follow up: add a Sleeping (Zzz) button for the existing sleepy expression. All 35 focused avatar tests pass.
 - [x] D95 follow up: one persistent morphing face, continuity during rapid reversals, stable idle clocks and motion settings. All 2045 tests in 107 files, strict typecheck, both production builds and 350 browser assertions pass. Verified at a phone viewport with four times CPU throttling; changes remain local.
 

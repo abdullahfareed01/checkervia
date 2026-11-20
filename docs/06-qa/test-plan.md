@@ -30,6 +30,8 @@ Since D80 it also checks, on the game screen at every portrait phone size, that 
 
 Robot check (D95 follow up): with Vite on port 5180, run `node scripts/check-robot.mjs`. It measures the actual animated SVG outlines at the start, middle and end of each change, checks a single persistent face and seven persistent paths, and tests 24 interrupted reversals. It verifies unchanged idle clocks, smooth entry and exit from sadness, and motion being disabled both before and during a morph. It uses a 360 by 640 viewport and four times CPU throttling, saves a short frame timing sample and captures four expressions. Throttling on this computer does not replace testing on a physical low end phone. Browser artifacts are saved under `artifacts/avatar-review`.
 
+The wink checks also measure one eye closing and reopening while the other stays round, the repeating rest, continuity when interrupted, a recognizable static wink with motion off, and resuming the cycle when motion is restored. A fifth screenshot captures the closed wink.
+
 Marketplace (D96): `tests/marketplace.test.ts` covers validated saved data, immutable changes, bundle contents, ownership checks, storage failure and rendering. The `shop`, `shop-pieces`, `shop-unlock`, `shop-game` and `shop-journey` states in `scripts/check-layout.mjs` cover the full screen and demo flow. The journey checks cancellation, confirmation, preview without equipping, actual board colours, original finishes, saved collection, keyboard focus and an unchanged game position. Use `--debug-port` to keep a separate browser port when other tasks are checking UI concurrently.
 
 
@@ -39,6 +41,8 @@ Cosmetic ownership (D106): `tests/cosmetic-ownership.test.ts` checks both assign
 
 Live shop previews (D106 follow up): the cosmetic browser script also checks automatic card and large preview animation, pause and resume, offscreen and hidden page suspension, reduced motion and the supplied tag/circle screenshot regression. It saves phone card crops at 390px and at 320px with 200 percent text. The layout matrix includes `shop-live-paused` alongside effects, friend perspective and the full marketplace journey.
 
+
+Shop replay and inspector (D106 follow up): the cosmetic browser script checks that repeated Replay clicks create a new finite animation timeline with actual movement, then return to autoplay where permitted. Play once in Off and Reduced animates only the selected preview, returns to stillness and never changes saved settings or game effects. Expanded bundle details and enlarged text must release a tall inspector from sticky positioning. Title and price bounds are checked on phones. Include `shop-more-details`, `shop-effects`, `shop-live-paused` and `shop-journey` in the layout matrix at normal and 200 percent text; inspect screenshots as well as the automated result.
 
 ## Not automated
 
