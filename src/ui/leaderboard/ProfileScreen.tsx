@@ -43,6 +43,8 @@ import { InfoButton, InfoDialog, ProfileRules } from "./InfoDialog";
 import { conductStore, useShownConduct } from "../conduct";
 import { longDate, reportsLeftText } from "../ConductDialogs";
 import { BackIcon, ChevronIcon } from "../icons";
+import { AccountSection, LoginEntry } from "./AccountSection";
+import { useAccountsEnabled } from "./accountClient";
 import { useUsernameCheck } from "./useUsernameCheck";
 import type { UsernameCheck } from "./useUsernameCheck";
 
@@ -129,7 +131,7 @@ export function ProfileScreen({ onClose, firstGame = false, purpose = "ai", onSa
     <div className="lb-backdrop pf-backdrop">
       <LbGradients />
       <div
-        className="lb-screen pf-screen"
+        className="lb-screen pf-screen gold-scroll"
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${ids}-title`}
@@ -478,6 +480,7 @@ function CreateProfile({
           <div className="pf-row-country">
             <CountryPicker value={country} onChange={setCountry} disabled={saving} />
           </div>
+          <LoginEntry onLoggedIn={onDone} />
         </section>
 
         <div className="pf-column">
@@ -697,7 +700,7 @@ function ReportsPage({ server }: { server: ConductStatus | undefined }) {
 }
 
 type Stats = { kind: "loading" } | { kind: "problem"; problem: Problem } | { kind: "ready"; profile: ProfileResponse };
-type OwnPage = "levels" | "reports" | "edit" | "name" | "avatar";
+type OwnPage = "levels" | "reports" | "edit" | "name" | "avatar" | "account";
 
 function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile; onTerms: () => void }) {
   const [stats, setStats] = useState<Stats>({ kind: "loading" });
@@ -706,6 +709,7 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
   // D64a: the profile opens as a view; the pencil on the avatar opens the
   // edit page, whose username and avatar rows open pages of their own.
   const { page, open, back, onKeyDown } = usePages<OwnPage>({ name: "edit", avatar: "edit" });
+  const accountsOn = useAccountsEnabled();
   const [rulesOpen, setRulesOpen] = useState(false);
   const [justSaved, setJustSaved] = useState(false);
   const [name, setName] = useState(profile.username);
@@ -876,6 +880,14 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
       </div>
     );
   }
+  if (page === "account") {
+    return (
+      <div className="pf-page" onKeyDown={onKeyDown}>
+        {head("Saved progress", { back, backLabel: "Back to your profile" })}
+        <AccountSection profile={profile} />
+      </div>
+    );
+  }
   if (page === "reports" && ready) {
     return (
       <div className="pf-page" onKeyDown={onKeyDown}>
@@ -895,6 +907,11 @@ function EditProfile({ head, profile, onTerms }: { head: Head; profile: Profile;
             <p className="pf-save-line pf-save-saved pf-saved-note" role="status">
               Saved. Your profile is up to date.
             </p>
+          )}
+          {accountsOn && (
+            <div className="pf-rows">
+              <Row opens="account" label="Saved progress" value={profile.emailHint ?? "Not saved"} onOpen={() => open("account")} />
+            </div>
           )}
         </div>
         <div className="pf-column pf-stats">

@@ -17,6 +17,8 @@ export interface AdminRequest {
 
 export interface AdminDeps {
   readonly store: AdminStore;
+  /** After a profile is deleted: remove its saved email from Supabase Auth (D150). */
+  readonly afterPlayerDeleted?: () => Promise<void>;
   readonly auth: AuthApi;
   readonly adminEmail: string; // ADMIN_EMAIL
   readonly salt: string; // LEADERBOARD_HASH_SALT, for the IP's keyed hash

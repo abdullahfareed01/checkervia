@@ -15,6 +15,9 @@
 //                  rename limit shows on the Profile screen)
 // Seeded players get avatars, except every seventh (players from before
 // avatars, shown with the neutral person).
+import { handleAccount } from "../../../netlify/accounts/handler";
+import { createMemoryAccountStore } from "../../../netlify/accounts/memoryAccountStore";
+import { createFakePlayerAuth } from "../../../netlify/accounts/playerAuth";
 import { handleCheckUsername } from "../../../netlify/leaderboard/handlers/checkUsername";
 import { handleClaimUsername } from "../../../netlify/leaderboard/handlers/claimUsername";
 import { handleGetLeaderboard } from "../../../netlify/leaderboard/handlers/getLeaderboard";
@@ -46,6 +49,20 @@ const HANDLERS: Record<string, LeaderboardHandler> = {
   "update-profile": handleUpdateProfile,
 };
 
+/** Development only: a code the fake Auth "emailed", shown in a corner. */
+function devCode(): string {
+  const code = String(Math.floor(Math.random() * 1_000_000)).padStart(6, "0");
+  let note = document.getElementById("dev-account-code");
+  if (!note) {
+    note = document.createElement("output");
+    note.id = "dev-account-code";
+    note.setAttribute("style", "position:fixed;left:8px;bottom:8px;z-index:9999;padding:6px 10px;border-radius:8px;background:#000c;color:#fff;font:600 14px system-ui");
+    document.body.append(note);
+  }
+  note.textContent = `Development code: ${code}`;
+  return code;
+}
+
 const NAMES = [
   "KingMeKate", "Ozzie", "MoveMaster", "Zara_K", "DoubleJump", "Priya", "Lukas88", "Checkmate_No", "Amaru", "TheBishop",
   "Noor", "Femi_Plays", "Sakura", "Ivan_T", "Mateo", "BlackRook", "Aisha", "JumpQueen", "Kenji", "Lola",
@@ -75,6 +92,9 @@ export async function startDevLeaderboard(mode: string): Promise<void> {
   let time = Date.now();
   const store = createMemoryStore(() => time);
   const deps = { store, salt: "dev salt", now: () => new Date(time), newToken, log: (message: string) => console.info(message) };
+  // Saving progress (D150) with a fake Auth: no email is sent; the code shows on screen instead.
+  const accountDeps = { ...deps, enabled: true, accounts: createMemoryAccountStore(store, () => time), auth: createFakePlayerAuth(devCode), adminEmail: "owner@example.com" };
+  HANDLERS["account"] = (request) => handleAccount(request, accountDeps);
   const week = 3 * 86_400_000;
 
   let seeded = 0;

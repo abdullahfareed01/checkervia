@@ -9,6 +9,9 @@ import { unavailable } from "./http";
 import type { AdminDeps, AdminRequest, AdminResponse } from "./http";
 import { createAuthApi } from "./gotrue";
 import { createSupabaseAdminStore } from "./supabaseAdminStore";
+import { drainErasures } from "../accounts/deps";
+import { createPlayerAuth } from "../accounts/playerAuth";
+import { createSupabaseAccountStore } from "../accounts/supabaseAccountStore";
 
 declare const process: { env: Record<string, string | undefined> };
 interface NetlifyContext {
@@ -43,6 +46,12 @@ function configuredDeps(): AdminDeps | null {
     salt: env("LEADERBOARD_HASH_SALT"),
     now: () => new Date(),
     log: (message) => console.error(message),
+    // The link went with the profile (cascade); its Auth user and email go now.
+    afterPlayerDeleted: () => drainErasures({
+      accounts: createSupabaseAccountStore(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY")),
+      auth: createPlayerAuth(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), env("SUPABASE_ANON_KEY")),
+      log: (message) => console.error(message),
+    }, 20),
   };
   return deps;
 }

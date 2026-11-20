@@ -27,6 +27,8 @@ import type {
   UpdateProfileResponse,
 } from "../../leaderboard/protocol";
 import type { UsernameRule } from "../../leaderboard/username";
+import type { AccountPurpose, AccountSave, AccountStatus, LinkResponse, LoginResponse } from "../../leaderboard/account";
+import type { Collection } from "../../state/marketplace";
 import { deviceId, leaderboardStore } from "./profile";
 
 export type ApiResult<T> =
@@ -40,6 +42,7 @@ export type ApiResult<T> =
       readonly problems?: readonly UsernameRule[];
       readonly retryAfter?: number;
       readonly nextRenameAt?: string;
+      readonly message?: string;
     };
 
 const BASE = "/.netlify/functions/";
@@ -51,7 +54,7 @@ export function setLeaderboardTransport(next: typeof fetch | null): void {
   transport = next ?? ((input, init) => fetch(input, init));
 }
 
-export async function call<T>(name: string, options: { query?: Record<string, string>; body?: unknown; signal?: AbortSignal } = {}): Promise<ApiResult<T>> {
+export async function call<T>(name: string, options: { query?: Record<string, string>; body?: unknown; signal?: AbortSignal; message?: boolean } = {}): Promise<ApiResult<T>> {
   const query = options.query ? `?${new URLSearchParams(options.query)}` : "";
   const headers: Record<string, string> = { [DEVICE_HEADER]: deviceId() };
   const token = leaderboardStore.get().profile?.token;
@@ -107,8 +110,22 @@ export async function call<T>(name: string, options: { query?: Record<string, st
     ...(Array.isArray(body.problems) ? { problems: body.problems as UsernameRule[] } : {}),
     ...(typeof body.retryAfter === "number" ? { retryAfter: body.retryAfter } : {}),
     ...(typeof body.nextRenameAt === "string" ? { nextRenameAt: body.nextRenameAt } : {}),
+    // Only where the server's own words matter (the account steps, D150).
+    ...(options.message && typeof (data as { error?: unknown })?.error === "string" ? { message: (data as { error: string }).error } : {}),
   };
 }
+
+/** Saving progress with an email (D150). */
+export const accountApi = {
+  status: () => call<AccountStatus>("account", { query: { action: "status" } }),
+  load: () => call<{ save: AccountSave | null }>("account", { query: { action: "load" } }),
+  requestCode: (email: string, purpose: AccountPurpose) => call<{ sent: true }>("account", { body: { action: "requestCode", email, purpose }, message: true }),
+  verifyLink: (email: string, code: string) => call<LinkResponse>("account", { body: { action: "verify", email, code, purpose: "link" }, message: true }),
+  verifyLogin: (email: string, code: string) => call<LoginResponse>("account", { body: { action: "verify", email, code, purpose: "login" }, message: true }),
+  save: (collection: Collection, settings: unknown) => call<{ updatedAt: string }>("account", { body: { action: "save", collection, settings } }),
+  logout: () => call<{ loggedOut: true }>("account", { body: { action: "logout" } }),
+  unlink: () => call<{ unlinked: true }>("account", { body: { action: "unlink" } }),
+};
 
 export const leaderboardApi = {
   checkUsername: (username: string, signal?: AbortSignal) =>

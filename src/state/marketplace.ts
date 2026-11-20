@@ -82,6 +82,10 @@ export function createCollectionStore(storage: CollectionStorage | null, storage
       if (!MARKET_ITEMS.some((item) => item.id === id) || current.owned.includes(id)) return;
       commit({ ...current, owned: withBundleContents([...current.owned, id]) });
     },
+    /** A saved collection brought back from the server (D150), checked again. */
+    replace(next: Collection) {
+      commit(parseCollection(JSON.stringify(next)));
+    },
     equip(id: string) {
       const item = MARKET_ITEMS.find((entry) => entry.id === id);
       if (!item || !current.owned.includes(id)) return;
