@@ -995,7 +995,11 @@
   padding: 6px 14px;
   border-radius: 12px;
   font-size: 0.9rem;
-  white-space: nowrap;
+  /* One line whenever it fits (flex sizes it to its one line width); with
+     very large text on a small phone it wraps instead of running off the
+     dialog. */
+  white-space: normal;
+  text-wrap: balance;
 }
 
 .consent-dialog .dialog-actions .button:not(.button-primary) {
