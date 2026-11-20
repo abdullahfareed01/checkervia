@@ -33,7 +33,7 @@ describe("interactive chart geometry", () => {
     const html = renderToStaticMarkup(createElement("div", null, createElement(Chart, props), createElement(Chart, props)));
     const ids = [...html.matchAll(/linearGradient id="([^"]+)"/g)].map((match) => match[1]);
     expect(ids).toHaveLength(2); expect(new Set(ids).size).toBe(2);
-    expect(html).toContain('stop-opacity="0.28"'); expect(html).toContain('stop-opacity="0"');
+    expect(html).toContain('stop-opacity="0.34"'); expect(html).toContain('stop-opacity="0.02"');
     expect(html).toContain('aria-roledescription="interactive chart"'); expect(html).toContain('tabindex="0"');
     expect(html).toContain("arrow keys"); expect(html).toContain("Show data"); expect(html).not.toContain("style=");
   });
@@ -56,8 +56,15 @@ describe("removable sample experience", () => {
     data.totals.levels.forEach((row) => { expect(row.games).toBe(row.wins + row.losses + row.draws); expect(row.resigned + row.abandoned).toBeLessThanOrEqual(row.losses); });
     expect(demoOverview("7", true, now).totals.games).toBe(0);
   });
-  it("labels the live source and offers the game without linking public game users to admin", () => {
-    const html = renderToStaticMarkup(createElement(DataSourceBar));
-    expect(html).toContain("Game data"); expect(html).toContain('href="/"'); expect(html).toContain('rel="noopener noreferrer"');
+  it("shows no banner for game data; only sample data is called out (D111)", () => {
+    expect(renderToStaticMarkup(createElement(DataSourceBar))).toBe("");
+  });
+  it("has a previous window for every bounded period and none for all time (D111)", () => {
+    expect(demoOverview("all", false, now).previous).toBeNull();
+    for (const period of ["7", "30", "90"] as const) {
+      const data = demoOverview(period, false, now);
+      expect(data.previous?.games).toBeGreaterThan(0); expect(data.previous?.visitors).toBeGreaterThan(0);
+    }
+    expect(demoOverview("30", true, now).previous?.games).toBe(0);
   });
 });

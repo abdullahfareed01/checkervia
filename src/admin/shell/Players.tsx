@@ -7,7 +7,9 @@ import { PLAYER_STATUSES, PLAYER_SORTS } from "../protocol";
 import type { Page, PlayerRow, PlayersQuery, PlayerSort, PlayerStatus } from "../protocol";
 import { adminCall } from "../session";
 import { useAdminRead } from "../useAdminRead";
-import { date, dateTime } from "./format";
+import { date } from "./format";
+import { Badge, DataTable, FlagName, SectionCard, toneOf, When } from "./ui";
+import type { Column } from "./ui";
 import { PlayerDetails } from "./PlayerDetail";
 
 const SORT_LABELS: Record<PlayerSort, string> = { joined: "Joined", active: "Last active", name: "Username", wins: "Verified wins", games: "Games", losses: "Losses", resigned: "Resigned", abandoned: "Abandoned", reports: "Reports" };
@@ -24,22 +26,21 @@ export function playerQuery(filters: Filters): PlayersQuery {
 }
 const label = (value: string) => value[0]!.toUpperCase() + value.slice(1);
 const count = (value: number) => value.toLocaleString("en-GB");
-/** D109: one compact row per player; on narrow screens each row stacks into a small card. */
+/** D109: one row per player; on narrow screens each row stacks into a small card. D113: the shared table. */
 export function PlayerTable({ rows, now, onOpen }: { rows: readonly PlayerRow[]; now: Date; onOpen: (id: string) => void }) {
-  const columns: readonly [string, (row: PlayerRow) => number][] = [["Verified wins", (row) => row.wins], ["Games", (row) => row.games], ["Losses", (row) => row.losses], ["Draws", (row) => row.draws],
+  const counts: readonly [string, (row: PlayerRow) => number][] = [["Verified wins", (row) => row.wins], ["Games", (row) => row.games], ["Losses", (row) => row.losses], ["Draws", (row) => row.draws],
     ["Resigned", (row) => row.resigned], ["Abandoned", (row) => row.abandoned], ["Reports", (row) => row.reports], ["Unique reporters", (row) => row.reporters]];
-  return <div className="adm-panel adm-flush"><div className="adm-table-scroll"><table className="adm-data-table adm-list-table">
-    <caption className="adm-sr">Players on this page. Wins are verified; games and losses are reported.</caption>
-    <thead><tr><th scope="col" className="adm-left">Player</th><th scope="col" className="adm-left">Flag</th><th scope="col" className="adm-left">Joined</th><th scope="col" className="adm-left">Last active</th>{columns.map(([name]) => <th scope="col" key={name}>{name}</th>)}</tr></thead>
-    <tbody>{rows.map((row) => <tr key={row.id}>
-      <th scope="row" className="adm-left adm-row-head"><button type="button" className="adm-link adm-player-name" onClick={() => onOpen(row.id)} aria-label={`View player ${row.username}`}>{row.username}</button>
-        {statusLabels(row, now).map((status) => <span className={`adm-badge adm-badge-${status.split(" ")[0]!.toLowerCase()}`} key={status}>{status}</span>)}</th>
-      <td className="adm-left" data-label="Flag">{row.country ? COUNTRY_NAMES[row.country] ?? row.country : "No flag"}</td>
-      <td className="adm-left adm-num" data-label="Joined">{date(row.joinedAt)}</td>
-      <td className="adm-left adm-num" data-label="Last active">{dateTime(row.lastActiveAt)}</td>
-      {columns.map(([name, value]) => <td key={name} data-label={name} title={name === "Verified wins" ? `Wins by level: ${LEVEL_NAMES.map((level, index) => `${level} ${row.winsByLevel[index]}`).join(", ")}` : undefined}>{count(value(row))}</td>)}
-    </tr>)}</tbody>
-  </table></div></div>;
+  const columns: readonly Column<PlayerRow>[] = [
+    { label: "Player", head: true, cell: (row) => <><button type="button" className="adm-link adm-player-name" onClick={() => onOpen(row.id)} aria-label={`View player ${row.username}`}>{row.username}</button>
+      {statusLabels(row, now).map((status) => <Badge tone={toneOf(status)} key={status}>{status}</Badge>)}</> },
+    { label: "Flag", cell: (row) => <FlagName code={row.country} /> },
+    { label: "Joined", cell: (row) => <span className="adm-num adm-nowrap">{date(row.joinedAt)}</span> },
+    { label: "Last active", cell: (row) => <When iso={row.lastActiveAt} now={now.getTime()} /> },
+    ...counts.map(([name, value]): Column<PlayerRow> => ({ label: name, numeric: true, cell: (row) => count(value(row)),
+      title: name === "Verified wins" ? (row) => `Wins by level: ${LEVEL_NAMES.map((level, index) => `${level} ${row.winsByLevel[index]}`).join(", ")}` : undefined })),
+  ];
+  return <DataTable label="Players on this page. Wins are verified; games and losses are reported." columns={columns} rows={rows} rowKey={(row) => row.id}
+    empty={{ title: "No players match these filters.", text: "Players appear here as they join; clear the filters to see everyone.", icon: "users" }} />;
 }
 export function Players() {
   const [draft, setDraft] = useState(defaults);
@@ -89,11 +90,13 @@ export function Players() {
       </div></details>
       <div className="adm-filter-actions"><button type="submit" className="adm-button adm-button-primary">Apply filters</button><button type="button" className="adm-button adm-button-quiet" onClick={() => { setDraft(defaults()); setApplied(playerQuery(defaults())); setCursors([undefined]); setNotice(""); }}>Clear filters</button></div>
     </form>
-    <div className="adm-toolbar"><p className="adm-dim adm-small">25 players per page. Wins are verified; games and losses are reported.</p><div className="adm-filter-actions"><button type="button" className="adm-button adm-button-quiet" disabled={result.kind === "loading"} onClick={reload}>Refresh players</button><button type="button" className="adm-button adm-button-quiet" disabled={exporting || result.kind !== "ok" || result.value.rows.length === 0} onClick={() => void exportPage()}>{exporting ? "Preparing export" : "Export this page"}</button></div></div>
     <p className={notice ? "adm-dim adm-small" : "adm-sr"} role="status">{notice}</p>
-    <div aria-busy={result.kind === "loading"}>{result.kind === "loading" ? <p role="status">Loading players</p> : result.kind === "problem" ? <div className="adm-panel"><p className="adm-problem" role="alert">{result.text}</p><button type="button" className="adm-button adm-button-quiet" onClick={reload}>Try players again</button></div> : <>
-      {result.value.rows.length ? <PlayerTable rows={result.value.rows} now={new Date()} onOpen={setSelected} /> : <p className="adm-panel adm-dim">No players match these filters.</p>}
+    <SectionCard title="Players" icon="users" flush note="25 players per page. Wins are verified; games and losses are reported."
+      extra={<div className="adm-filter-actions"><button type="button" className="adm-button adm-button-quiet" disabled={result.kind === "loading"} onClick={reload}>Refresh players</button><button type="button" className="adm-button adm-button-quiet" disabled={exporting || result.kind !== "ok" || result.value.rows.length === 0} onClick={() => void exportPage()}>{exporting ? "Preparing export" : "Export this page"}</button></div>}>
+    <div aria-busy={result.kind === "loading"}>{result.kind === "loading" ? <p className="adm-card-status" role="status">Loading players</p> : result.kind === "problem" ? <div className="adm-card-status"><p className="adm-problem" role="alert">{result.text}</p><button type="button" className="adm-button adm-button-quiet" onClick={reload}>Try players again</button></div> : <PlayerTable rows={result.value.rows} now={new Date()} onOpen={setSelected} />}</div>
+    </SectionCard>
+    {result.kind === "ok" && <>
       <nav className="adm-pagination" aria-label="Player pages"><button type="button" className="adm-button adm-button-quiet" disabled={cursors.length === 1} onClick={() => { setCursors((before) => before.slice(0, -1)); setNotice(""); }}>Previous page</button><span className="adm-num">Page {cursors.length}</span><button type="button" className="adm-button adm-button-quiet" disabled={!result.value.next} onClick={() => { const next = result.value.next; if (next) setCursors((before) => [...before, next]); setNotice(""); }}>Next page</button></nav>
-    </>}</div>
+    </>}
   </section>;
 }

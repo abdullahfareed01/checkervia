@@ -4,13 +4,19 @@
 .adm-filter-dates, .adm-filter-actions { grid-column: 1 / -1; }
 .adm-filter-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .adm-records { display: grid; gap: 4px; padding: 0; margin: 0; list-style: none; }
-.adm-player-name { max-width: 100%; text-align: left; overflow-wrap: anywhere; font-size: 0.9rem; }
+.adm-player-name { max-width: 100%; text-align: left; overflow-wrap: break-word; font-size: var(--adm-type-table); }
 .adm-player-name:focus-visible { outline: 3px solid var(--adm-focus); outline-offset: 2px; }
 .adm-records > li { padding: 6px 0; border-bottom: 1px solid var(--adm-line-soft); }
 .adm-records p { margin-top: 6px; }
 .adm-pagination { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; }
 .adm-facts dd { max-width: 100%; }
-.adm-table-scroll { max-width: 100%; overflow-x: auto; }
-.adm-table-scroll:focus-visible { outline: 3px solid var(--adm-focus); outline-offset: 2px; }
 .adm-audit-details { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 0.85rem; }
 @media (max-width: 480px) { .adm-player-filters > .adm-field:first-child { grid-column: 1 / -1; } }
+/* D112: on a small phone two selects side by side clip their text
+   ("All countrie"). There each filter is one row: its name, then the
+   control, which keeps the form about as short. */
+@container adm-page (max-width: 21em) {
+  .adm-player-filters { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .adm-player-filters > label.adm-field { grid-template-columns: minmax(0, 0.75fr) minmax(0, 1.5fr); align-items: center; gap: 10px; }
+  .adm-player-filters > .adm-field:first-child { grid-column: auto; }
+}

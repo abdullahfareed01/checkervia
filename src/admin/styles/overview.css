@@ -1,33 +1,131 @@
-/* D103, compacted in D109: flat summary cards and data tables. Charts are in chart.css. */
+/* D111: the overview from the owner's mockup. Six headline cards, then a
+   12 column board of panels. Widths follow the page container in em, so a
+   larger text size gets fewer, wider columns. Charts are in chart.css. */
 .adm-overview { display: grid; gap: 12px; min-width: 0; }
-.adm-small { font-size: 0.8rem; }
 .adm-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; }
 .adm-toolbar-end { justify-content: flex-end; }
-.adm-periods { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--adm-line-soft); border-radius: 10px; background: #101a29; }
-.adm-periods .adm-button { border: 0; min-width: 0; padding: 0 12px; }
-.adm-periods [aria-pressed="true"] { background: #1f3b44; color: #a6f2df; }
+.adm-head-actions .adm-toolbar { display: contents; }
+.adm-periods { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border: 1px solid var(--adm-line); border-radius: 11px; background: var(--adm-segment-bg); }
+.adm-periods .adm-button { border: 0; min-width: 0; padding: 0 12px; background: transparent; box-shadow: none; }
+/* D112: on a phone a row of tabs never leaves one alone on a second line:
+   an even grid, three across for five tabs, two by two for four. */
+@container adm-page (max-width: 30em) {
+  .adm-periods { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .adm-periods:has(> :nth-child(5)) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .adm-periods .adm-button { padding: 0 6px; white-space: normal; line-height: 1.2; }
+}
+/* D113: very narrow (a phone at a large text size): one tab per row, so a
+   long name such as Suspended always fits. */
+@container adm-page (max-width: 17em) {
+  .adm-periods, .adm-periods:has(> :nth-child(5)) { grid-template-columns: minmax(0, 1fr); }
+}
+.adm-periods [aria-pressed="true"] { background: var(--adm-segment-on); color: var(--adm-green-deep); box-shadow: var(--adm-shadow-small); }
 .adm-notes summary { min-height: 44px; }
 
-.adm-metrics { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); gap: 10px; margin: 0; }
-@media (max-width: 480px) { .adm-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (min-width: 1100px) { .adm-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-.adm-metric { position: relative; gap: 2px; padding: 10px 12px 10px 14px; overflow: hidden; }
-.adm-metric::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 0 2px 2px 0; background: #6ce5ca; }
-.adm-metric:nth-child(3n + 2)::before { background: #83b4ff; }
-.adm-metric:nth-child(3n)::before { background: #e4bd7e; }
-.adm-metric dt { color: #a9bbd1; font-size: 0.78rem; }
-.adm-metric dd { display: grid; gap: 2px; margin: 0; overflow-wrap: anywhere; }
-.adm-metric-value { color: var(--adm-cream); font-size: 1.45rem; line-height: 1.2; letter-spacing: -0.04em; }
-.adm-metric .adm-small { font-size: 0.75rem; line-height: 1.3; }
+/* ---------- Headline cards (the tiles are in components.css) ---------- */
+.adm-stats { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin: 0; }
+@container (min-width: 16em) { .adm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@container (min-width: 34em) { .adm-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (min-width: 64em) { .adm-stats { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.adm-change { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 0 3px; font-size: var(--adm-type-meta); font-weight: 600; }
+.adm-stat .adm-change { letter-spacing: -0.01em; }
+.adm-change .adm-icon { width: 15px; height: 15px; stroke-width: 2.6; }
+.adm-change-up { color: var(--adm-up); }
+.adm-change-down { color: var(--adm-down); }
+.adm-change-flat { color: var(--adm-dim); }
+.adm-change-percent { margin-left: 2px; white-space: nowrap; }
+.adm-needs-review .adm-icon { width: 17px; height: 17px; fill: currentColor; stroke: var(--adm-panel); stroke-width: 2; }
+.adm-live-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 12px; border-radius: 999px; background: var(--adm-live-bg); color: var(--adm-live-text); font-size: var(--adm-type-label); font-weight: 700; }
+.adm-live-pill span { width: 8px; height: 8px; border-radius: 50%; background: var(--adm-live-dot); }
 
-@media (min-width: 720px) { .adm-chart { align-self: start; } }
-@media (min-width: 1280px) { .adm-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+/* ---------- The board ---------- */
+.adm-board { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 12px; min-width: 0; }
+.adm-board > * { grid-column: span 12; min-width: 0; }
+.adm-board > div { display: grid; }
+@container (min-width: 40em) {
+  .adm-board > .adm-span-4, .adm-board > .adm-span-5, .adm-board > .adm-span-6, .adm-board > .adm-span-7 { grid-column: span 6; }
+}
+@container (min-width: 64em) {
+  .adm-board > .adm-span-4 { grid-column: span 4; }
+  .adm-board > .adm-span-5 { grid-column: span 5; }
+  .adm-board > .adm-span-7 { grid-column: span 7; }
+  .adm-board > .adm-span-8 { grid-column: span 8; }
+}
+.adm-card { align-content: start; }
 
-.adm-data-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-.adm-data-table caption { padding-bottom: 6px; color: var(--adm-dim); text-align: left; }
-.adm-data-table th, .adm-data-table td { padding: 7px 8px; border-bottom: 1px solid var(--adm-line-soft); overflow-wrap: anywhere; text-align: right; }
-.adm-data-table th:first-child, .adm-data-table td.adm-left, .adm-data-table th.adm-left { text-align: left; }
-.adm-data-table thead { color: var(--adm-dim); font-size: 0.75rem; }
-.adm-data-table thead th { font-weight: 800; }
-.adm-data-table tbody tr:hover { background: #1a283a; }
-.adm-data-table tbody tr:last-child > * { border-bottom: 0; }
+/* AI game results */
+.adm-results { container-type: inline-size; }
+.adm-donut-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-around; gap: 12px 14px; padding: 4px 0; }
+.adm-donut { position: relative; flex: none; width: 124px; }
+@container (min-width: 20em) {
+  .adm-donut-row { flex-wrap: nowrap; justify-content: space-between; }
+  .adm-donut { width: clamp(96px, 38%, 150px); }
+  .adm-donut-legend { min-width: 0; }
+}
+.adm-donut svg { display: block; width: 100%; height: auto; }
+.adm-donut circle { fill: none; stroke-width: 17; }
+.adm-donut-track { stroke: var(--adm-track); }
+.adm-donut-part { stroke: var(--tone); }
+.adm-donut-centre { position: absolute; inset: 0; display: grid; place-content: center; margin: 0; text-align: center; color: var(--adm-text); font-size: 0.9rem; }
+.adm-donut-centre strong { color: var(--adm-ink); font-size: 1.45rem; line-height: 1.1; }
+.adm-donut-legend { display: grid; gap: 10px; min-width: min(100%, 13em); margin: 0; padding: 0; list-style: none; }
+.adm-donut-legend li { display: grid; grid-template-columns: 11px minmax(0, 1fr) auto auto; align-items: center; gap: 8px; }
+.adm-donut-label { font-size: 0.88rem; line-height: 1.3; overflow-wrap: break-word; }
+.adm-donut-legend strong { color: var(--adm-ink); font-size: 1rem; }
+.adm-donut-count { min-width: 2.8em; color: var(--adm-text); font-size: 0.88rem; text-align: right; }
+.adm-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--tone); }
+.adm-tone-green { --tone: var(--adm-green); }
+.adm-tone-blue { --tone: var(--adm-blue); }
+.adm-tone-gold { --tone: var(--adm-amber); }
+
+/* Registrations, resignations */
+.adm-figure { line-height: 1.3; display: grid; justify-items: start; align-content: start; gap: 1px; min-width: 0; margin: 0; color: var(--adm-text); font-size: 0.92rem; }
+.adm-figure > strong { color: var(--adm-ink); font-size: 1.9rem; line-height: 1.1; letter-spacing: -0.02em; }
+.adm-figure-note { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin-top: 6px; font-size: var(--adm-type-meta); }
+.adm-figure-note .adm-change { font-size: 0.95rem; }
+.adm-split-figure { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); align-items: end; gap: 12px; }
+.adm-spark { display: block; width: 100%; height: 74px; color: var(--adm-green); }
+.adm-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; padding-top: 4px; }
+.adm-figure-gold, .adm-figure-blue { padding-left: 14px; border-left: 4px solid var(--adm-amber); border-radius: 1px; }
+.adm-figure-blue { border-left-color: var(--adm-blue); }
+
+/* Needs attention */
+.adm-attention { display: grid; margin: -4px 0 0; padding: 0; list-style: none; }
+.adm-attention li + li { border-top: 1px solid var(--adm-line-soft); }
+.adm-attention a { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; align-items: center; gap: 12px; min-height: 44px; padding: 0 6px; border-radius: 8px; color: var(--adm-text); text-decoration: none; }
+.adm-attention a:hover { background: var(--adm-hover); }
+.adm-attention-label { font-size: 0.95rem; line-height: 1.3; overflow-wrap: break-word; }
+.adm-count { min-width: 38px; padding: 1px 10px; border-radius: 999px; background: var(--adm-chip); color: var(--adm-text); font-size: 0.85rem; font-weight: 700; text-align: center; }
+.adm-count-red { background: var(--adm-red); color: var(--adm-on-red); }
+.adm-attention .adm-attention-go { width: 18px; height: 18px; stroke-width: 2.2; }
+
+/* Weekly active players: columns on round number ticks */
+.adm-columns { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: 124px auto; column-gap: 10px; padding-top: 6px; }
+.adm-columns-y { display: flex; flex-direction: column; justify-content: space-between; color: var(--adm-dim); font-size: var(--adm-type-meta); text-align: right; }
+.adm-columns-y span { line-height: 0; }
+.adm-columns-plot { position: relative; display: flex; align-items: flex-end; gap: 5%; padding: 0 3%; }
+.adm-columns-grid { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: space-between; pointer-events: none; }
+.adm-columns-grid span { height: 1px; background: var(--adm-grid); }
+.adm-column-slot { position: relative; z-index: 1; display: flex; align-items: flex-end; flex: 1; height: 100%; }
+.adm-column { width: 100%; max-width: 66px; min-height: 2px; height: 0; margin: 0 auto; border-radius: 5px 5px 0 0; background: linear-gradient(180deg, var(--adm-column-top), var(--adm-column-bottom)); }
+.adm-columns-x { display: flex; grid-column: 2; gap: 5%; padding: 6px 3% 0; color: var(--adm-text); font-size: var(--adm-type-label); }
+.adm-columns-x > span { display: flex; flex: 1; justify-content: center; min-width: 0; white-space: nowrap; }
+
+/* Results by level: one split bar per level */
+.adm-split { display: grid; gap: 10px; margin: 2px 0 0; padding: 0; list-style: none; }
+.adm-split li { display: grid; grid-template-columns: minmax(6.5em, auto) minmax(0, 1fr) auto; align-items: center; gap: 6px 14px; }
+.adm-split-name { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; }
+.adm-split .adm-split-icon { width: 21px; height: 21px; color: var(--adm-gold-icon); }
+.adm-split-bar { display: block; height: 14px; overflow: hidden; border-radius: 999px; background: var(--adm-blue); }
+.adm-split-empty { background: var(--adm-track); }
+.adm-split-left { display: block; width: 0; height: 100%; background: var(--adm-green); }
+.adm-split-share { min-width: 7em; color: var(--adm-text); font-size: 0.9rem; text-align: right; white-space: nowrap; }
+.adm-split-sep { margin: 0 6px; color: var(--adm-dim); }
+/* Narrow: the share wraps under the name when both do not fit, the bar below. */
+@container (max-width: 30em) {
+  .adm-split li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+  .adm-split-name { flex: 1 1 auto; min-width: 0; }
+  .adm-split-share { min-width: 0; margin-left: auto; }
+  .adm-split-bar { flex: 1 1 100%; order: 3; }
+}
+/* Data tables are in components.css. */

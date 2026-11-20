@@ -1,0 +1,142 @@
+/* D113: the admin type scale and the shared components (shell/ui.tsx).
+   One scale for every page: body 15px, tables 15px, labels, notes and
+   table headers 14px in sentence case, nothing under 13px (axis ticks,
+   badges), card titles 18px, page titles 32px, key numbers 32px and the
+   hero number 40px, all with tabular figures. Sizes are in rem, so they
+   follow the browser's text size. Colours come from the theme tokens
+   (refinement.css): no fixed colours here. */
+:root {
+  --adm-type-title: 2rem;
+  --adm-type-card: 1.125rem;
+  --adm-type-body: 0.9375rem;
+  --adm-type-table: 0.9375rem;
+  --adm-type-label: 0.875rem;
+  --adm-type-meta: 0.8125rem;
+  --adm-type-number: 2rem;
+  --adm-type-hero: 2.5rem;
+  --adm-row: 44px;
+}
+
+body { font-size: var(--adm-type-body); }
+.adm-small { font-size: var(--adm-type-label); line-height: 1.5; }
+.adm-num { font-variant-numeric: tabular-nums; }
+
+/* ---------- Section card ---------- */
+.adm-card { grid-template-columns: minmax(0, 1fr); }
+.adm-card-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; min-width: 0; }
+.adm-panel-title { font-size: var(--adm-type-card); line-height: 1.3; }
+.adm-panel-title > span, .adm-hero-label > span, .adm-stat-label > span, .adm-flag-name > span, .adm-breakdown-name { min-width: 0; overflow-wrap: anywhere; }
+.adm-card-note { max-width: 80ch; color: var(--adm-soft); font-size: var(--adm-type-label); line-height: 1.5; }
+.adm-card-flush { gap: 0; padding: 0; overflow: hidden; }
+.adm-card-flush > .adm-card-head { padding: 14px 16px 12px; }
+.adm-card-flush > .adm-card-note { margin-top: -4px; padding: 0 16px 12px; }
+.adm-card-flush .adm-data-table { border-top: 1px solid var(--adm-line-soft); }
+.adm-card-status { display: grid; justify-items: start; gap: 8px; padding: 4px 16px 16px; }
+
+/* ---------- Stat tiles ---------- */
+.adm-stat { container-type: inline-size; display: grid; align-content: start; gap: 6px; min-width: 0; padding: 14px 16px 14px 14px; border: 1px solid var(--adm-line-soft); border-left: 4px solid var(--adm-stat-edge); border-radius: 14px; background: var(--adm-panel); box-shadow: var(--adm-shadow); }
+.adm-stat-red { border-left-color: var(--adm-alert-edge); }
+.adm-stat-label { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--adm-soft); font-size: var(--adm-type-label); font-weight: 600; line-height: 1.3; }
+.adm-stat-label > span { min-width: 0; overflow-wrap: break-word; }
+.adm-stat .adm-stat-icon { flex: none; width: 22px; height: 22px; color: var(--adm-icon); }
+.adm-stat-gold .adm-stat-icon { color: var(--adm-gold-icon); }
+.adm-stat-red .adm-stat-icon { color: var(--adm-red); }
+.adm-stat dd { display: grid; justify-items: start; gap: 6px; min-width: 0; margin: 0; }
+.adm-stat-value { color: var(--adm-ink); font-size: var(--adm-type-number); font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+
+/* Tiles beside each other: one column on a phone, two, then four (a wide
+   tile takes two). */
+.adm-tiles { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; margin: 0; }
+@container adm-page (min-width: 20em) {
+  .adm-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .adm-tile-wide { grid-column: 1 / -1; }
+}
+@container adm-page (min-width: 56em) {
+  .adm-tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .adm-tile-wide { grid-column: span 2; }
+}
+
+/* ---------- Hero tile ---------- */
+.adm-hero { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; min-width: 0; padding: 18px 20px; border: 1px solid var(--adm-line-soft); border-left: 6px solid var(--adm-stat-edge); border-radius: 16px; background: var(--adm-panel); box-shadow: var(--adm-shadow); }
+.adm-hero-main { display: grid; gap: 4px; min-width: 0; }
+.adm-hero-label { display: flex; align-items: center; gap: 10px; color: var(--adm-ink); font-size: var(--adm-type-card); font-weight: 700; line-height: 1.3; }
+.adm-hero-label .adm-icon { width: 24px; height: 24px; color: var(--adm-icon); }
+.adm-hero-value { color: var(--adm-ink); font-size: var(--adm-type-hero); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.adm-hero-note { color: var(--adm-soft); font-size: var(--adm-type-body); line-height: 1.4; }
+.adm-hero-aside { display: grid; justify-items: end; gap: 8px; min-width: 0; text-align: right; }
+.adm-hero-meta { max-width: 24em; text-wrap: balance; color: var(--adm-dim); font-size: var(--adm-type-label); line-height: 1.4; }
+@container adm-page (max-width: 30em) {
+  .adm-hero-aside { justify-items: start; text-align: left; }
+}
+
+/* ---------- Breakdown: a thin bar of shares and labelled numbers ---------- */
+.adm-breakdown { display: grid; justify-self: stretch; gap: 10px; margin-top: 4px; }
+.adm-breakdown-bar { display: flex; gap: 2px; height: 8px; overflow: hidden; border-radius: 999px; background: var(--adm-track); }
+.adm-breakdown-part { display: block; width: 0; height: 100%; }
+.adm-breakdown-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 7.5em), 1fr)); gap: 6px 18px; margin: 0; padding: 0; list-style: none; }
+.adm-breakdown-list li { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--adm-text); font-size: var(--adm-type-label); }
+.adm-breakdown-name { min-width: 0; overflow-wrap: break-word; }
+.adm-breakdown-list strong { margin-left: auto; color: var(--adm-ink); font-size: 1.125rem; font-variant-numeric: tabular-nums; }
+.adm-level-1 { --tone: var(--adm-level-1); background: var(--tone); }
+.adm-level-2 { --tone: var(--adm-level-2); background: var(--tone); }
+.adm-level-3 { --tone: var(--adm-level-3); background: var(--tone); }
+.adm-level-4 { --tone: var(--adm-level-4); background: var(--tone); }
+.adm-dot { flex: none; }
+
+/* ---------- Badges: words first, colour second ---------- */
+.adm-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: var(--adm-type-meta); font-weight: 700; line-height: 1.45; white-space: nowrap; vertical-align: middle; }
+.adm-badge-neutral { background: var(--adm-badge-bg); color: var(--adm-badge-text); }
+.adm-badge-ok { background: var(--adm-ok-bg); color: var(--adm-ok); }
+.adm-badge-warn { background: var(--adm-warn-bg); color: var(--adm-warn-text); }
+.adm-badge-danger { background: var(--adm-danger-bg); color: var(--adm-danger); }
+
+/* ---------- Empty state ---------- */
+.adm-empty-state { display: grid; justify-items: center; gap: 4px; padding: 28px 20px; text-align: center; }
+.adm-empty-icon { width: 28px; height: 28px; margin-bottom: 4px; color: var(--adm-icon); }
+.adm-empty-title { color: var(--adm-ink); font-size: 1rem; font-weight: 700; }
+.adm-empty-text { max-width: 40em; color: var(--adm-soft); font-size: var(--adm-type-label); line-height: 1.5; text-wrap: pretty; }
+
+/* ---------- Flags and times ---------- */
+.adm-flag-name { display: inline-flex; align-items: center; gap: 8px; min-width: 0; max-width: 100%; vertical-align: middle; }
+.adm-flag-name > span:last-child { min-width: 0; overflow-wrap: break-word; }
+.adm-flag { flex: none; display: inline-block; width: 1.4em; height: 1.05em; border-radius: 3px; object-fit: cover; box-shadow: 0 0 0 1px var(--adm-line); }
+.adm-flag-none { border: 1px dashed var(--adm-line-strong); background: var(--adm-raised); box-shadow: none; }
+.adm-when, .adm-nowrap { white-space: nowrap; }
+
+/* ---------- Data tables ---------- */
+.adm-table-scroll { container: adm-table / inline-size; min-width: 0; max-width: 100%; max-height: max(22rem, 100dvh - 9rem); overflow: auto; }
+.adm-table-scroll:focus-visible { outline: 3px solid var(--adm-focus); outline-offset: -3px; }
+.adm-data-table { width: 100%; border-collapse: separate; border-spacing: 0; color: var(--adm-text); font-size: var(--adm-type-table); line-height: 1.4; font-variant-numeric: tabular-nums; }
+.adm-data-table th, .adm-data-table td { height: var(--adm-row); padding: 8px 10px; border-bottom: 1px solid var(--adm-line-soft); text-align: left; vertical-align: middle; overflow-wrap: break-word; }
+.adm-data-table thead th { position: sticky; top: 0; z-index: 1; border-bottom-color: var(--adm-line); background: var(--adm-raised); color: var(--adm-soft); font-size: var(--adm-type-label); font-weight: 600; line-height: 1.3; letter-spacing: 0; text-transform: none; text-wrap: balance; }
+.adm-data-table tbody th { color: var(--adm-ink); font-weight: 600; }
+.adm-data-table .adm-cell-num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.adm-data-table .adm-cell-actions { text-align: right; }
+.adm-data-table tbody tr:hover > * { background: var(--adm-hover); }
+.adm-data-table tbody tr:last-child > * { border-bottom: 0; }
+.adm-row-head > * + * { margin-left: 8px; }
+.adm-row-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+
+/* Where a table does not fit (shell/ui.tsx, useStacking): on a narrow box
+   each row becomes a small card whose cells carry their own labels; on a
+   wide box it scrolls sideways with the first column pinned. */
+.adm-data-table thead th:first-child, .adm-data-table tbody > tr > :first-child { position: sticky; left: 0; z-index: 1; background: var(--adm-panel); }
+.adm-data-table thead th:first-child { z-index: 2; background: var(--adm-raised); }
+.adm-data-table tbody tr:hover > :first-child { background: var(--adm-hover); }
+.adm-table-scroll:has(> .adm-stacked) { max-height: none; overflow: visible; }
+.adm-stacked thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.adm-stacked, .adm-stacked tbody, .adm-stacked tr, .adm-stacked th, .adm-stacked td { display: block; }
+.adm-stacked tr { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 9em), 1fr)); gap: 10px 14px; padding: 12px 16px 14px; border-bottom: 1px solid var(--adm-line-soft); }
+.adm-stacked tbody tr:last-child { border-bottom: 0; }
+.adm-stacked tbody tr:hover > * { background: none; }
+.adm-data-table.adm-stacked tr > * { position: static; height: auto; padding: 0; border: 0; background: none; text-align: left; white-space: normal; }
+.adm-stacked .adm-row-head { grid-column: 1 / -1; font-size: 1rem; overflow-wrap: anywhere; }
+.adm-stacked .adm-row-head > * { margin-right: 8px; }
+.adm-stacked .adm-row-head > * + * { margin-left: 0; }
+.adm-stacked td[data-label]::before { content: attr(data-label); display: block; margin-bottom: 2px; color: var(--adm-soft); font-size: var(--adm-type-meta); font-weight: 600; }
+.adm-stacked .adm-span-2 { grid-column: span 2; }
+.adm-stacked .adm-span-all, .adm-stacked .adm-cell-actions { grid-column: 1 / -1; }
+.adm-stacked .adm-row-actions { justify-content: flex-start; }
+@container adm-table (max-width: 20em) {
+  .adm-stacked .adm-span-2 { grid-column: 1 / -1; }
+}

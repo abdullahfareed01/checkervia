@@ -82,6 +82,7 @@ const sample: OverviewData = {
   daily: [{ day: "2026-11-16", registered: 12, registrations: 1, deletions: 0, visitors: 0, active: 2,
     games: 7, wins: 3, losses: 3, draws: 1, resigned: 2, abandoned: 1, onlineGames: 0 }],
   weekly: [{ week: "2026-11-16", active: 2 }],
+  previous: null,
 };
 
 describe("overview storage adapter", () => {
@@ -96,10 +97,12 @@ describe("overview storage adapter", () => {
       return new Response(JSON.stringify(body), { headers: { "content-type": "application/json" } });
     });
     const store = createSupabaseAdminStore("https://project.supabase.co", "sb_secret_test", fetcher);
-    expect(await store.overview(sample.range)).toMatchObject({ totals: sample.totals, daily: [{ games: 7, onlineGames: 5 }], weekly: [{ week: "2026-11-09", active: 0 }, ...sample.weekly] });
-    expect(sent.map((s) => s.rpc).sort()).toEqual(["admin_daily", "admin_overview", "admin_weekly_active"]);
+    expect(await store.overview(sample.range)).toMatchObject({ totals: sample.totals, daily: [{ games: 7, onlineGames: 5 }], weekly: [{ week: "2026-11-09", active: 0 }, ...sample.weekly],
+      previous: { games: 7, wins: 3, registrations: 1, registeredEnd: 12 } });
+    expect(sent.map((s) => s.rpc).sort()).toEqual(["admin_daily", "admin_daily", "admin_overview", "admin_weekly_active"]);
     expect(sent.find((s) => s.rpc === "admin_overview")?.params).toEqual({ p_since: "2026-11-10T00:00:00.000Z" });
-    expect(sent.find((s) => s.rpc === "admin_daily")?.params).toEqual({ p_from: "2026-11-10", p_to: "2026-11-16" });
+    // D111: the current window, then the seven days before it for the change arrows.
+    expect(sent.filter((s) => s.rpc === "admin_daily").map((s) => s.params)).toEqual([{ p_from: "2026-11-10", p_to: "2026-11-16" }, { p_from: "2026-11-03", p_to: "2026-11-09" }]);
     expect(sent.every((s) => s.headers.get("apikey") === "sb_secret_test")).toBe(true);
   });
   it.each(["admin_overview", "admin_daily", "admin_weekly_active"])("fails the whole snapshot if %s fails", async (broken) => {
@@ -133,19 +136,22 @@ describe("overview charts and numbers", () => {
     expect(html).toContain("No daily records in this period.");
     expect(html).not.toContain("<svg");
   });
-  it("shows the player's results and keeps resignations and abandonments separate", () => {
+  it("shows the mockup's six headline cards and keeps resignations and abandonments separate", () => {
     const html = renderToStaticMarkup(createElement(OverviewNumbers, { data: sample }));
-    expect(html).toMatch(/Resigned games[^]*?>2<\/span>/);
-    expect(html).toMatch(/Abandoned games[^]*?>1<\/span>/);
-    expect(html).toMatch(/Active players today[^]*?>2<\/span>/);
+    for (const label of ["Total Players", "Active Today", "Online Now", "Visitors", "AI Games", "Open Reports", "Live", "Needs review"]) expect(html).toContain(label);
+    expect(html).toMatch(/Active Today[^]*?>2<\/span>/);
+    // No earlier window (all time, or no data): no invented change arrows.
+    expect(html).not.toContain("adm-change-up"); expect(html).not.toContain("compared with the previous");
     const charts = renderToStaticMarkup(createElement(OverviewCharts, { data: sample }));
-    expect(charts.match(/<svg/g)).toHaveLength(5);
-    for (const label of ["Easy", "Medium", "Hard", "Strongest", "Draws", "partial", "UTC"]) expect(charts).toContain(label);
-    expect(charts).toContain('<td>3</td><td>3</td><td>1</td>');
+    expect(charts.match(/class="adm-chart-svg"/g)).toHaveLength(1);
+    for (const label of ["Players &amp; Visitors", "AI Game Results", "Registrations", "Resigned games", "Abandoned games", "Needs Attention", "Weekly Active Players", "Results by Level", "Easy", "Medium", "Hard", "Strongest", "Draws", "UTC"]) expect(charts).toContain(label);
+    expect(charts).toMatch(/Resigned games/); expect(charts).toMatch(/>2<\/strong><span>Resigned games/); expect(charts).toMatch(/>1<\/strong><span>Abandoned games/);
+    expect(charts).toContain("50% "); expect(charts).toContain("wins 3, losses 3, draws 1");
+    expect(charts).not.toContain("style=");
   });
   it("offers all periods and explains live traffic counting while loading", () => {
     const html = renderToStaticMarkup(createElement(OverviewStats));
-    for (const label of ["7 days", "30 days", "90 days", "All time", "Loading statistics", "expire after 75 seconds", "UTC days"]) expect(html).toContain(label);
+    for (const label of ["Last 7 days", "Last 30 days", "Last 90 days", "All time", "Refresh", "Export", "Loading statistics", "expire after 75 seconds", "UTC days"]) expect(html).toContain(label);
     expect(html).toContain('aria-busy="true"');
     expect(html).not.toContain("Registered players</dt>");
   });

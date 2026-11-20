@@ -84,7 +84,20 @@ describe("the admin page", () => {
     expect(adminCode).not.toContain("demo.token.value");
     expect(adminCode).not.toContain("startDemo");
     // The access token is kept in memory, never in the browser's storage.
-    expect(adminCode).not.toMatch(/localStorage|sessionStorage|indexedDB/);
+    // D112: the one exception is the theme choice (src/admin/theme.ts),
+    // its read, save and remove; nothing else may use storage at all.
+    expect(adminCode).not.toMatch(/sessionStorage|indexedDB/);
+    expect(adminCode.match(/localStorage/g)?.length ?? 0).toBeLessThanOrEqual(3);
+    expect(adminCode).toContain("checkervia-admin-theme");
+  });
+  it("uses storage only for the theme choice, with one fixed key and value set (D112)", () => {
+    const files = readdirSync("src/admin", { recursive: true }).map((file) => join("src/admin", String(file))).filter((file) => /\.(ts|tsx)$/.test(file));
+    const users = files.filter((file) => /localStorage|sessionStorage|indexedDB|document\.cookie/.test(readFileSync(file, "utf8")));
+    expect(users.map((file) => file.replace(/\\/g, "/"))).toEqual(["src/admin/theme.ts"]);
+    const theme = readFileSync("src/admin/theme.ts", "utf8");
+    expect(theme.match(/localStorage\?\.(\w+)\(([^)]*)\)/g)).toEqual(["localStorage?.getItem(KEY)", "localStorage?.removeItem(KEY)", "localStorage?.setItem(KEY, choice)"]);
+    expect(theme).toContain('const KEY = "checkervia-admin-theme";');
+    expect(theme).toMatch(/if \(choice === "system"\) globalThis\.localStorage\?\.removeItem\(KEY\);\s*else globalThis\.localStorage\?\.setItem\(KEY, choice\);/);
   });
 });
 

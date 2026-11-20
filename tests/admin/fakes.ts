@@ -155,7 +155,7 @@ export function fakeStore(overrides: Partial<AdminStore> = {}): AdminStore & { s
       range,
       totals: { registered: 0, newPlayers: 0, visitors: 0, visitorsToday: 0, onlineNow: 0, games: 0,
         onlineGames: 0, resigned: 0, abandoned: 0, openReports: 0, suspended: 0, levels: [] },
-      daily: [], weekly: [],
+      daily: [], weekly: [], previous: null,
     }),
     players: async () => [],
     countries: async (range) => ({ range, rows: [] }),
