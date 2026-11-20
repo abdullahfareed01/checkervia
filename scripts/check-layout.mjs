@@ -109,6 +109,7 @@ const openStrongest = `${click(".menu-card-ai")} ${click(".level-option:last-of-
 
 const { marketplaceJourney } = await import("./marketplace-journey.mjs");
 const SCREENS = {
+  "shop-more-details": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + click(".shop-more-details summary"), layer: ".marketplace" },
   "shop-live-paused": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + clickText(".shop-filters button", "Effects") + click(".shop-live-toggle"), layer: ".marketplace" },
   "shop-effects": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + clickText(".shop-filters button", "Effects") + clickText(".shop-product", "Sapphire Comet") + click(".shop-replay"), layer: ".marketplace" },
   "shop-friend": { query: "?lb=populated", steps: click(".home-shop") + until(".marketplace") + clickText(".shop-filters button", "Pieces") + clickText(".shop-product", "Amethyst") + clickText(".shop-preview-controls button", "You play White") + clickText(".shop-preview-controls button", "Friend") + click(".shop-replay"), layer: ".marketplace" },

@@ -34,7 +34,7 @@ function Harness() {
         const move = getLegalMoves(current.board, current.side)[0]!;
         return { before: current.board, board: applyMove(current.board, move), last: move, side: current.side === "black" ? "white" : "black", ply: current.ply + 1 };
       })),
-      motion: (level: "off" | "standard") => { document.documentElement.dataset.anim = level; settingsStore().update((current) => ({ ...current, animation: { ...current.animation, level } })); },
+      motion: (level: "off" | "reduced" | "standard") => { document.documentElement.dataset.anim = level; settingsStore().update((current) => ({ ...current, animation: { ...current.animation, level } })); },
       effect: (id: string) => { inventory.addDemo(id); inventory.equip(id); flushSync(() => setGame((current) => ({ ...current }))); },
       profile: (letter: string) => flushSync(() => { setAccounts(true); leaderboardStore.setProfile({ username: `Owner${letter}`, token: letter.repeat(43), avatar: null, country: null }); }),
       shop: () => flushSync(() => setShop(true)),

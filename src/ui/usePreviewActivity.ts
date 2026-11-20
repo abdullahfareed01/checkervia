@@ -7,7 +7,7 @@ export function usePreviewActivity(enabled: boolean) {
   const [visible, setVisible] = useState(false);
   useEffect(() => {
     const element = ref.current;
-    if (!enabled || !element) return;
+    if (!enabled || !element) { setVisible(false); return; }
     let inView = typeof IntersectionObserver === "undefined";
     const update = () => setVisible(inView && document.visibilityState !== "hidden");
     const observer = typeof IntersectionObserver === "undefined" ? null : new IntersectionObserver((entries) => {

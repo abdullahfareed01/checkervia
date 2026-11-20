@@ -47,6 +47,16 @@ Regression checks cover automatic startup, the large board, pause and resume, hi
 
 Validation: all 2046 tests in 107 files, strict TypeScript, both builds, 24 layout states and 109 cosmetic browser assertions pass. Phone card crops at 390px and at 320px with 200 percent text confirm that the label clears the complete circle. The browser run uses four times CPU throttling; it does not replace a physical low end phone test. Live payments and private room integration retain the limits described above.
 
+## Replay and inspector follow up (19 Nov 2026)
+
+The supplied recording showed reduced motion enabled and a long selected product panel. Replay now starts a fresh single animation cycle on every click, independently of the automatic preview, and brings its board into view. When motion is reduced or off, the button says Play once and explains the explicit preview. That action animates only the selected sample, then returns to stillness; stored settings, cards and gameplay retain their motion preference.
+
+The inspector puts the product name and sample price first, keeps Replay beside the board, and shows the description and unlock action together on a typical desktop window. More details preserves ownership explanations and bundle contents without crowding the initial view. Native expansion remains keyboard accessible. The inspector sticks beside the catalogue only when its full measured height fits; short screens and enlarged text scroll the existing content area naturally. No nested panel scrollbar or clipped detail is introduced. Name and price wrap when text needs more space.
+
+The browser regression now verifies a fresh timeline on repeated clicks, actual movement, one finite cycle and the return to automatic motion or stillness. This replaces the earlier insufficient Replay assertion that merely checked whether any animation was already running. Checks also cover expanded details, measured panel fit and enlarged title and price bounds. Game rules, appearance ownership and real purchase prerequisites are unchanged.
+
+Validation: 2085 tests in 108 files passed, followed by 63 focused tests. Strict TypeScript and both production builds pass. The main layout matrix passes 32 states, the focused enlarged price matrix passes six, and the cosmetic browser check passes 132 assertions under four times CPU throttling. Evidence: `artifacts/marketplace-replay-layout-final.json`, `artifacts/marketplace-replay-price.json`, `artifacts/marketplace-replay-browser-final.log` and the corresponding test and build logs. Physical low end phone testing remains an owner check.
+
 ## Next production item
 
 - [ ] Choose merchant country, provider and recoverable account flow, then implement server checkout and webhook backed ownership. Approve any required dependency before installation.

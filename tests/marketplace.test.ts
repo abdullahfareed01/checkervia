@@ -59,6 +59,8 @@ describe("marketplace presentation", () => {
     expect(html).toContain("Sample USD price");
     expect(html).toContain("My collection");
     expect(html).toContain("Pause live previews");
+    expect(html).toContain("More details");
+    expect(html).not.toContain('<details class="shop-more-details" open');
     const visible = [...html.matchAll(/>([^<]+)</g)].map((m) => m[1]).join(" ");
     expect(visible).not.toMatch(/[-\u2010-\u2015\u2212]/);
   });
@@ -74,5 +76,16 @@ describe("marketplace presentation", () => {
     expect(html).toContain('data-preview-auto="true"');
     expect(html.match(/class="shop-square [^"]*shop-preview-mover/g)).toHaveLength(1);
     expect(html).toContain("cosmetic-fx-silk");
+  });
+  it("keeps a requested replay distinct from autoplay", () => {
+    const html = renderToStaticMarkup(createElement(ShopPreview, { look: { board: "classic", pieces: "classic", effect: "comet" }, large: true, autoPlay: true, replaying: true, play: 2 }));
+    expect(html).toContain('data-preview-mode="replay"');
+    expect(html.match(/class="shop-square [^"]*shop-preview-mover/g)).toHaveLength(1);
+  });
+  it("marks an explicit one-shot request without enabling autoplay", () => {
+    const html = renderToStaticMarkup(createElement(ShopPreview, { look: { board: "classic", pieces: "classic", effect: "silk" }, replaying: true, explicitMotion: true }));
+    expect(html).toContain('data-preview-mode="replay"');
+    expect(html).toContain('data-preview-explicit="true"');
+    expect(html).toContain('data-preview-auto="false"');
   });
 });
