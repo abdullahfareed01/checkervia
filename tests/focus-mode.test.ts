@@ -58,8 +58,19 @@ describe("focus mode: the game screen", () => {
 
   it("the page never scrolls: the board is the smaller of the width and the height left", () => {
     const focus = css("focus.css");
-    expect(focus).toContain("--board-size: min(var(--focus-w), max(200px, calc(100dvh - var(--focus-chrome))));");
-    expect(focus).toMatch(/\.app\.app-focus \.topbar,\n {2}\.app\.app-focus \.game,\n {2}\.app\.app-focus \.sidebar \{\n {4}width: var\(--board-size\);/);
+    // The column (title, cards, AI) is the smaller of the width and the
+    // height left; the board is as wide, less the game over hint's room.
+    expect(focus).toContain("--focus-col: min(var(--focus-w), max(200px, calc(100dvh - var(--focus-chrome))));");
+    expect(focus).toContain("--board-size: min(var(--focus-col), max(200px, calc(100dvh - var(--focus-chrome) - var(--focus-hint-room, 0px))));");
+    expect(focus).toMatch(/\.app\.app-focus \.topbar,\n {2}\.app\.app-focus \.game,\n {2}\.app\.app-focus \.sidebar \{\n {4}width: var\(--focus-col\);/);
+    // Large text is allowed for (nothing at the normal size), and the hint's
+    // room is taken only while the hint shows, and never where it goes beside the symbol.
+    expect(focus).toContain("--focus-text-extra: clamp(0px, 5 * (1rem - 16px), 26px);");
+    expect(focus).toMatch(/--focus-chrome: calc\([^;]*\+ var\(--focus-text-extra\)\);/);
+    expect(focus).toMatch(/\.app\.app-focus:has\(\.focus-hint\) \{\n {4}--focus-hint-room: calc\(10px \+ max\(44px, 2\.5rem \+ 8px\)\);/);
+    expect(focus).toMatch(/\.app\.app-focus:has\(\.focus-hint\) \{\n {4}--focus-hint-room: 0px;/);
+    // The wide layout keeps the title and the game as wide as the board.
+    expect(focus).toContain("--focus-col: var(--board-size);");
   });
 });
 

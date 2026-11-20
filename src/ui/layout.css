@@ -414,6 +414,24 @@
   }
 }
 
+/* The same when the card itself is narrow on a wider window (focus mode
+   with a board sized from the height, a tablet with large text): the name
+   row with "Strong language" needs about 310px, 345px with large text.
+   The text column's width comes from the card, never from its content. */
+.card-text {
+  container: card-text / inline-size;
+}
+
+@container card-text (max-width: 350px) {
+  .chip-adult-text {
+    display: none;
+  }
+
+  .chip-adult-info {
+    display: inline-flex;
+  }
+}
+
 /* ---------- Coordinates in the squares' corners ---------- */
 
 /* Above the pieces, as on a printed board, so a piece never hides one. */

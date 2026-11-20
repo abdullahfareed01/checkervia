@@ -123,6 +123,20 @@
   inset: -7px 0;
 }
 
+/* Close is 32px to the eye; its target reaches 12px past the pill's end,
+   so it is 44px wide without taking room from Try focus mode. */
+.focus-offer-close::after {
+  right: -12px;
+}
+
+/* While the offer floats over the chance bar (only before the first move,
+   when the bar shows an even game), the bar's names and numbers hide: on a
+   small phone they peeked out around the pill. The bar's own label for
+   screen readers stays. */
+.board-area:has(> .focus-offer) .winbar-label {
+  visibility: hidden;
+}
+
 .focus-offer-go {
   display: flex;
   align-items: center;
@@ -167,9 +181,16 @@
 
 /* Two columns: low in the side panel, over the move list (empty at the
    start), just above the action bar. */
+/* With large text the side panel's AI row comes lower, so the pill does
+   too (up to 16px, still clear of the action bar); the empty move list's
+   "No moves yet" hides under it, as the chance bar's labels do. */
 .sidebar > .focus-offer {
-  bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 30px);
+  bottom: calc(var(--bar-h) + 2 * var(--bar-pad) + 30px - clamp(0px, 1rem - 16px, 16px));
   transform: translateX(-50%);
+}
+
+.sidebar:has(> .focus-offer) .history-where {
+  visibility: hidden;
 }
 
 @keyframes focus-offer-in {
@@ -206,8 +227,14 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-offer {
    its arrow pointing at it, with Leave focus mode and a close button. The
    leather and bronze rim of the game's popups; calm, no glow (D41, D42). */
 .focus-lead {
-  position: relative;
   display: grid;
+}
+
+/* Under the symbol, the hint is placed in the title row (the symbol is its
+   first item, at its left edge) and is never wider than that row, so it
+   stays on screen in every layout; with large text its words wrap. */
+.top-row:has(> .focus-lead) {
+  position: relative;
 }
 
 .focus-hint {
@@ -219,8 +246,10 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-offer {
   z-index: 30;
   display: flex;
   align-items: center;
+  width: max-content;
+  max-width: 100%;
   border-radius: 14px;
-  white-space: nowrap;
+  white-space: normal;
   background: linear-gradient(180deg, var(--hint-bg) 0%, #2a190c 100%);
   box-shadow:
     0 0 0 1px var(--hint-rim),
@@ -243,8 +272,12 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-offer {
 }
 
 .focus-hint-leave {
+  flex: 0 1 auto;
+  min-width: 0;
   min-height: 44px;
-  padding: 0 10px 0 14px;
+  padding: 4px 10px 4px 14px;
+  line-height: 1.25;
+  text-align: left;
   border: none;
   border-radius: 14px 0 0 14px;
   font: inherit;
@@ -256,10 +289,12 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-offer {
 }
 
 .focus-hint-close {
+  flex: none;
+  align-self: stretch;
+  min-height: 44px;
   display: grid;
   place-items: center;
   width: 44px;
-  height: 44px;
   padding: 0;
   border: none;
   border-left: 1px solid rgba(201, 146, 76, 0.35);
@@ -290,18 +325,25 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-offer {
    (With the window at least 5:4 the board is sized from the height, which
    leaves 250px or more on each side.) */
 @media (min-width: 1200px) and (min-height: 600px), (min-width: 900px) and (min-height: 600px) and (min-aspect-ratio: 5/4) {
+  .focus-lead {
+    position: relative;
+  }
+
+  /* No wider than the room left of the centred column (the page's side
+     padding and the 12px to the symbol included). Level with the symbol's
+     top, so a hint that wraps onto two lines with large text grows down,
+     never above the window; the arrow stays at the symbol's middle. */
   .focus-hint {
-    top: 50%;
+    top: 0;
     left: auto;
     right: calc(100% + 12px);
-    transform: translateY(-50%);
+    max-width: calc((100vw - var(--focus-col, 100vw)) / 2 - 44px);
   }
 
   .focus-hint::before {
-    top: 50%;
+    top: 16px;
     left: auto;
     right: -6px;
-    margin-top: -6px;
     border-left: none;
     border-right: 1px solid var(--hint-rim);
   }
@@ -347,9 +389,16 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-hint {
   .app.app-focus {
     --focus-w: min(calc(100vw - 16px), 760px);
     --focus-top: 52px; /* the title row */
-    --focus-chrome: calc(var(--focus-top) + 2 * var(--card-h) + var(--ai-card-extra, 0px) + var(--coach-h, 0px) + 5 * var(--focus-gap) + 16px);
+    /* Large text grows the cards up to their caps (as --text-extra in
+       layout.css does outside focus mode); nothing at the normal size. */
+    --focus-text-extra: clamp(0px, 5 * (1rem - 16px), 26px);
+    --focus-chrome: calc(var(--focus-top) + 2 * var(--card-h) + var(--ai-card-extra, 0px) + var(--coach-h, 0px) + 5 * var(--focus-gap) + 16px + var(--focus-text-extra));
     --focus-gap: 8px;
-    --board-size: min(var(--focus-w), max(200px, calc(100dvh - var(--focus-chrome))));
+    /* The column: the title, the cards and the AI. The board is as wide,
+       except while the game over hint needs room (below): then only the
+       board is smaller, so the cards' text never wraps onto more lines. */
+    --focus-col: min(var(--focus-w), max(200px, calc(100dvh - var(--focus-chrome))));
+    --board-size: min(var(--focus-col), max(200px, calc(100dvh - var(--focus-chrome) - var(--focus-hint-room, 0px))));
     min-height: 100dvh;
     grid-template-columns: minmax(0, 1fr);
     /* The title stays at the top; the cards, the board and the AI sit in
@@ -375,12 +424,34 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-hint {
   .app.app-focus .topbar,
   .app.app-focus .game,
   .app.app-focus .sidebar {
-    width: var(--board-size);
+    width: var(--focus-col);
     max-width: none;
   }
 
   .app.app-focus .sidebar {
     gap: 0;
+  }
+
+  /* Once a game is over, the hint under the small screen symbol gets room
+     of its own above the AI's card instead of covering it: the board gives
+     up that height when the window is short (behind the result panel, so
+     nothing jumps in view).
+     The room is the 10px above the hint and its height, two lines at the
+     most with a large text size. */
+  .app.app-focus:has(.focus-hint) {
+    --focus-hint-room: calc(10px + max(44px, 2.5rem + 8px));
+  }
+
+  .app.app-focus:has(.focus-hint) .game {
+    margin-top: calc(var(--focus-gap) + var(--focus-hint-room));
+  }
+}
+
+/* Where the hint goes beside the symbol (above), it covers nothing and
+   needs no room. (The wide layout's own board size leaves it out too.) */
+@media (min-width: 1200px) and (min-height: 600px), (min-width: 900px) and (min-height: 600px) and (min-aspect-ratio: 5/4) {
+  .app.app-focus:has(.focus-hint) {
+    --focus-hint-room: 0px;
   }
 }
 
@@ -392,6 +463,7 @@ html:is([data-anim="off"], [data-anim="reduced"]) .focus-hint {
     --focus-top: 64px;
     --focus-chrome: calc(var(--focus-top) + 2 * var(--card-h) + var(--ai-card-extra, 0px) + 3 * var(--focus-gap) + 32px);
     --board-size: min(calc(100vw - 2 * 320px - 64px), 820px, max(260px, calc(100dvh - var(--focus-chrome))));
+    --focus-col: var(--board-size); /* the title and the game as wide as the board */
     height: 100dvh;
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     /* The title at the top, the board in the middle of the height below. */

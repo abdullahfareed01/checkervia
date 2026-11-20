@@ -1,5 +1,10 @@
 # Progress Log
 
+## 20 Nov 2026: Merges of the admin work and saved progress, and layout fixes (D147)
+- `feature/leaderboard` (admin D111 to D113) and `feature/accounts` (D150 and its follow up) merged into `merge/online-rooms`; no decision numbers collided.
+- Layout check fixes, all on screens that predate these merges: the AI voice settings page was wider than the sheet on small phones (an implicit grid column grew to the voice's full name); the focus mode offer's Not now was 32px wide and the chance bar's labels and the empty move list's "No moves yet" peeked out around it; the focus mode game over hint covered the AI's card on phones, ran off the window with large text and went above it beside the symbol; focus mode overflowed the window with large text; "Strong language" covered the AI card's count on narrow cards in wide windows; the shop's price was cut off with large text. The shop journey check now picks Same screen after 2 Players.
+- Not run: the whole layout matrix after the fixes (only the failing screens at their sizes were rechecked), and the admin browser check.
+
 ## 20 Nov 2026: Saved progress follow up: every test, small phones and large text (D150 follow up)
 - This worktree now has its own node_modules (`npm install`, no package or lockfile change), so the 3 flag tests that failed only for want of it pass: all 2189 tests passed before any change.
 - `scripts/check-layout.mjs` over the 11 profile and account states at all 16 sizes and 100, 130 and 200 percent text found the create profile and first game profile pages cut off at 320x568 and 360x640 at every text size, and the country list cut off at normal text on phones (320x568 to 360x740) and on wide windows (1024x768). The first run was stopped at 360x740 once the causes were clear; the run after the fix covers every size. Fixed on the profile screen only (see the D150 follow up): the sheet scrolls only when a page cannot fit, the slide in no longer holds the country list inside the page, the list opens in the middle of wide windows, and the login link is one line. After the fix: 528 states checked, 0 with issues.
