@@ -7,14 +7,14 @@
 // calm "not available" panel.
 import { DEVICE_HEADER } from "../../src/leaderboard/protocol";
 import { unavailable } from "./http";
-import type { LeaderboardHandler, LeaderboardResponse } from "./http";
+import type { LeaderboardHandler, LeaderboardRequest, LeaderboardResponse } from "./http";
 import { newToken } from "./security";
 import type { LeaderboardStore } from "./store";
 import { createSupabaseStore } from "./supabaseStore";
 
 // Minimal declarations so we do not need @types/node or @netlify/functions.
 declare const process: { env: Record<string, string | undefined> };
-interface NetlifyContext {
+export interface NetlifyContext {
   readonly ip?: string;
 }
 
@@ -29,7 +29,7 @@ function configuredStore(): LeaderboardStore | null {
   return store;
 }
 
-function toResponse(result: LeaderboardResponse): Response {
+export function toResponse(result: LeaderboardResponse): Response {
   const headers: Record<string, string> = { "content-type": "application/json", "cache-control": "no-store" };
   const retryAfter = (result.body as { retryAfter?: unknown } | null)?.retryAfter;
   if (result.status === 429 && typeof retryAfter === "number") headers["retry-after"] = String(retryAfter);
@@ -44,18 +44,20 @@ export async function serve(request: Request, context: NetlifyContext | undefine
     return toResponse(unavailable());
   }
 
-  const result = await handler(
-    {
-      method: request.method,
-      body: request.method === "POST" ? await request.text() : "",
-      query: new URL(request.url).searchParams,
-      authorization: request.headers.get("authorization"),
-      deviceId: request.headers.get(DEVICE_HEADER),
-      // Set by Netlify itself, so a visitor cannot choose it. No country is
-      // taken from the request: the player always chooses their flag (D61).
-      ip: context?.ip ?? request.headers.get("x-nf-client-connection-ip") ?? "unknown",
-    },
-    { store: configured, salt, now: () => new Date(), newToken, log: (message) => console.error(message) },
-  );
+  const result = await handler(await leaderboardRequest(request, context), { store: configured, salt, now: () => new Date(), newToken, log: (message) => console.error(message) });
   return toResponse(result);
+}
+
+/** The parts of a Netlify request a handler may use. */
+export async function leaderboardRequest(request: Request, context: NetlifyContext | undefined): Promise<LeaderboardRequest> {
+  return {
+    method: request.method,
+    body: request.method === "POST" ? await request.text() : "",
+    query: new URL(request.url).searchParams,
+    authorization: request.headers.get("authorization"),
+    deviceId: request.headers.get(DEVICE_HEADER),
+    // Set by Netlify itself, so a visitor cannot choose it. No country is
+    // taken from the request: the player always chooses their flag (D61).
+    ip: context?.ip ?? request.headers.get("x-nf-client-connection-ip") ?? "unknown",
+  };
 }
