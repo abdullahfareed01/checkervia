@@ -15,6 +15,13 @@ Format: decision, reason, consequence.
 - Email provider: Resend through Supabase SMTP; a verified domain is required. Owner steps: `docs/07-deployment/accounts-setup.md`. Until `ACCOUNTS_ENABLED=1` the function reports `enabled: false` and the game shows nothing new.
 - No dependency added. Migration 9 is prepared, not applied.
 
+### D150 follow up. The profile screen on the smallest phones and with large text (20 Nov 2026)
+- `scripts/check-layout.mjs` over every profile and account state, at all 16 sizes and at 100, 130 and 200 percent text, found the create profile and first game profile pages cut off on small phones and with large text (the Log in link made them a row taller), and the country list cut off at normal text on phones and on wide windows.
+- Cause of the country list: the page's slide in used fill mode `both`, so after it ended the page still counted as transformed and held the list (fixed to the window) inside the sheet. It now uses `backwards`: the same look, and nothing remains once it ends.
+- The sheet stays sized to what it shows; only when a page cannot fit does it scroll, inside the sheet, on the slim gold scroll bar. While the country list or a popup is open the sheet does not scroll, so only one thing scrolls at a time. On wide windows the country list opens in the middle of the window over the dimmed sheet, because a list dropping below its button would be cut off by the compact sheet.
+- The login link reads "Have a saved profile? Log in" (one line on a 320px phone) and keeps its 15px size whatever order the styles load in.
+- Only the profile screen changes; other screens keep their look. `tests/leaderboard/profile-fit.test.ts` keeps these rules; `tests/leaderboard/accounts-off.test.ts` proves the game works as before with `ACCOUNTS_ENABLED` unset and migration 9 not run.
+
 ## D110. Dashboard phase 3: reports, suspensions, live play and audited actions (19 Nov 2026)
 - Build the last three sections and the moderator's actions on migration 7's installed functions. No migration, dependency or deployment. The SQL already saves each change and its audit row in one transaction; the server only validates and calls it.
 - New reads (read limit): `reports` (status, source, player, keyset cursor of time and key, at most 100 per page), `reportGroups` (players with reports, open first, then different reporters; the AI counts as one; at most 50) and `live` (devices in a game now by mode, AI level and flag, plus online room games without their boards).

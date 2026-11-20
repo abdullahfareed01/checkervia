@@ -3,7 +3,7 @@
 // - An unsaved profile: "Save your progress", and logging in to another one.
 // - A saved profile: which email it is saved to, logging out on this
 //   device, removing the email, and logging in to another profile.
-// - No profile yet (the create page): "Already have a saved profile? Log in".
+// - No profile yet (the create page): "Have a saved profile? Log in".
 import { useState } from "react";
 import { AccountDialog, AccountShell } from "./AccountDialog";
 import { accountProblemText, useAccountsEnabled } from "./accountClient";
@@ -83,7 +83,7 @@ export function LoginEntry({ onLoggedIn }: { onLoggedIn: () => void }) {
   if (!on) return null;
   return (
     <>
-      <button type="button" className="link-button acct-link" onClick={() => setOpen(true)}>Already have a saved profile? Log in</button>
+      <button type="button" className="link-button acct-link" onClick={() => setOpen(true)}>Have a saved profile? Log in</button>
       {open && <AccountDialog purpose="login" onClose={() => setOpen(false)} onDone={() => { setOpen(false); onLoggedIn(); }} />}
     </>
   );

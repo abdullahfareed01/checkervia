@@ -1,5 +1,12 @@
 # Progress Log
 
+## 20 Nov 2026: Saved progress follow up: every test, small phones and large text (D150 follow up)
+- This worktree now has its own node_modules (`npm install`, no package or lockfile change), so the 3 flag tests that failed only for want of it pass: all 2189 tests passed before any change.
+- `scripts/check-layout.mjs` over the 11 profile and account states at all 16 sizes and 100, 130 and 200 percent text found the create profile and first game profile pages cut off at 320x568 and 360x640 at every text size, and the country list cut off at normal text on phones (320x568 to 360x740) and on wide windows (1024x768). The first run was stopped at 360x740 once the causes were clear; the run after the fix covers every size. Fixed on the profile screen only (see the D150 follow up): the sheet scrolls only when a page cannot fit, the slide in no longer holds the country list inside the page, the list opens in the middle of wide windows, and the login link is one line. After the fix: 528 states checked, 0 with issues.
+- New `tests/leaderboard/accounts-off.test.ts`: with `ACCOUNTS_ENABLED` unset and migration 9 not run, guest play, making a profile, sending a win, the leaderboard and the profile work as before through the real handlers, the account function only says it is off, the deployed function never reaches Supabase, and the store finds a profile without the table migration 9 adds. New `tests/leaderboard/profile-fit.test.ts` keeps the layout rules.
+- `docs/07-deployment/migrations-run-order.md`: every migration in the order to run them, with a read only check for each (checked in PGlite along the whole chain).
+- Validation: strict TypeScript passes; all 2200 tests in 117 files pass; both production builds pass.
+
 ## 20 Nov 2026: Optional email login to save progress (D150)
 - Built on `feature/accounts` (worktree `artifacts/accounts-worktree`): migration 9, the `account` function (codes, link, login, save, load, log out, remove email), Supabase Auth for players with an in memory fake, device keys for a second device, the clean up of removed emails, the profile screen section, the email and code popup with the replace warning, background sync of the shop and settings, and the Terms section "Saving your progress".
 - Validation: see the backlog entry of the same day. Owner setup (domain, Resend, Supabase SMTP and template, migration 9, `ACCOUNTS_ENABLED`) is listed in `docs/07-deployment/accounts-setup.md`.

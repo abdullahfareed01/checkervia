@@ -22,7 +22,9 @@
 .acct-buttons .lb-button {
   flex: 1 1 11rem;
 }
-.acct-link {
+/* Two classes: .link-button (menu.css) sets font: inherit, and must not win
+   by load order. */
+.link-button.acct-link {
   min-height: 44px;
   padding: 8px 4px;
   font-size: 15px;

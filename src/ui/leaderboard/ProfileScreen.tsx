@@ -129,7 +129,7 @@ export function ProfileScreen({ onClose, firstGame = false, onSaved, onTerms }: 
     <div className="lb-backdrop pf-backdrop">
       <LbGradients />
       <div
-        className="lb-screen pf-screen"
+        className="lb-screen pf-screen gold-scroll"
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${ids}-title`}

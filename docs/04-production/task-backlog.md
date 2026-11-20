@@ -2,6 +2,7 @@
 
 ## Saving progress with an email (20 Nov 2026, branch feature/accounts, D150)
 - [x] Migration 9, the account function, Supabase Auth for players, device keys, email removal, sync, screens, Terms and tests. Validation: strict TypeScript passes; 2186 of 2189 tests pass, including 48 new ones in six files. The 3 failures are the flag tests that fail identically on the starting commit, because this worktree has no node_modules of its own. Layout matrix: 56 states (320x568, 390x844, 844x390, 1280x800, normal and 200 percent text, including the new account page, email, code and replace states): the new states all pass; the 6 failures (create and first game profile pages at 320x568, and at 844x390 with large text) also fail on the starting commit. A scripted browser flow on the development server saved a profile with a code, refused a wrong code and logged in on a new device key.
+- [x] Follow up: own node_modules (all tests pass, including the 3 flag tests), the profile pages and country list fixed on small phones and with large text (528 layout states, 0 issues), a test that the game works as before with accounts off, and the migrations run order. 2200 tests in 117 files, strict TypeScript and both builds pass.
 - [ ] Owner: verify a domain in Resend and connect it to Supabase SMTP with the code template (`accounts-setup.md`).
 - [ ] Owner approval, then apply migration 9.
 - [ ] Owner: set `ACCOUNTS_ENABLED=1` in Netlify, deploy and test with a real email.
