@@ -1,6 +1,8 @@
 import type { AiLevel } from "./difficulty";
 import type { Verdict } from "./judge";
 import { checkReaction, classify } from "./language";
+import { AI_CUES, CHAT_LINES } from "./chatLines";
+import type { ChatList } from "./chatLines";
 
 export interface ChatContext {
   level: AiLevel;
@@ -20,27 +22,26 @@ export interface ChatContext {
 export const GAME_ENDINGS = ["playerWon", "aiWon", "resigned", "abandoned", "aiResigned", "stubborn", "draw"] as const;
 export type GameEnding = (typeof GAME_ENDINGS)[number];
 
-const HUMAN_TURNS = ["My move. Your turn!", "Over to you.", "You are up.", "Your move. Make it count.", "The board is yours.", "On you now.", "Your turn. I am watching.", "All yours. Pick your next move."];
-// Cocky about the AI itself: a cue follows any move, so it never judges the
-// player (D156).
-const STRONG_TURNS = ["My move. Your turn!", "On you. I am ready for anything.", "Your move. No excuses.", "You are up. I already know my reply.", "Your turn. My next move is waiting.", "Over to you. I am just warming up.", "Your move. I like where this is going.", "On you. I am in no hurry."];
-const AI_TURNS = ["My turn. Watch closely.", "Over to me.", "Let me think.", "My move next.", "I am up. Give me a moment.", "Time for my reply."];
-// After an ordinary move there is no engine verdict, so these talk about the
-// AI and the game, never about the player's play (D155).
-const PLAIN = ["Let us see where this goes.", "There is more to this game yet.", "I am enjoying this one.", "I am curious what comes next.", "Every decision counts.", "This is getting interesting."];
-const FIERCE = ["I am just getting started.", "I already know my next three replies.", "I came for a challenge. I brought my best.", "I am not here to hand out compliments.", "Watch closely. I do not miss.", "This board belongs to me.", "I have patience. My mercy is another matter.", "Nobody outplays me twice."];
-const RESPECT = ["Fine. That earned a nod. Do not get used to it.", "Credit where it is due. Now keep it up.", "That was sharp. I am still not going easy."];
-const SLIPS = ["That was a gift. I will take it.", "You gave me an opening. No refunds.", "That plan needed another look."];
-const pick = (lines: readonly string[], seed: number) => lines[Math.abs(Math.trunc(seed)) % lines.length]!;
+/** Picks one of `lines`; `list` names the list, so a picker can remember it (D161). */
+export type PickLine = (list: string, lines: readonly string[]) => string;
 
-export function turnLine(side: "ai" | "human", level: AiLevel, seed: number): string {
-  return pick(side === "ai" ? AI_TURNS : level === 4 ? STRONG_TURNS : HUMAN_TURNS, seed);
+/** Line `seed` modulo the length: the same line for the same seed (tests). */
+export const seededPick = (seed: number): PickLine => (_list, lines) => lines[Math.abs(Math.trunc(seed)) % lines.length]!;
+
+/** Which local list follows a move with this engine verdict. */
+export function chatListFor(verdict: Verdict | null): ChatList {
+  return verdict === "great" ? "respect" : verdict === "blunder" ? "slip" : "ordinary";
 }
 
-export function localChatLine(level: AiLevel, seed: number, verdict: Verdict | null = null): string {
-  if (verdict === "great") return pick(RESPECT, seed);
-  if (verdict === "blunder") return pick(SLIPS, seed);
-  return pick(level === 4 ? FIERCE : PLAIN, seed);
+/** The turn cue: the AI's own while it thinks, the level's after its move. */
+export function turnLine(side: "ai" | "human", level: AiLevel, seed: number, pick: PickLine = seededPick(seed)): string {
+  return side === "ai" ? pick("cue:ai", AI_CUES) : pick(`cue:${level}`, CHAT_LINES[level].cue);
+}
+
+/** The local line after an AI move, from the list for the engine's verdict. */
+export function localChatLine(level: AiLevel, seed: number, verdict: Verdict | null = null, pick: PickLine = seededPick(seed)): string {
+  const list = chatListFor(verdict);
+  return pick(`${list}:${level}`, CHAT_LINES[level][list]);
 }
 
 // Chatter is not an explanation. Keep board facts and whose turn it is in

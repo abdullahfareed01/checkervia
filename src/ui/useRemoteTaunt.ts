@@ -7,12 +7,13 @@ import type { GameEnding } from "../ai/chat";
 import { endContext } from "./usePersonality";
 import type { LineContext } from "../ai/lines";
 import { requestTaunt, tauntEvent } from "../ai/taunt";
-import { localChatLine, turnLine } from "../ai/chat";
+import { localChatLine, seededPick, turnLine } from "../ai/chat";
+import type { PickLine } from "../ai/chat";
 import type { ModelContext } from "../ai/request";
 import type { BubbleMessage } from "./ChatBubble";
 import { deliverChat, TURN_CUE_MS } from "./chatDelivery";
 import type { ChatFrame } from "./chatDelivery";
-import { readShownLines, rememberShownLine } from "./shownLines";
+import { pickFresh, readShownLines, rememberShownLine } from "./shownLines";
 
 // How the game ended, for the model (D160), from the end line's own bank.
 const ENDING_OF: Readonly<Partial<Record<LineContext, GameEnding>>> = {
@@ -84,7 +85,9 @@ export interface BubblePlan {
 }
 
 // Pure, so the choice can be tested without a browser.
-export function bubblePlan(state: GameState, bubble: BubbleMessage | null): BubblePlan {
+// `pick` chooses the cue and the local line; the app passes the remembering
+// random picker (D161), tests the seeded one.
+export function bubblePlan(state: GameState, bubble: BubbleMessage | null, pick: PickLine = seededPick(state.aiRequestId)): BubblePlan {
   const key = bubble?.key ?? "";
   // Warnings keep their exact local words; idle lines stay local too (D73,
   // D82, restored by D156): the model was inventing the player's past play.
@@ -95,13 +98,19 @@ export function bubblePlan(state: GameState, bubble: BubbleMessage | null): Bubb
   // AI moved first, which the model is never told.
   const aiOpening = key === "greeting" && state.history.length > 1;
   const thinking = key.startsWith("thinking-") && state.aiPhase === "thinking";
-  const fallback = local ? null : move ? localChatLine(state.aiLevel, state.aiRequestId, state.history.at(-1)?.judgement?.verdict ?? null) : bubble?.text ?? null;
-  const cue = thinking ? turnLine("ai", state.aiLevel, state.aiRequestId) : move ? turnLine("human", state.aiLevel, state.aiRequestId) : null;
+  const fallback = local ? null : move ? localChatLine(state.aiLevel, state.aiRequestId, state.history.at(-1)?.judgement?.verdict ?? null, pick) : bubble?.text ?? null;
+  const cue = thinking ? turnLine("ai", state.aiLevel, state.aiRequestId, pick) : move ? turnLine("human", state.aiLevel, state.aiRequestId, pick) : null;
   return { passThrough: !bubble || local, fallback, cue, waiting: thinking, asksModel: !local && !engineLine && !aiOpening };
 }
 
 export function useRemoteBubble(state: GameState, bubble: BubbleMessage | null, rematch: boolean): BubbleMessage | null {
-  const plan = bubblePlan(state, bubble);
+  // Picked once per bubble (a game, a turn, a key), then kept while it shows.
+  const cached = useRef<{ id: string; game: unknown; plan: BubblePlan } | null>(null);
+  const id = `${state.aiRequestId}|${state.aiPhase}|${bubble?.key ?? ""}|${bubble?.text ?? ""}`;
+  if (!cached.current || cached.current.id !== id || cached.current.game !== state.history[0]) {
+    cached.current = { id, game: state.history[0], plan: bubblePlan(state, bubble, (list, lines) => pickFresh(list, lines)) };
+  }
+  const plan = cached.current.plan;
   const frame = useDeliveredLine(state, bubble?.key ?? "", plan.fallback, plan.asksModel, rematch, plan.cue, plan.waiting);
   if (!bubble || plan.passThrough) return bubble;
   return { ...bubble, text: frame.text, tone: frame.phase === "final" ? bubble.tone : "banter", why: frame.phase === "final" && bubble.why, announce: frame.phase === "final" ? bubble.announce : false };

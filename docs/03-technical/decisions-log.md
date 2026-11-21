@@ -2,6 +2,13 @@
 
 Format: decision, reason, consequence.
 
+## D161. Less predictable local lines around the AI's moves (21 Nov 2026)
+- Reason: the AI talk audit (section 4). The turn cue and the local line after an AI move were both picked by `aiRequestId` modulo the list length, so they came strictly in order and always in the same pairs, and the respect and slip lists had 3 lines each, shared by every level.
+- The lists live in `src/ai/chatLines.ts`, one set per level in its voice (Easy warm, Medium playful, Hard cocky, Strongest savage): 8 turn cues, 8 ordinary lines, 10 respect lines and 10 slip lines each, plus the AI's own 6 cues while it thinks. Mild swearing appears only in two Strongest slip lines, which follow an engine verified blunder (D45).
+- In the app the cue and the line are picked separately at random (`pickFresh` in `src/ui/shownLines.ts`), never one of the last 3 of their list in this tab (sessionStorage), once per bubble. The seeded picks stay for tests (`seededPick`).
+- Supersedes: the shared `RESPECT`, `SLIPS`, `PLAIN` and `FIERCE` lists and the seeded order of D107.
+- Tests: `tests/ai-talk-fallbacks.test.ts` (sizes at every level, every line valid for its verdict, respect lines read as respect, slip lines never praise, cues never judge, no dashes, the cap, a capital first letter, lmao only at Hard and Strongest; 40 turns per level with no repeat within 3 and cues that pair with different lines; a broken memory still picks).
+
 ## D160. The end line is told how the game really ended (21 Nov 2026)
 - Reason: the AI talk audit (section 3). The model's end line was told only who won, so "That blunder sealed it." passed after a game with no blunder and an abandoned game looked like a game won by play; and the D69 laugh was only on the local line, so it was lost whenever the model answered.
 - The end line's context carries `ending` (`playerWon`, `aiWon`, `resigned`, `abandoned`, `aiResigned`, `stubborn` or `draw`, from the same `endContext` that picks the local bank) and `blunderSeen` (any engine verified blunder by the player in the game). `readContext` accepts them only for the `end` event. The prompt says how the game ended in words, and whether a blunder was verified ("do not claim one" when none was). After the player's win the blunder count is left out, because respect is due (D157).
