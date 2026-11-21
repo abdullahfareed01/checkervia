@@ -64,7 +64,7 @@ export function promptForContext(c: ModelContext): string {
     'Do not mention colours, squares, piece counts, captures, kings, position advantage, or whose turn it is. The interface already announces the turn. Do not repeat a turn cue.',
     `Event: ${c.event ?? "during"}. Level: ${c.level}. Outcome: ${c.outcome ?? "game ongoing"}. Never invent a result.`,
     playFacts(c),
-    c.verdict === "great" || c.outcome === "human-win" ? 'Grudging respect is allowed for this verified achievement. At Strongest keep it terse, never gush.' : 'Do not praise the human or claim they played well. At Strongest, give only competitive banter about yourself.',
+    c.verdict === "great" || c.outcome === "human-win" ? 'Give grudging respect for this verified achievement: the line must read as respect, with no taunt and no backhanded "nice try". At Strongest keep it terse, never gush.' : 'Do not praise the human or claim they played well. At Strongest, give only competitive banter about yourself.',
     describeBoard(c.board),
   ].join("\n");
   const legal = getLegalMoves(c.board, c.player);

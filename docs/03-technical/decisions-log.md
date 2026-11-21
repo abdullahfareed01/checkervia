@@ -2,6 +2,12 @@
 
 Format: decision, reason, consequence.
 
+## D157. The chip and the words agree at every level (21 Nov 2026)
+- Reason: the AI talk audit (bug 4). The chip comes from the engine's verdict and the words from the model, and nothing tied them together: a green "Respect" chip sat above "nice try, but your plan is already outdated, stuck in a predictable loop", and at Easy to Hard "Great move, well played!" passed after a blunder. The owner's rule (A): a roast only after a blunder, respect only after a great move.
+- `validChatLine` (server and browser): no praise of the player at any level (`praisesPlayer`) unless the verdict is great or the player won; after a great move, or for the player's win, the line must read as respect (`readsAsRespect`: respect words, and no taunt words such as "nice try", "predictable", "luck", "gift", and no insult). A refused model line leaves the local line, which agrees with its chip. With no verdict D155 already forbids judging the play, so there is no chip and no judgement. The taunt prompt now asks for respect instead of allowing it.
+- Supersedes: the part of D107 that limited unearned praise to Strongest ("Easy, Medium and Hard keep their distinct clean voices" stays; their praise now also needs a great move or the player's win).
+- Tests: `tests/ai-talk-tone.test.ts` (a table of every level, every verdict and five model answers: the chip and the shown line agree; the audit's examples; respect for the player's win; greetings are not praise; the local lines for each verdict).
+
 ## D156. Idle lines stay local, and local lines without a verdict never judge the player (21 Nov 2026)
 - Reason: the AI talk audit (bug 2). Since D107 idle lines 1 to 5 went to the model every 5 seconds, and it made up the player's past play ("You're falling into the same old trap, again."). Some local lines also rested on a false premise. The owner's rules: idle lines stay local (B), and with no engine verdict the AI talks about itself, the board or the waiting, never about the player's strategy, plan, mistakes, skill or patterns (A).
 - `bubblePlan` treats every `idle` key as local, like the resign hint and pressure: the line shows as picked, at once, as before D107. This restores D73 and D82 and supersedes the part of D107 that sent idle lines to the model.

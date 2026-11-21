@@ -48,6 +48,25 @@ const HUMAN_WIN = /\b(?:you (?:win|won|beat me)|I (?:lose|lost)|your victory|I r
 // player too, so they follow the same rule.
 const PLAY_CLAIM = /\b(?:plans?|planned|planning|strateg(?:y|ies|ic)|attempts?|mistakes?|errors?|traps?|trapped|predictable|again|same old|blunder(?:s|ed|ing)?|slip(?:s|ped)?|sloppy|careless|clumsy|reckless|desperate|habits?|patterns?|loops?|outdated|skills?|unskilled|weak(?:ness)?|flaw(?:s|ed)?|barely|disaster|(?<!good )luck|lucky|fluke|nice try|that move|those moves|your last move|your (?:play|playing|game|idea|ideas|thinking|tactics?|defen[cs]e|attack|choices?|decisions?)|you keep|you always|every time|rookie|beginner)\b/i;
 
+// Praise of the player or their play, at every level (D157). Greetings
+// like "good luck" or "nice to meet you" are not praise.
+const PLAYER_PRAISE = /\b(?:(?:good|great|nice|strong|smart|clever|solid|excellent|brilliant|beautiful|lovely|fine) (?:move|moves|play|job|one|choice|idea|plan|shot|thinking|work|effort)|well (?:played|done)|nice(?! try| to)|excellent|brilliant|clever|impressive|impressed|amazing|awesome|wonderful|proud of you|respect|sharp|talented|skilled|outstanding|superb|fantastic|congratulations|congrats|champion|getting better|way to go|you(?: are|'re|’re) (?:good|great|strong|smart|skilled|talented|a natural|doing (?:great|well)))\b/i;
+
+// What a line of respect says, and what turns it into a taunt (D157): the
+// "Respect" chip may only sit above a line that reads as respect.
+const RESPECT_WORDS = /\b(?:respect|well played|well done|(?:nice|good|great|fine|strong) (?:move|one|play|game|job|shot|work)|sharp|clever|brilliant|excellent|impressive|impressed|solid|credit|nod|earned|deserved|fair (?:enough|and square)|not bad|you got me|got me there|you beat me|you won|outplayed me|did not see|didn't see|didn’t see|bravo|hats off|kudos|props|i admit|i will admit|i'll admit|good game|congratulations|congrats|that worked)\b/i;
+const ROAST_WORDS = /\b(?:nice try|predictable|outdated|stuck|loops?|weak|sloppy|careless|lucky|luck|fluke|gift|mistakes?|blunder\w*|slip\w*|traps?|fail\w*|wasted|wrong|bad|poor|worse|worst|doomed|barely|pathetic|not enough|too late|desperate|clumsy|for once)\b/i;
+
+/** True when `line` praises the player or their play. */
+export function praisesPlayer(line: string): boolean {
+  return PLAYER_PRAISE.test(line);
+}
+
+/** True when `line` reads as respect: respect words, no taunt, no insult. */
+export function readsAsRespect(line: string): boolean {
+  return RESPECT_WORDS.test(line) && !ROAST_WORDS.test(line) && !classify(line).includes("insult");
+}
+
 /** True when `line` judges the player's play (or insults the player). */
 export function judgesPlay(line: string): boolean {
   return PLAY_CLAIM.test(line) || classify(line).includes("insult");
@@ -62,6 +81,11 @@ export function validChatLine(line: string, context: ChatContext = { level: 1 })
   if (context.level === 4 && context.verdict !== "great" && context.outcome !== "human-win" && PRAISE.test(line)) return false;
   const verified = context.verdict === "blunder" || context.verdict === "great" || context.outcome === "human-win";
   if (!verified && judgesPlay(line)) return false;
+  // The chip and the words agree (D157): praise only for a great move or the
+  // player's win, and then the line must read as respect.
+  const respectDue = context.verdict === "great" || context.outcome === "human-win";
+  if (!respectDue && praisesPlayer(line)) return false;
+  if (respectDue && !readsAsRespect(line)) return false;
   if (AI_WIN.test(line) && context.outcome !== "ai-win") return false;
   if (HUMAN_WIN.test(line) && context.outcome !== "human-win") return false;
   if (/\b(?:a draw|drawn game|game over|it is over|it's over|it’s over)\b/i.test(line) && !context.outcome) return false;
