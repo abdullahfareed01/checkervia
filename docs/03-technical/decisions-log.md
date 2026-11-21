@@ -2,6 +2,13 @@
 
 Format: decision, reason, consequence.
 
+## D154. The AI's opening move is not a reply (21 Nov 2026)
+- Reason: the AI talk audit (`docs/03-technical/ai-talk-audit.md`, bug 1). In production every AI move carried a turn cue as its `reaction`, the opening move too, so when the AI opened the bubble asked the model for a `during` line about a player move that never happened ("You barely managed to avoid a disaster with that pathetic attempt"). The owner approved changing D85 and D107 for this.
+- `chooseMove` adds the turn cue only when there was a player move to answer (`options.opponent`): in the success result, the engine fallback result and the `onFallbackReady` result. The controller's late fallback passes no empty reaction either.
+- So `reactionBubble` shows the `aiOpens` greeting at `history[1]`, as D85 intended. That greeting stays local: `bubblePlan` (new, pure, in `useRemoteTaunt.ts`) never offers it to the model, because the model is not told that the AI moved first. The player's own greeting, when the player moves first, is still offered to the model (D107).
+- Supersedes: the part of D107 that sent the AI's first bubble to the model, and the D85 note "unless the model already said something then" (in production nothing else may speak there now).
+- Tests: `tests/ai-talk-opening.test.ts` (every level, model up and down: the first bubble is an `aiOpens` line, no taunt request, no turn cue; the reply to a player move keeps its cue).
+
 ## D153. One database round per room request, with fallback (21 Nov 2026)
 - Reason: after D151 a poll still made two trips from Ohio to Mumbai and a move three. New migration `docs/07-deployment/rooms-migration-10.sql` (step 12 in `migrations-run-order.md`) adds two functions, and nothing else: no table, column, index, policy or data change. The rooms migration (`leaderboard-migration-6.sql`) is already run in the owner's database and is not edited.
 - `online_room_poll`: counts the request against each rate limit counter (the same keys and limits as before, made by `rateLimitCounters`), finds the player of the token (the first key, else `player_tokens` when that table exists), reads the room with its players and latest game, and stores the sign of life only when every counter allows it, the player exists and is not hidden, they are in the room and the room has not expired. `online_save_move`: stores the move only while the game has the expected moves, is not finished and belongs to that room, and then the room's last use.

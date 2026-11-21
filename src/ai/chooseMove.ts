@@ -181,10 +181,13 @@ export async function chooseMove(
   }
   const prompt = buildPrompt(board, player, offer.choices, offer.shown, options.opponent, moves.length);
   const bestIndex = offer.scoreOf ? offer.scoreOf.reduce((best, score, index, scores) => score > scores[best]! ? index : best, 0) : 0;
+  // The turn cue is a reply to the player's move, so there is none when the
+  // AI opens the game: the bubble then shows its opening greeting (D85, D154).
+  const cue = options.opponent ? { reaction: turnLine("human", options.level ?? 2, options.lineSeed ?? 0) } : {};
   const fallback = (attempts: number): Extract<ChooseMoveResult, { ok: true }> => ({
     ok: true, move: offer.choices[bestIndex]!, attempts,
     reason: "The engine chose its best scored legal move for this level.",
-    reaction: turnLine("human", options.level ?? 2, options.lineSeed ?? 0),
+    ...cue,
     ...(offer.info && offer.scoreOf ? { lookahead: { ...offer.info, score: offer.scoreOf[bestIndex]!, scoresShown: true, source: "engine" as const } } : {}),
   });
   if (options.engineFallback) options.onFallbackReady?.(fallback(0));
@@ -209,7 +212,7 @@ export async function chooseMove(
         ok: true,
         move,
         attempts: call,
-        ...(options.engineFallback ? { reaction: turnLine("human", options.level ?? 2, options.lineSeed ?? 0) } : {}),
+        ...(options.engineFallback ? cue : {}),
         ...(explanation === undefined ? {} : { reason: checkReason(explanation) }),
         ...(!options.engineFallback && wantsReaction && reaction ? { reaction: checkReaction(reaction, options.level, verdict) } : {}),
         ...(offer.info && offer.scoreOf ? { lookahead: { ...offer.info, score: offer.scoreOf[index]! } } : {}),

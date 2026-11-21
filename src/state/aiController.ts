@@ -108,7 +108,7 @@ export function startAiTurn(
       // chooseMove reports model problems as a result, so this is unexpected.
       if (cancelled) return;
       if (engineFallback && fallback) {
-        dispatch({ type: "aiMoved", requestId, move: fallback.move, reason: fallback.reason ?? null, lookahead: fallback.lookahead, reaction: fallback.reaction });
+        dispatch({ type: "aiMoved", requestId, move: fallback.move, reason: fallback.reason ?? null, lookahead: fallback.lookahead, ...(fallback.reaction ? { reaction: fallback.reaction } : {}) });
         return;
       }
       const message = error instanceof Error ? error.message : String(error);
