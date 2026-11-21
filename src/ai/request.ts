@@ -25,7 +25,7 @@ export interface ModelContext extends ChatContext {
 export function readContext(value: unknown): ModelContext | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const c = value as Record<string, unknown>;
-  if (Object.keys(c).some(k => !["job", "board", "player", "level", "opening", "candidates", "scores", "event", "verdict", "outcome"].includes(k))) return null;
+  if (Object.keys(c).some(k => !["job", "board", "player", "level", "opening", "candidates", "scores", "event", "verdict", "outcome", "humanMoves"].includes(k))) return null;
   if (c.job !== "move" && c.job !== "taunt") return null;
   if (c.player !== "black" && c.player !== "white") return null;
   if (![1, 2, 3, 4].includes(c.level as number) || typeof c.opening !== "boolean") return null;
@@ -37,19 +37,34 @@ export function readContext(value: unknown): ModelContext | null {
   if (c.event !== undefined && !TAUNT_EVENTS.includes(c.event as TauntEvent)) return null;
   if (c.verdict !== undefined && c.verdict !== null && c.verdict !== "great" && c.verdict !== "blunder") return null;
   if (c.outcome !== undefined && !["ai-win", "human-win", "draw"].includes(c.outcome as string)) return null;
-  if (c.job === "move" && (c.verdict !== undefined || c.outcome !== undefined)) return null;
+  if (c.humanMoves !== undefined && (!Number.isInteger(c.humanMoves) || (c.humanMoves as number) < 0 || (c.humanMoves as number) > 10_000)) return null;
+  // A verdict is about the player's last move, so only a move reaction has one (D155).
+  if (c.verdict !== undefined && c.verdict !== null && c.event !== undefined && c.event !== "during") return null;
+  if (c.job === "move" && (c.verdict !== undefined || c.outcome !== undefined || c.humanMoves !== undefined)) return null;
   return c as unknown as ModelContext;
+}
+
+// What is true about the human's play, for the taunt (D155): whether they
+// have moved, and the engine's verdict on their last move when it had one.
+function playFacts(c: ModelContext): string {
+  const moved = c.humanMoves === undefined ? "" : c.humanMoves === 0 ? "The human has not made a move yet in this game, so there is no play of theirs to talk about. " : `The human has made ${c.humanMoves} ${c.humanMoves === 1 ? "move" : "moves"} in this game. `;
+  const during = c.event === undefined || c.event === "during";
+  if (during && c.verdict === "blunder") return `${moved}The engine verified that the human's last move was a blunder: you may roast that move.`;
+  if (during && c.verdict === "great") return `${moved}The engine verified that the human's last move was excellent: give grudging respect for it.`;
+  if (c.outcome === "human-win") return `${moved}The human won this game.`;
+  return `${moved}There is no engine verdict on the human's play: never judge their strategy, plan, attempts, mistakes, skill or patterns. Talk about yourself, the game or the board in general terms.`;
 }
 
 export function promptForContext(c: ModelContext): string {
   if (c.job === "taunt") return [
     'Reply only as JSON: {"reaction":"one short rival remark"}.',
-    c.level === 4 ? 'You are a relentless, cocky checkers rival, never sweet or encouraging. Mock the plan, not real world traits. No friendly coaching.' : c.level === 3 ? 'You are a cocky, competitive checkers rival. Keep it clean.' : c.level === 2 ? 'You are a playful, competitive checkers rival. Keep it clean.' : 'You are a warm, encouraging checkers rival. Keep it clean.',
+    c.level === 4 ? "You are a relentless, cocky checkers rival, never sweet or encouraging. Brag about yourself; mock the human's play only after an engine verified blunder. Never mock real world traits. No friendly coaching." : c.level === 3 ? 'You are a cocky, competitive checkers rival. Keep it clean.' : c.level === 2 ? 'You are a playful, competitive checkers rival. Keep it clean.' : 'You are a warm, encouraging checkers rival. Keep it clean.',
     'At most 20 words and 140 characters. No threats, slurs, real world personal remarks or dashes. No profanity except mild words after a verified blunder at Strongest.',
     `You are ${c.player === "black" ? "Black" : "White"}. The human is ${c.player === "black" ? "White" : "Black"}. "I" means the AI; "you" means the human.`,
     'Do not mention colours, squares, piece counts, captures, kings, position advantage, or whose turn it is. The interface already announces the turn. Do not repeat a turn cue.',
-    `Event: ${c.event ?? "during"}. Level: ${c.level}. Human move verdict: ${c.verdict ?? "ordinary"}. Outcome: ${c.outcome ?? "game ongoing"}. Never invent a result.`,
-    c.verdict === "great" || c.outcome === "human-win" ? 'Grudging respect is allowed for this verified achievement. At Strongest keep it terse, never gush.' : 'Do not praise the human or claim they played well. At Strongest, give only competitive banter or a cutting taunt.',
+    `Event: ${c.event ?? "during"}. Level: ${c.level}. Outcome: ${c.outcome ?? "game ongoing"}. Never invent a result.`,
+    playFacts(c),
+    c.verdict === "great" || c.outcome === "human-win" ? 'Grudging respect is allowed for this verified achievement. At Strongest keep it terse, never gush.' : 'Do not praise the human or claim they played well. At Strongest, give only competitive banter about yourself.',
     describeBoard(c.board),
   ].join("\n");
   const legal = getLegalMoves(c.board, c.player);

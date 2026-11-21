@@ -11,7 +11,9 @@ import type { ChatFrame } from "./chatDelivery";
 export function chatContext(state: GameState, key: string, rematch = false): ModelContext {
   const verdict = key.startsWith("move-") ? state.history.at(-1)?.judgement?.verdict ?? null : null;
   const outcome = state.drawn ? "draw" : state.winner ? state.winner === aiSideOf(state) ? "ai-win" : "human-win" : undefined;
-  return { job: "taunt", board: state.board, player: aiSideOf(state), level: state.aiLevel, opening: false, candidates: [], event: tauntEvent(key, rematch), verdict, ...(outcome ? { outcome } : {}) };
+  // The player's moves so far: zero means nothing about their play is true yet (D155).
+  const humanMoves = state.history.filter((entry) => entry.player === state.humanSide).length;
+  return { job: "taunt", board: state.board, player: aiSideOf(state), level: state.aiLevel, opening: false, candidates: [], event: tauntEvent(key, rematch), verdict, humanMoves, ...(outcome ? { outcome } : {}) };
 }
 
 interface Delivery extends ChatFrame { game: GameState["history"][number] | undefined; turn: number; key: string; cue: string | null; waiting: boolean }

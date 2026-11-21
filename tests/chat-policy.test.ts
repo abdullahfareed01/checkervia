@@ -32,7 +32,10 @@ describe("chat truth, colour and level", () => {
     expect(validChatLine("You are a skilled player.", { level: 4 })).toBe(false);
     expect(validChatLine("Your move, rival!", { level: 4, verdict: null })).toBe(false);
     expect(validChatLine("Well played. That was clever.", { level: 4, verdict: "great" })).toBe(true);
-    expect(validChatLine("Bring a real plan, noob.", { level: 4 })).toBe(true);
+    // D155: judging the play (or the player) needs an engine verified blunder.
+    expect(validChatLine("Bring a real plan, noob.", { level: 4 })).toBe(false);
+    expect(validChatLine("Bring a real plan, noob.", { level: 4, verdict: "blunder" })).toBe(true);
+    expect(validChatLine("I am just getting started.", { level: 4, verdict: null })).toBe(true);
     expect(validChatLine("Bring a real plan, noob.", { level: 2 })).toBe(false);
     expect(validChatLine("Damn, that was a gift.", { level: 4 })).toBe(false);
     expect(validChatLine("Damn, that was a gift.", { level: 4, verdict: "blunder" })).toBe(true);
