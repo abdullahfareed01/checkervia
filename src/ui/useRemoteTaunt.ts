@@ -7,13 +7,14 @@ import type { ModelContext } from "../ai/request";
 import type { BubbleMessage } from "./ChatBubble";
 import { deliverChat, TURN_CUE_MS } from "./chatDelivery";
 import type { ChatFrame } from "./chatDelivery";
+import { readShownLines, rememberShownLine } from "./shownLines";
 
-export function chatContext(state: GameState, key: string, rematch = false): ModelContext {
+export function chatContext(state: GameState, key: string, rematch = false, recentLines: readonly string[] = []): ModelContext {
   const verdict = key.startsWith("move-") ? state.history.at(-1)?.judgement?.verdict ?? null : null;
   const outcome = state.drawn ? "draw" : state.winner ? state.winner === aiSideOf(state) ? "ai-win" : "human-win" : undefined;
   // The player's moves so far: zero means nothing about their play is true yet (D155).
   const humanMoves = state.history.filter((entry) => entry.player === state.humanSide).length;
-  return { job: "taunt", board: state.board, player: aiSideOf(state), level: state.aiLevel, opening: false, candidates: [], event: tauntEvent(key, rematch), verdict, humanMoves, ...(outcome ? { outcome } : {}) };
+  return { job: "taunt", board: state.board, player: aiSideOf(state), level: state.aiLevel, opening: false, candidates: [], event: tauntEvent(key, rematch), verdict, humanMoves, ...(outcome ? { outcome } : {}), ...(recentLines.length ? { recentLines: recentLines.slice(-3) } : {}) };
 }
 
 interface Delivery extends ChatFrame { game: GameState["history"][number] | undefined; turn: number; key: string; cue: string | null; waiting: boolean }
@@ -26,7 +27,10 @@ function useDeliveredLine(state: GameState, key: string, local: string | null, e
     if (matches(sealed.current)) return undefined;
     const show = (frame: ChatFrame) => {
       const next = { ...frame, game, turn, key, cue, waiting };
-      if (frame.phase === "final") sealed.current = next;
+      if (frame.phase === "final") {
+        sealed.current = next;
+        if (frame.text) rememberShownLine(frame.text);
+      }
       setShown(next);
     };
     if (waiting) {
@@ -35,7 +39,7 @@ function useDeliveredLine(state: GameState, key: string, local: string | null, e
       return () => clearTimeout(timer);
     }
     if (!local) return undefined;
-    return deliverChat(cue, local, enabled && state.mode === "vs-ai" && state.viewIndex === null ? signal => requestTaunt(chatContext(state, key, rematch), signal) : null, show);
+    return deliverChat(cue, local, enabled && state.mode === "vs-ai" && state.viewIndex === null ? signal => requestTaunt(chatContext(state, key, rematch, readShownLines()), signal) : null, show);
   }, [game, turn, key, local, enabled, rematch, state.aiLevel, cue, waiting]);
   if (matches(sealed.current)) return sealed.current!;
   return matches(shown) && shown!.cue === cue && shown!.waiting === waiting ? shown! : { phase: cue ? "cue" : "typing", text: cue };

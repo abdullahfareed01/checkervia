@@ -9,6 +9,8 @@ export interface ChatContext {
   // How many moves the human has made this game (D155). Zero means they have
   // not moved yet, so there is nothing about their play to talk about.
   humanMoves?: number;
+  // The AI's last few final lines this tab (D159): a new line may not repeat one.
+  recentLines?: readonly string[];
 }
 
 const HUMAN_TURNS = ["My move. Your turn!", "Over to you.", "You are up.", "Your move. Make it count.", "The board is yours.", "On you now.", "Your turn. I am watching.", "All yours. Pick your next move."];
@@ -92,9 +94,14 @@ const STRAY_QUOTE = /"|(?:^|[^\p{L}])'|'(?!\p{L})/u;
 // "Oh you." in place of the turn cue "On you." (the audit's evasion).
 const TURN_EVASION = /(?:^|[.!?]\s*)(?:oh|0n),? you(?:[.!?]|$)/i;
 
+// A line compared without case, spaces or punctuation.
+const plainWords = (line: string) => normaliseLine(line).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+
 export function validChatLine(raw: string, context: ChatContext = { level: 1 }): boolean {
   const line = normaliseLine(raw);
   if (STRAY_QUOTE.test(line)) return false;
+  // Variety (D159): never a recent line again, never the stale "Nice try" opener.
+  if (/^nice try\b/i.test(line) || context.recentLines?.some((recent) => plainWords(recent) === plainWords(line))) return false;
   if (!line.trim() || line.length > 140 || line.trim().split(/\s+/).length > 20 || /[-\u2013\u2014]/.test(line)) return false;
   if (checkReaction(line, context.level, context.verdict ?? null) !== line || BOARD_CLAIM.test(line) || TURN_CLAIM.test(line)) return false;
   // The current UI supplies an explicit verdict (null for an ordinary move)

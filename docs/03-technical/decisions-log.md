@@ -2,6 +2,12 @@
 
 Format: decision, reason, consequence.
 
+## D159. The taunt prompt has the move prompt's variety rules and the last lines (21 Nov 2026)
+- Reason: the AI talk audit (section 4). The variety rules, the "Nice try" ban and the AI's recent lines lived only in the move prompt, whose reaction production discards, so the taunt model could repeat itself and opened with "Nice try".
+- The taunt prompt now says to vary the wording, never to open with "Nice try", that a laugh may fit, and quotes the AI's last 3 final lines with "Say something new". The browser keeps those lines per tab (`src/ui/shownLines.ts`, sessionStorage, the last 3 final lines of the bubble and the result) and sends them as `recentLines`; `readContext` accepts at most 3 strings of at most 140 characters on one line, for taunts only. This is the only browser text forwarded to the model, and it is the AI's own words.
+- `validChatLine` refuses a line equal to a recent one (ignoring case, spaces and punctuation) and any line opening with "Nice try".
+- Tests: `tests/ai-talk-variety.test.ts` (the prompt, refusing repeats and the opener, the context checks, the last 3 lines in the context and in the tab).
+
 ## D158. Model lines are checked in the form players see (21 Nov 2026)
 - Reason: the AI talk audit (bugs 2 to 4). The rules matched exact spellings, so "Your 'move' was predictable." got past the turn word rule, "Oh you. Less staring, more strategy." got past "On you", and a line could start in lower case.
 - `normaliseLine` (in `chat.ts`) runs before every rule in `validChatLine`, on the server and in the browser: curly quotes become straight, quotes around the whole line or around a single word are removed, spaces are tidied and the first letter becomes a capital. `readTaunt` shows that form. A quote left after this (a double quote, or a single quote that is not an apostrophe inside a word) refuses the line.

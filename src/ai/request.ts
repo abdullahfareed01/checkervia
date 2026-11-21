@@ -1,5 +1,6 @@
-// The proxy rebuilds prompts from board/event data. Browser text is never
-// forwarded, so names, profiles and arbitrary error messages cannot leak.
+// The proxy rebuilds prompts from board/event data. The only browser text
+// forwarded is the AI's own last chat lines (D159), checked for length and
+// shape; names, profiles and arbitrary error messages are never sent.
 import { getLegalMoves } from "../engine";
 import type { Board, Player } from "../engine";
 import type { AiLevel } from "./difficulty";
@@ -25,7 +26,7 @@ export interface ModelContext extends ChatContext {
 export function readContext(value: unknown): ModelContext | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const c = value as Record<string, unknown>;
-  if (Object.keys(c).some(k => !["job", "board", "player", "level", "opening", "candidates", "scores", "event", "verdict", "outcome", "humanMoves"].includes(k))) return null;
+  if (Object.keys(c).some(k => !["job", "board", "player", "level", "opening", "candidates", "scores", "event", "verdict", "outcome", "humanMoves", "recentLines"].includes(k))) return null;
   if (c.job !== "move" && c.job !== "taunt") return null;
   if (c.player !== "black" && c.player !== "white") return null;
   if (![1, 2, 3, 4].includes(c.level as number) || typeof c.opening !== "boolean") return null;
@@ -40,7 +41,9 @@ export function readContext(value: unknown): ModelContext | null {
   if (c.humanMoves !== undefined && (!Number.isInteger(c.humanMoves) || (c.humanMoves as number) < 0 || (c.humanMoves as number) > 10_000)) return null;
   // A verdict is about the player's last move, so only a move reaction has one (D155).
   if (c.verdict !== undefined && c.verdict !== null && c.event !== undefined && c.event !== "during") return null;
-  if (c.job === "move" && (c.verdict !== undefined || c.outcome !== undefined || c.humanMoves !== undefined)) return null;
+  // The AI's own last lines (D159): at most 3 short single line strings.
+  if (c.recentLines !== undefined && (!Array.isArray(c.recentLines) || c.recentLines.length > 3 || !c.recentLines.every(line => typeof line === "string" && line.trim() !== "" && line.length <= 140 && !/[\u0000-\u001f]/.test(line)))) return null;
+  if (c.job === "move" && (c.verdict !== undefined || c.outcome !== undefined || c.humanMoves !== undefined || c.recentLines !== undefined)) return null;
   return c as unknown as ModelContext;
 }
 
@@ -64,6 +67,9 @@ export function promptForContext(c: ModelContext): string {
     'Do not mention colours, squares, piece counts, captures, kings, position advantage, or whose turn it is. The interface already announces the turn. Do not repeat a turn cue.',
     `Event: ${c.event ?? "during"}. Level: ${c.level}. Outcome: ${c.outcome ?? "game ongoing"}. Never invent a result.`,
     playFacts(c),
+    // The variety rules of the move prompt (D159).
+    'Vary your wording every time and never open with "Nice try". You may laugh (haha, hehe, lol) when it fits.',
+    ...(c.recentLines?.length ? [`Your last lines were: ${c.recentLines.map(line => JSON.stringify(line)).join(", ")}. Say something new; do not reuse their words or openings.`] : []),
     c.verdict === "great" || c.outcome === "human-win" ? 'Give grudging respect for this verified achievement: the line must read as respect, with no taunt and no backhanded "nice try". At Strongest keep it terse, never gush.' : 'Do not praise the human or claim they played well. At Strongest, give only competitive banter about yourself.',
     describeBoard(c.board),
   ].join("\n");
