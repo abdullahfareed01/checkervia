@@ -48,7 +48,7 @@ export function useRemoteLine(state: GameState, key: string, local: string | nul
 
 /** How one bubble is delivered: what shows first, the local line, and whether the model is asked. */
 export interface BubblePlan {
-  readonly passThrough: boolean; // shown exactly as given (no bubble, or a warning)
+  readonly passThrough: boolean; // shown exactly as given (no bubble, a warning or an idle line)
   readonly fallback: string | null; // the local line, shown when the model gives none
   readonly cue: string | null; // the turn cue shown before the dots
   readonly waiting: boolean; // the AI is thinking: cue, then dots, no final line yet
@@ -58,16 +58,18 @@ export interface BubblePlan {
 // Pure, so the choice can be tested without a browser.
 export function bubblePlan(state: GameState, bubble: BubbleMessage | null): BubblePlan {
   const key = bubble?.key ?? "";
-  const warning = key.startsWith("push-") || key.startsWith("hint-") || (key.startsWith("idle-") && Number(key.split("-").at(-1)) >= 6);
+  // Warnings keep their exact local words; idle lines stay local too (D73,
+  // D82, restored by D156): the model was inventing the player's past play.
+  const local = key.startsWith("push-") || key.startsWith("hint-") || key.startsWith("idle-");
   const move = key.startsWith("move-");
   const engineLine = move && state.history.at(-1)?.lookahead?.source === "engine";
   // The AI's opening greeting (D85, D154) is its own bank's line: it says the
   // AI moved first, which the model is never told.
   const aiOpening = key === "greeting" && state.history.length > 1;
   const thinking = key.startsWith("thinking-") && state.aiPhase === "thinking";
-  const fallback = warning ? null : move ? localChatLine(state.aiLevel, state.aiRequestId, state.history.at(-1)?.judgement?.verdict ?? null) : bubble?.text ?? null;
+  const fallback = local ? null : move ? localChatLine(state.aiLevel, state.aiRequestId, state.history.at(-1)?.judgement?.verdict ?? null) : bubble?.text ?? null;
   const cue = thinking ? turnLine("ai", state.aiLevel, state.aiRequestId) : move ? turnLine("human", state.aiLevel, state.aiRequestId) : null;
-  return { passThrough: !bubble || warning, fallback, cue, waiting: thinking, asksModel: !warning && !engineLine && !aiOpening };
+  return { passThrough: !bubble || local, fallback, cue, waiting: thinking, asksModel: !local && !engineLine && !aiOpening };
 }
 
 export function useRemoteBubble(state: GameState, bubble: BubbleMessage | null, rematch: boolean): BubbleMessage | null {

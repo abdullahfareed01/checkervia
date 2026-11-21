@@ -11,8 +11,10 @@ export interface ChatContext {
   humanMoves?: number;
 }
 
-const HUMAN_TURNS = ["My move. Your turn!", "Over to you.", "You are up.", "Your move. Make it count.", "The board is yours.", "On you now.", "Your turn. Show me your plan.", "All yours. Pick your next move."];
-const STRONG_TURNS = ["My move. Your turn!", "On you. Make it worth my time.", "Your move. No excuses.", "You are up. Try a real plan.", "Your turn. Impress me for once.", "Over to you. Keep up.", "Your move. Show some fight.", "On you. Less staring, more strategy."];
+const HUMAN_TURNS = ["My move. Your turn!", "Over to you.", "You are up.", "Your move. Make it count.", "The board is yours.", "On you now.", "Your turn. I am watching.", "All yours. Pick your next move."];
+// Cocky about the AI itself: a cue follows any move, so it never judges the
+// player (D156).
+const STRONG_TURNS = ["My move. Your turn!", "On you. I am ready for anything.", "Your move. No excuses.", "You are up. I already know my reply.", "Your turn. My next move is waiting.", "Over to you. I am just warming up.", "Your move. I like where this is going.", "On you. I am in no hurry."];
 const AI_TURNS = ["My turn. Watch closely.", "Over to me.", "Let me think.", "My move next.", "I am up. Give me a moment.", "Time for my reply."];
 // After an ordinary move there is no engine verdict, so these talk about the
 // AI and the game, never about the player's play (D155).
