@@ -4,7 +4,7 @@
 // to the database would.
 import type { World } from "./world";
 
-export function recordRounds(w: World, ms = 20) {
+export function recordRounds(w: World, ms = 50) {
   const calls: { name: string; round: number }[] = [];
   let inFlight = 0;
   let round = 0;
