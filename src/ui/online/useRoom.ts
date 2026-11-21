@@ -1,7 +1,8 @@
-// Keeps one room in step with the server (D141): asks for it about once a
-// second during a game (less while waiting, every five seconds while the tab
-// is hidden, as a sign of life), at once when the tab comes back or the
-// network returns, and after each action. Every answer is the room as the
+// Keeps one room in step with the server (D141): asks for it during a game
+// every half second while the opponent is to move and every three seconds on
+// the player's own turn (D152), less while waiting, every five seconds while
+// the tab is hidden (as a sign of life), at once when the tab comes back or
+// the network returns, and on from the answer to each action. Every answer is the room as the
 // server sees it; the moves are joined to the ones the browser has.
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { RoomView } from "../../online/protocol";
@@ -10,7 +11,7 @@ import { problemOf } from "../leaderboard/Problem";
 import type { Problem } from "../leaderboard/Problem";
 import { roomApi } from "./roomApi";
 import { rememberRoom } from "./roomMemory";
-import { mergeGame, NO_GAME, pollDelay, RETRY_MS, WAIT_LIMIT_MS } from "./roomSync";
+import { mergeGame, NO_GAME, pollDelay, RETRY_MS, turnOf, WAIT_LIMIT_MS } from "./roomSync";
 import type { KnownGame } from "./roomSync";
 
 /** Why the room cannot be used any more: the server's code (roomExpired, notMember...). */
@@ -40,6 +41,8 @@ export function useRoom(code: string, first: RoomView | null) {
   }));
   const known = useRef(state.game);
   const pollNow = useRef<() => void>(() => {});
+  // After an action's answer: the next poll counts from it (D152).
+  const pollAfter = useRef<(view: RoomView) => void>(() => {});
   const waitingSince = useRef<number | null>(null);
 
   /** Takes in a view; true when moves are missing and the room must be read again at once. */
@@ -95,14 +98,26 @@ export function useRoom(code: string, first: RoomView | null) {
           setState((current) => ({ ...current, paused: true }));
           return;
         }
-        delay = gap ? 0 : pollDelay(view.status, hidden);
+        delay = gap ? 0 : pollDelay(view.status, hidden, turnOf(view));
       } else {
         delay = failed(result);
       }
+      clearTimeout(timer);
       if (delay !== null) timer = setTimeout(() => void run(), delay);
     };
 
     pollNow.current = () => void run();
+    // The answer to an action is the newest room: a poll still on its way
+    // was asked before it, so it is dropped, and the next one is timed from
+    // this answer (half a second after the player's own move).
+    pollAfter.current = (view: RoomView) => {
+      if (stopped) return;
+      controller?.abort();
+      controller = null;
+      clearTimeout(timer);
+      const delay = pollDelay(view.status, document.visibilityState === "hidden", turnOf(view));
+      if (delay !== null) timer = setTimeout(() => void run(), delay);
+    };
     void run();
     const wake = () => void run();
     document.addEventListener("visibilitychange", wake);
@@ -122,6 +137,7 @@ export function useRoom(code: string, first: RoomView | null) {
       const result = await request();
       if (result.kind === "ok") {
         if (apply(result.value.room)) pollNow.current();
+        else pollAfter.current(result.value.room);
       } else if (failed(result) === 0) {
         pollNow.current();
       }

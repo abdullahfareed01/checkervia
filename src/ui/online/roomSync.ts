@@ -29,8 +29,9 @@ export function mergeGame(known: KnownGame, view: RoomView): { game: KnownGame; 
   return { game: { match: match.number, moves: moves.length === match.moveCount ? moves : moves.slice(0, match.moveCount) }, gap: false };
 }
 
-// How often to ask, in milliseconds: about every second while a game is on
-// or about to start, every two seconds while waiting or after the game,
+// How often to ask, in milliseconds: about every second while a game is
+// about to start (during the game, by whose turn it is: THEIR_TURN_POLL_MS
+// and MY_TURN_POLL_MS below), every two seconds while waiting or after the game,
 // every five seconds while the tab is hidden (only to say "still here,
 // away"), never once the room has closed or expired.
 export const POLL_MS: Record<RoomStatus, number | null> = {
@@ -47,8 +48,26 @@ export const RETRY_MS = 3000;
 // they still wait (each question costs the free plan a request).
 export const WAIT_LIMIT_MS = 15 * 60_000;
 
-export function pollDelay(status: RoomStatus, hidden: boolean): number | null {
-  const delay = POLL_MS[status];
-  if (delay === null) return null;
+// During a game, by whose turn it is (D152): often while the opponent is to
+// move (their move is what the player waits for), rarely on the player's own
+// turn (only to see a resignation, a departure or a forfeit, and as the sign
+// of life, far inside the 12 seconds after which a player counts as gone).
+// Together they ask less often than once a second did, per game hour.
+export const THEIR_TURN_POLL_MS = 550;
+export const MY_TURN_POLL_MS = 3500;
+
+/** Whose move the game waits for: null outside a game that is on (countdown, over, no game). */
+export type Turn = "mine" | "theirs" | null;
+
+export function turnOf(view: RoomView): Turn {
+  const { match, you } = view;
+  if (view.status !== "playing" || !match || match.startsInMs > 0 || match.winner || !you.colour) return null;
+  return match.toMove === you.colour ? "mine" : "theirs";
+}
+
+export function pollDelay(status: RoomStatus, hidden: boolean, turn: Turn = null): number | null {
+  const base = POLL_MS[status];
+  if (base === null) return null;
+  const delay = status === "playing" && turn ? (turn === "mine" ? MY_TURN_POLL_MS : THEIR_TURN_POLL_MS) : base;
   return hidden ? Math.max(delay, HIDDEN_POLL_MS) : delay;
 }

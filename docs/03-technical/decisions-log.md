@@ -2,6 +2,15 @@
 
 Format: decision, reason, consequence.
 
+## D152. Turn aware polling during an online game (21 Nov 2026)
+- Reason: during a game the browser waited 1 s after each answer, whoever was to move. What a player waits for is the opponent's move; on their own turn nothing can change except a resignation, a departure or a forfeit.
+- Now (`src/ui/online/roomSync.ts`, `turnOf` and `pollDelay`): every 550 ms while the opponent is to move, every 3.5 s on the player's own turn. Unchanged: 1 s during the countdown, 2 s while waiting and after the game, 5 s while the tab is hidden, never once the room is closed or expired, 3 s after an error, and the 15 minute wait limit. 3.5 s stays far inside the 12 s after which a player counts as gone, even with one lost answer.
+- The answer to the player's own move (or another action) is the newest room: a poll still on its way is dropped, and the next one is timed from that answer, so the opponent's reply is asked for about half a second after the move is stored (`pollAfter` in `useRoom.ts`).
+- Why 550 ms and 3.5 s, not 500 ms and 3 s: the next question is set when the answer comes, so faster answers (D151) mean more questions. With 500 ms and 3 s the measured count per game hour went up by about 2.5%; with 550 ms and 3.5 s it went down.
+- Measured on 21 Nov 2026 (latency harness with the real handlers on the in memory store, 365 ms a call from Karachi and 200 ms a database round from Ohio to Mumbai, 2 or 3 games of 16 moves; before is the code of 51d7daf, after is D151 and D152): polls per game hour for both players 3,617 before, 3,504 after (3% fewer); all calls including moves 4,290 before, 4,275 after, although games went faster; a move confirmed after 1.6 s before, 1.0 s after; the other player saw it after a median of 2.7 s before (max 3.4 s), 1.6 s after (max 2.3 s).
+- If the answers get much faster (for example with the database next to the functions), the count per game hour goes up again; raise `MY_TURN_POLL_MS` then. `tests/online/polling.test.ts` checks the count against once a second for answer times from 0.6 s up.
+- Your own move is still shown at once, sent again every 2 s after a network failure, and taken back when the server refuses it (D142, `useOnlineGame.ts`, unchanged).
+
 ## D151. Fewer database rounds for the room functions (21 Nov 2026)
 - Reason: the functions run in Ohio (`us-east-2`) and the database is in Mumbai (`ap-south-1`), so each round trip to the database costs about 200 ms, and they add up one after another. Measured on 21 Nov 2026 (latency harness, today's regions): a move took about 1.6 s to be confirmed and the other player saw it after a median of 2.3 s.
 - `room-state` now takes two rounds instead of three: the room is read in the same round as the device, rate limit and token checks (`signedInWithRoom` in `netlify/online/http.ts`), then the sign of life is stored.
