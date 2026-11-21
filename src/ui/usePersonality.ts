@@ -1,8 +1,10 @@
 // The AI's personality around the moves (Change 4): a greeting when a game
 // starts, idle lines when the player is slow, the resign hint when the
 // engine proves the position lost, the line at the end of the game and the
-// engine's tips after the AI wins. All lines come from the local banks:
-// no model call.
+// engine's tips after the AI wins. The lines come from the local banks.
+// The greeting (when the player moves first) and the end line are then
+// offered to the model by useRemoteTaunt.ts (D107); idle lines, the resign
+// hint, the pressure and the AI's opening greeting stay local (D154, D156).
 import { useCallback, useEffect, useRef, useState } from "react";
 import { analyze } from "../ai/analyzer";
 import { gameTips } from "../ai/endgame";

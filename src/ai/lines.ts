@@ -1,9 +1,12 @@
 // Local line banks for the AI's personality (Change 4): greetings, idle
-// lines, resigning, the end of the game and the resign hint. No model call:
-// instant and free. Every line follows the language rules of its level
+// lines, resigning, the end of the game and the resign hint. Instant and
+// free: idle lines, the hint, the pressure and the AI's opening greeting are
+// always these lines (D154, D156); the player's greeting and the end line
+// are these when the model gives no valid line (D107). Every line follows the language rules of its level
 // (checked by tests through checkReaction), has no hyphens or dashes and is
 // at most 140 characters. Voices: Easy warm and encouraging, Medium playful,
-// Hard cocky, Strongest savage and mocking (only Strongest insults the play).
+// Hard cocky, Strongest savage and mocking (only Strongest insults, and
+// never in a greeting, an idle line or the opening, D156).
 // Mild swearing appears only in "aiWonBlunder" at Strongest: the game is
 // over and the engine verified at least one blunder by the player.
 import type { AiLevel } from "./difficulty";

@@ -2,6 +2,14 @@
 
 Format: decision, reason, consequence.
 
+## D162. AI talk cleanups: the first move, rematches, a rate budget for talk (21 Nov 2026)
+- Reason: the AI talk audit (section 6). The production move prompt said "This is the first move of the game" on every turn, `rematch` was sent for any later game in the same game screen (also after a New game in the middle of a game), moves and chat lines shared one limit of 20 a minute so talk could push a move onto the engine fallback, and two file comments still said the lines make no model call.
+- The move prompt names the first move of the game only on the starting position with Black to move; otherwise it says only to leave the reaction empty (`isFirstMove` in `prompt.ts`).
+- A game is a rematch only when it follows a game that was finished in this game screen (`trackRematch`, `useRematch`); the first game and a New game in the middle of a game are a start.
+- The AI function checks the request first, then counts it: taunts against a separate limiter (`talkLimiter`, 20 a minute per IP, in `functions/ai-move.ts`), moves against the moves' limiter. A request the function refuses as invalid no longer counts.
+- The headers of `usePersonality.ts` and `lines.ts` say which lines stay local and which are offered to the model.
+- Tests: `tests/ai-talk-cleanups.test.ts` (the first move text, rematch after a finished game only, a burst of chat lines past their own limit while moves still reach the model).
+
 ## D161. Less predictable local lines around the AI's moves (21 Nov 2026)
 - Reason: the AI talk audit (section 4). The turn cue and the local line after an AI move were both picked by `aiRequestId` modulo the list length, so they came strictly in order and always in the same pairs, and the respect and slip lists had 3 lines each, shared by every level.
 - The lists live in `src/ai/chatLines.ts`, one set per level in its voice (Easy warm, Medium playful, Hard cocky, Strongest savage): 8 turn cues, 8 ordinary lines, 10 respect lines and 10 slip lines each, plus the AI's own 6 cues while it thinks. Mild swearing appears only in two Strongest slip lines, which follow an engine verified blunder (D45).

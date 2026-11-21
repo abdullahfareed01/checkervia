@@ -25,7 +25,7 @@ import { RulesDialog } from "./RulesDialog";
 import { LanguageInfo } from "./LanguageInfo";
 import { ANGRY_FROM_IDLE, endsWithWinLaugh, usePageVisible, usePersonality } from "./usePersonality";
 import { reactionBubble } from "./bubble";
-import { useRemoteBubble, useRemoteLine } from "./useRemoteTaunt";
+import { useRematch, useRemoteBubble, useRemoteLine } from "./useRemoteTaunt";
 import { WhySheet } from "./WhyContent";
 import { StatusBar } from "./StatusBar";
 import { TermsDialog } from "./TermsDialog";
@@ -321,7 +321,7 @@ export function App({ initial, onMenu, onAiLevel }: AppProps) {
   const localBubble = aiLanding
     ? { key: `thinking-${state.aiRequestId}`, text: null, tone: "banter" as const, why: false }
     : reactionBubble(state, personality);
-  const bubble = useRemoteBubble(state, localBubble, gameKey > 1);
+  const bubble = useRemoteBubble(state, localBubble, useRematch(state));
   const remoteEndText = useRemoteLine(state, `end-${state.history.length}`, personality.end?.line.text ?? null, over && state.mode === "vs-ai", false, endsWithWinLaugh(state));
   const endAiLine = personality.end ? { ...personality.end.line, text: remoteEndText ?? "" } : undefined;
   // The action bar's fourth button: Resign during a game, Result after it.

@@ -61,6 +61,9 @@ export interface HandlerDeps {
   env: HandlerEnv;
   fetch: typeof fetch;
   limiter: RateLimiter;
+  // Chat lines count here, not against the moves' limit, so talk can never
+  // push a move onto the engine fallback (D162). Without it, `limiter`.
+  talkLimiter?: RateLimiter;
   log?: (message: string) => void;
   providerTimeoutMs?: number;
   checkHealth?: (env: HandlerEnv) => Promise<boolean>;
@@ -193,12 +196,13 @@ export async function handleAiMove(
     // prevent entering a game. Legacy callers retain the old interface below.
     if (request.method === "GET") return { status: 200, body: { ready: true } };
     if (request.method !== "POST") return fail(405, "Method not allowed.");
-    if (!deps.limiter.allow(request.clientId)) return { status: 200, body: { fallback: true } };
     if (request.body.length > MAX_BODY_CHARS) return fail(400, "Invalid request.");
     let body: Record<string, unknown>;
     try { body = JSON.parse(request.body) as Record<string, unknown>; } catch { return fail(400, "Invalid request."); }
     const context = readContext(body?.context);
     if (!context) return fail(400, "Invalid request.");
+    const limiter = context.job === "taunt" ? deps.talkLimiter ?? deps.limiter : deps.limiter;
+    if (!limiter.allow(request.clientId)) return { status: 200, body: { fallback: true } };
     const result = await runChain(context, deps.chain);
     return { status: 200, body: "text" in result ? { text: result.text } : { fallback: true } };
   }

@@ -75,6 +75,24 @@ export function useRemoteLine(state: GameState, key: string, local: string | nul
   return useDeliveredLine(state, key, local, enabled, rematch, null, false, laugh).text;
 }
 
+/**
+ * Whether the game now on screen is a rematch (D162): it follows a game that
+ * was finished in this game screen. A New game in the middle of a game, or
+ * the first game, is a start.
+ */
+export interface RematchTrack { readonly game: unknown; readonly over: boolean; readonly rematch: boolean }
+export function trackRematch(previous: RematchTrack | null, game: unknown, over: boolean): RematchTrack {
+  if (previous === null) return { game, over, rematch: false };
+  if (previous.game !== game) return { game, over, rematch: previous.over };
+  return previous.over === over ? previous : { ...previous, over };
+}
+
+export function useRematch(state: GameState): boolean {
+  const track = useRef<RematchTrack | null>(null);
+  track.current = trackRematch(track.current, state.history[0], isGameOver(state));
+  return track.current.rematch;
+}
+
 /** How one bubble is delivered: what shows first, the local line, and whether the model is asked. */
 export interface BubblePlan {
   readonly passThrough: boolean; // shown exactly as given (no bubble, a warning or an idle line)

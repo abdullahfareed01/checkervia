@@ -11,6 +11,8 @@ declare const process: { env: Record<string, string | undefined> };
 
 // Best effort only: this memory is per function instance (see ai-opponent.md).
 const limiter = createRateLimiter({ limit: 20, windowMs: 60_000 });
+// Chat lines have their own budget, so talk never takes a move's place (D162).
+const talkLimiter = createRateLimiter({ limit: 20, windowMs: 60_000 });
 const store = createCooldownStore(process.env, fetch);
 
 export default async (request: Request): Promise<Response> => {
@@ -28,6 +30,7 @@ export default async (request: Request): Promise<Response> => {
       },
       fetch,
       limiter,
+      talkLimiter,
       chain: {
         env: process.env,
         providers: providersFromEnv(process.env),

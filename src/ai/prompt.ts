@@ -1,7 +1,7 @@
 // All prompt text lives in this file, so changing the prompt means changing
 // one place and bumping PROMPT_VERSION (and logging it in
 // docs/03-technical/ai-opponent.md).
-import { squareName } from "../engine";
+import { initialBoard, squareName } from "../engine";
 import type { Board, Move, Piece, Player } from "../engine";
 import type { Lookahead } from "./analyzer";
 import type { MoveJudgement } from "./judge";
@@ -94,8 +94,14 @@ function describeRecentLines(lines: readonly string[] | undefined): string {
 
 // What the AI is reacting to: the opponent's last move and, when the engine
 // found it remarkable, its verdict (so a roast or a compliment is deserved).
-function describeOpponentMove(opponent: OpponentMove | undefined): string {
-  if (!opponent) return 'This is the first move of the game: set "reaction" to "" or open with one confident, clean line.';
+// The game's real first move: the starting position with Black to move (D162).
+function isFirstMove(board: Board, player: Player): boolean {
+  return player === "black" && JSON.stringify(board) === JSON.stringify(initialBoard());
+}
+
+function describeOpponentMove(opponent: OpponentMove | undefined, firstMove: boolean): string {
+  if (!opponent && firstMove) return 'This is the first move of the game: set "reaction" to "" or open with one confident, clean line.';
+  if (!opponent) return 'Set "reaction" to "".';
   const strong = opponent.strongLanguage === true;
   const persona = strong ? STRONG_PERSONA : CLEAN_PERSONA;
   const about = `Your opponent's last move was ${opponent.label}.`;
@@ -152,7 +158,7 @@ export function buildPrompt(
     `Position (columns A to H from the left, rows 8 to 1 from the top):\n${describeBoard(board)}`,
     `${LEGEND}\n${DIRECTIONS}\nYou are playing ${side}.`,
     ...(scores && lookahead ? [explainLookahead(lookahead.depth)] : []),
-    describeOpponentMove(opponent),
+    describeOpponentMove(opponent, isFirstMove(board, player)),
     `${movesHeading(moves.length, legalCount)}\n${describeMoves(moves, scores)}`,
   ].join("\n\n");
 }
