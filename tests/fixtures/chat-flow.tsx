@@ -15,6 +15,9 @@ let scenario: Scenario = "fast";
 let humanSide: "black" | "white" = "white";
 let calls = 0;
 const contexts: unknown[] = [];
+// A different line each time: a line equal to one of the last 3 shown is refused (D159).
+const FAST = ["I came here to win, and I intend to.", "I came here to win. That is all I do.", "I came here to win, and I am patient.", "I came here to win, so watch closely."];
+let served = 0;
 const originalFetch = window.fetch.bind(window);
 window.fetch = async (input, init) => {
   if (!String(input).includes("/.netlify/functions/ai-move")) return originalFetch(input, init);
@@ -24,7 +27,7 @@ window.fetch = async (input, init) => {
   if (current === "offline") throw new Error("Mock offline");
   // Deliberately ignore AbortSignal to test an uncooperative late transport.
   await new Promise(resolve => setTimeout(resolve, current === "slow" ? 6500 : 80));
-  const reaction = current === "invalid" ? "Your black pieces look clever." : current === "sweet" || current === "great" ? "Well played. That was clever." : current === "turn-echo" ? "Your move, rival!" : current === "end" ? "I win. Next challenger." : "Bring a real plan, amateur.";
+  const reaction = current === "invalid" ? "Your black pieces look clever." : current === "sweet" || current === "great" ? "Well played. That was clever." : current === "turn-echo" ? "Your move, rival!" : current === "end" ? "I win. Next challenger." : FAST[served++ % FAST.length]!;
   return new Response(JSON.stringify({ text: JSON.stringify({ reaction }) }));
 };
 

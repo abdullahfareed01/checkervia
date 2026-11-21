@@ -1,6 +1,6 @@
 # AI talk audit
 
-Audit only, written 21 Nov 2026 on `feature/leaderboard` at `10fa279`. No source file, config, setting or deployment was changed. Every claim below was checked in the code, and every bug was reproduced by a scratch test that is not committed: `artifacts/ai-talk-audit/repro.test.ts` (the `artifacts/` folder is gitignored), run with `npx vitest run --config artifacts/ai-talk-audit/vitest.config.ts --silent=false`. Result: 12 of 12 reproductions pass, and they print the exact values quoted here.
+Audit only, written 21 Nov 2026 on `feature/leaderboard` at `10fa279`. No source file, config, setting or deployment was changed. Every claim below was checked in the code, and every bug was reproduced by a scratch test that is not committed: `artifacts/ai-talk-audit/repro.test.ts` (the `artifacts/` folder is gitignored), run with `npx vitest run --config artifacts/ai-talk-audit/vitest.config.ts --silent=false`. Result: 12 of 12 reproductions pass, and they print the exact values quoted here. Since then every finding has been fixed (D154 to D162): see the Fixed section at the end.
 
 ## The short answer
 
@@ -219,3 +219,30 @@ Several of these change decided behaviour (D73, D82, D85, D107), so per `AGENTS.
 - **Bug 3, stray quotes.** A model line with scare quotes slips past an exact spelling filter, and no check looks at quotes. Smallest fix: strip quotes around single words before the rules run, and reject lines that still have them.
 - **Bug 4, a Respect chip above a lowercase taunt.** The chip comes from the engine verdict and the text from the model, and no rule ties them; there is also no capital letter check, and the "Nice try" ban never reaches the taunt prompt. Smallest fix: with verdict great, accept only respect lines (otherwise use the local `RESPECT` line), and require a capital first letter.
 - **The common root.** The model is the main voice, but it gets almost no true facts and no rule checks what it claims about the player's play. When the model is down, the local lines are mostly truthful. The exceptions are the Strongest fallbacks after the AI's opening and the idle lines about "my last move".
+
+## Fixed
+
+Fixed on 21 Nov 2026 on `feature/ai-talk-fixes` (worktree `Mentor's Project talk`, from `feature/leaderboard` at `7d4933e`), one commit per fix of section 7, with the owner's approval to change D73, D82, D85 and D107. The audit above describes the code before these fixes. The owner's rules: the AI comments on the player's play only when the engine verified it (a roast only after a blunder, respect only after a great move, and with no verdict it talks about itself, the board or the waiting); idle lines stay local; the model stays the voice for move reactions and end lines, told true facts and checked.
+
+| Fix | Decision | What changed |
+|---|---|---|
+| 1. The AI's opening is not a reply | D154 | The turn cue reaction is added only when the player has moved, so the AI's first bubble is its local `aiOpens` greeting, with the model up or down. |
+| 2. True facts for the taunt model | D155 | The taunt context counts the player's moves; with zero the prompt says they have not moved. The verdict is sent only for a move reaction, and "Human move verdict: ordinary" is gone. Lines that judge the play (plan, strategy, attempt, mistake, trap, predictable, again and similar, and insults) need a verdict. |
+| 3. Idle stays local | D156 | Idle lines never go to the model. The local lines with a false premise were rewritten, and greetings, idle lines, the opening, turn cues and ordinary fallbacks no longer judge the player. |
+| 4. Chip and text agree | D157 | No praise at any level unless the move was great or the player won; then the line must read as respect, otherwise the local respect line shows. |
+| 5. Line form | D158 | Quotes are normalised before the rules run, the first letter is a capital, stray quotes and the "Oh you." evasion are refused. |
+| 6. Taunt prompt parity | D159 | The taunt prompt has the variety rules, the "Nice try" ban and the AI's last 3 shown lines; a repeat of one is refused. |
+| 7. Real end context | D160 | The end line is told how the game ended and whether a blunder was verified; a model line for the AI's win keeps the laugh at every level but Easy. |
+| 8. Less predictable fallbacks | D161 | Per level cue, ordinary, respect and slip lists (10 respect and 10 slip lines each), picked separately at random with no repeat within 3. |
+| 9. Cleanups | D162 | "First move of the game" only when it is; rematch only after a finished game; chat lines have their own rate limit; the stale comments are updated. |
+
+The four bugs, as they behave now:
+
+- **Bug 1.** When the AI opens, the bubble shows its thinking cue, then a Strongest `aiOpens` line such as "Opening played. Your move. I am already two steps ahead, haha.", and no chat request is made before the player moves.
+- **Bug 2.** Idle lines come from the local banks only, and none mentions the AI's last move or past play. The turn cue "On you. Less staring, more strategy." is gone, and "Oh you." is refused.
+- **Bug 3.** "Your 'move' was predictable." is read as "Your move was predictable." and refused.
+- **Bug 4.** After a great move the model's line must read as respect; the audit's line is refused and a local respect line shows under the chip. Model lines start with a capital letter.
+
+Tests: the twelve reproductions are now regressions in `tests/ai-talk-audit.test.ts`, asserting the fixed behaviour, beside one test file per fix (`tests/ai-talk-opening.test.ts`, `ai-talk-facts`, `ai-talk-local`, `ai-talk-tone`, `ai-talk-form`, `ai-talk-variety`, `ai-talk-ending`, `ai-talk-fallbacks`, `ai-talk-cleanups`). The mocked browser regression `scripts/check-chat.mjs` was brought in line with the new rules (its mock answers vary, because a repeated line is now refused) and passes its 39 checks.
+
+Browser check (production build, headless Edge at 390 by 844, the AI function mocked so that every chat request answers with the audit's roast): Strongest, the AI opened, and before the player moved the bubble showed only the AI's thinking cue, its `aiOpens` greeting and, from 30 seconds, local idle lines, with no chip and no chat request. After the player's ordinary move the reaction request said the player had made 1 move, the roast was refused and a local line showed. No page errors.

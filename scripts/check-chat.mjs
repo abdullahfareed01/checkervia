@@ -1,4 +1,4 @@
-// Run Vite on port 5180, then node scripts/check-chat.mjs. No real model calls.
+// Run Vite on port 5180 (or CHAT_PORT), then node scripts/check-chat.mjs. No real model calls.
 import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -27,7 +27,7 @@ try {
   const s=(method,params)=>send(method,params,sessionId);
   await s('Runtime.enable'); await s('Page.enable');
   await s('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
-  await s('Page.navigate',{url:'http://localhost:5180/tests/fixtures/chat-flow.html'});
+  await s('Page.navigate',{url:`http://localhost:${process.env.CHAT_PORT ?? 5180}/tests/fixtures/chat-flow.html`});
   const evaluate=async expression=>{const result=await s('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);return result.result.value;};
   for(let n=0;n<100;n++){if(await evaluate("typeof setChatScenario === 'function'"))break;await wait(100);}
   const checks=await evaluate(`(async()=>{
@@ -40,11 +40,11 @@ try {
     check(parseFloat(getComputedStyle(document.querySelector('[aria-live]')).width)<=1,'screen reader mirror is visually hidden');
     for(const side of ['white','black']){
       setChatScenario('fast',side);await wait(150);
-      check(text()!==null&&!text().includes('Bring a real plan'),'turn cue shown before remote remark for '+side);
+      check(text()!==null&&!text().includes('I came here to win'),'turn cue shown before remote remark for '+side);
       check(document.querySelector('[aria-live]').textContent==='','cue does not announce or speak');
       await wait(1400);check(typing(),'three animated dots after cue for '+side);
       check([...document.querySelectorAll('.speech-typing span')].every(dot=>getComputedStyle(dot).animationName==='typing'),'dots use animation');
-      await wait(1100);check(text()?.includes('Bring a real plan'),'one final line after dots for '+side);
+      await wait(1100);check(text()?.includes('I came here to win'),'one final line after dots for '+side);
       check(chatRequests().calls===1,'one request per turn for '+side);
       check(chatRequests().contexts[0].player===(side==='white'?'black':'white'),'correct AI colour for '+side);
       const final=text();await wait(800);check(text()===final,'no half second replacement for '+side);
@@ -58,7 +58,7 @@ try {
     setChatScenario('great');await wait(2650);check(text()?.includes('Well played'),'praise requires the great verdict');
     setChatScenario('slow');await wait(4300);const fallback=text();check(fallback!==null,'slow request finishes locally');
     await wait(2700);check(text()===fallback,'late reply cannot overwrite fallback');
-    setChatScenario('slow');await wait(100);setChatScenario('fast');await wait(7100);check(text()?.includes('Bring a real plan'),'new game ignores stale reply');
+    setChatScenario('slow');await wait(100);setChatScenario('fast');await wait(7100);check(text()?.includes('I came here to win'),'new game ignores stale reply');
     setChatScenario('review');await wait(200);check(!document.querySelector('.speech'),'no live chat in history review');check(chatRequests().calls===0,'review makes no request');
     setChatScenario('thinking');await wait(100);check(/my|me|think|reply/i.test(text()??''),'AI gets its own turn cue');await wait(1500);check(typing(),'thinking cue changes to dots');check(chatRequests().calls===0,'thinking does not generate a competing taunt');
     setChatScenario('end');await wait(100);check(typing(),'result waits behind dots');await wait(1100);check(text()?.includes('I win'),'one correct outcome line');check(chatRequests().calls===1,'one request for result');
