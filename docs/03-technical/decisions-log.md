@@ -2,6 +2,14 @@
 
 Format: decision, reason, consequence.
 
+## D151. Fewer database rounds for the room functions (21 Nov 2026)
+- Reason: the functions run in Ohio (`us-east-2`) and the database is in Mumbai (`ap-south-1`), so each round trip to the database costs about 200 ms, and they add up one after another. Measured on 21 Nov 2026 (latency harness, today's regions): a move took about 1.6 s to be confirmed and the other player saw it after a median of 2.3 s.
+- `room-state` now takes two rounds instead of three: the room is read in the same round as the device, rate limit and token checks (`signedInWithRoom` in `netlify/online/http.ts`), then the sign of life is stored.
+- `room-move` takes three rounds instead of six: the same first round; the move (`saveMove`, still stored only when the game has exactly the moves the checks saw); then the player's sign of life and the room's last use, together. The answer is built from the room as read plus the stored move, not read again (`saveMove` guarantees the game is exactly that). A refused or retried move takes two rounds and still stores the sign of life.
+- Unchanged: every check and its order of answers. A sign in problem (device, rate limit, token) is answered first, before the code or the room is used, so a request without a profile still gets 401 and nothing about the room; a bad code is read nowhere; an expired room is not touched; a forfeit that is due is settled as before. The only new work for a refused request is the room read in parallel, which the rate limit already bounds.
+- Known difference: the answer to a move shows the opponent's presence as read at the start of the request. If the opponent did something in that same moment (for example left the room), the next poll shows it.
+- Tests: `tests/online/rounds.test.ts` (the rounds of each request, the answer against a fresh read through a whole game, and the sign in checks). Other room functions are unchanged.
+
 ## D150. Optional email login so players can save their progress (20 Nov 2026)
 - Owner request: a lightweight way to log in again on any device without losing data, with guest play exactly as before. Saved: profile, wins (already on the server), shop unlocks and settings. Branch `feature/accounts`; decisions start at D150 because the merge branch already uses up to D146.
 - Codes: Supabase Auth email codes (6 digits). Public sign ups stay off, as the admin login requires (D100), so our function makes the Auth user with the secret key and then asks for a code with `create_user: false`. After a correct code the function reads the Auth user id and signs that session out at once (global scope): players never hold a Supabase session, only our own profile token, exactly as before.
