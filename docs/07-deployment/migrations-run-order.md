@@ -11,7 +11,7 @@ They are different migrations, and both are needed. The rooms file was numbered 
 
 ## What the repo records say
 
-`migration-status.md` records that steps 1 to 4 were already in your database on 17 Nov 2026 (run by hand earlier), and that steps 5 (draws), 6 (AI), 7 (admin) and 8 (admin fix) were applied to the configured Checkervia project between 17 and 19 Nov 2026. Steps 9, 10 and 11 have never been run. You said 3 and 4 are applied; run the checks to confirm what your project really has. If a check for 5, 6, 7 or 8 answers `true`, do not run that file again.
+`migration-status.md` records that steps 1 to 4 were already in your database on 17 Nov 2026 (run by hand earlier), and that steps 5 (draws), 6 (AI), 7 (admin) and 8 (admin fix) were applied to the configured Checkervia project between 17 and 19 Nov 2026. Steps 9, 10 and 11 have never been run according to those records; on 21 Nov 2026 you said step 9 (rooms) is now run in your database. Step 12 is new (21 Nov 2026) and not run. You said 3 and 4 are applied; run the checks to confirm what your project really has. If a check for 5, 6, 7 or 8 answers `true`, do not run that file again.
 
 ## The run order
 
@@ -28,6 +28,7 @@ They are different migrations, and both are needed. The rooms file was numbered 
 | 9 | `leaderboard-migration-6.sql` (rooms) | Online rooms with a friend: six new tables (rooms, members, matches, emotes, reports, blocks) and a clean up function. | 1 to 4 (not 5, and before or after 7) | Yes. New tables only; the live game ignores them until the rooms version is deployed. | `select to_regclass('public.online_rooms') is not null as applied;` |
 | 10 | No file: in a new tab run `select admin_link_rooms();` | Connects the rooms to the admin dashboard: report statuses and counts for room reports. It should answer `true`. It is safe to run again. | 7 and 9 | Yes. Quick; changes only the room reports table. | `select exists (select 1 from pg_trigger where tgname = 'online_matches_admin_stats') as applied;` |
 | 11 | `accounts-migration-9.sql` (saved progress) | Optional email login: tables linking a profile to an email login, extra device keys, saved shop and settings, login code bookkeeping and the clean up queue. Emails themselves stay in Supabase Auth. | 1 and Supabase Auth (written and tested after 1 to 8) | Yes. New tables only, in one transaction; nothing changes for players until `ACCOUNTS_ENABLED=1` is set and deployed. | `select to_regclass('public.player_accounts') is not null as applied;` |
+| 12 | `rooms-migration-10.sql` (rooms in one round) | Two functions that let the busiest room requests talk to the database once instead of two or three times (D153): one reads the rate limits, the player, the room and stores the sign of life; the other stores a move with the room's last use. Functions only: no table, column or data changes. Until it is run the site uses its earlier, slower steps. | 1 and 9 (works with or without 11) | Yes. Instant; it only creates or replaces two functions, and it is safe to run again. | `select count(*) = 2 as applied from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in ('online_room_poll', 'online_save_move');` |
 
 ## All the checks at once
 
@@ -45,7 +46,8 @@ select step, applied from (values
   ('8 admin-migration-8.sql', (select count(*) = 3 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in ('utc_day', 'admin_like', 'admin_has_rooms') and 'search_path=public' = any (p.proconfig))),
   ('9 leaderboard-migration-6.sql (rooms)', to_regclass('public.online_rooms') is not null),
   ('10 select admin_link_rooms()', (select exists (select 1 from pg_trigger where tgname = 'online_matches_admin_stats'))),
-  ('11 accounts-migration-9.sql (saved progress)', to_regclass('public.player_accounts') is not null)
+  ('11 accounts-migration-9.sql (saved progress)', to_regclass('public.player_accounts') is not null),
+  ('12 rooms-migration-10.sql (rooms in one round)', (select count(*) = 2 from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in ('online_room_poll', 'online_save_move')))
 ) as checks (step, applied);
 ```
 
@@ -57,6 +59,7 @@ Steps 1 to 4 never appear in Supabase's migration history, because they were run
 2. For that step, open a new SQL Editor tab (New query), paste the whole file, from its first line to its last, and press Run once. One file per tab, and never two files in one tab.
 3. Wait for "Success". If it shows an error, stop and do not run it again: the files that start with `begin;` leave nothing behind when they fail, and a second run of any file stops with "already exists". Send me the error text.
 4. Run the checks again. That step should now answer `true`. Then go to the next step that answers `false`, in a new tab.
-5. Run each migration once only, in the order of the table. Step 10 is the one exception: it is a single line, and running it again does no harm.
+5. Run each migration once only, in the order of the table. Steps 10 and 12 are the exceptions: running them again does no harm.
 6. Step 11 (saved progress) is still waiting for your approval. Run it only after you have decided to switch saving progress on (see `accounts-setup.md`).
-7. A migration only changes the database. The game changes when the matching version of the site is deployed on Netlify.
+7. Step 12 (rooms in one round) can run any time after step 9, before or after the version of the site that uses it is deployed: that version uses it as soon as it exists, and its earlier steps until then.
+8. A migration only changes the database. The game changes when the matching version of the site is deployed on Netlify.

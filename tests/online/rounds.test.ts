@@ -17,45 +17,11 @@ import { encodeMove } from "../../src/leaderboard/protocol";
 import type { EncodedMove } from "../../src/leaderboard/protocol";
 import { READY_MS } from "../../src/online/protocol";
 import { BLACK_WIN } from "../leaderboard/fixtures";
+import { recordRounds } from "./roundRecorder";
 import { call, later, player, world } from "./world";
 import type { TestPlayer, World } from "./world";
 
 const FIRST_BLACK_MOVE = encodeMove(getLegalMoves(initialBoard(), "black")[0]!);
-
-/** Records every store call and the round it ran in; each call waits `ms` first. */
-function recordRounds(w: World, ms = 20) {
-  const calls: { name: string; round: number }[] = [];
-  let inFlight = 0;
-  let round = 0;
-  const wrap = <T extends object>(target: T, side: string): T =>
-    new Proxy(target, {
-      get(object, key) {
-        const value = Reflect.get(object, key);
-        if (typeof value !== "function") return value;
-        return async (...args: unknown[]) => {
-          if (inFlight === 0) round += 1;
-          inFlight += 1;
-          calls.push({ name: `${side}.${String(key)}`, round });
-          try {
-            await new Promise((resolve) => setTimeout(resolve, ms));
-            return await value.apply(object, args);
-          } finally {
-            inFlight -= 1;
-          }
-        };
-      },
-    });
-  w.deps = { ...w.deps, store: wrap(w.deps.store, "store"), online: wrap(w.deps.online, "online") };
-  return {
-    reset() {
-      calls.length = 0;
-      round = 0;
-    },
-    /** The calls of each round, sorted by name. */
-    rounds: () => Array.from({ length: round }, (_, index) => calls.filter((c) => c.round === index + 1).map((c) => c.name).sort()),
-    names: () => calls.map((c) => c.name),
-  };
-}
 
 async function startedRoom(w: World) {
   const host = await player(w, "Hosty");

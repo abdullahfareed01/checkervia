@@ -4,7 +4,7 @@
 // is due is settled first. Asked about once a second during a game.
 //
 // Two database rounds (D151): the sign in checks with the room read, then
-// the sign of life.
+// the sign of life. One round with migration 10 (D153).
 import { fail, guarded, ok } from "../../leaderboard/http";
 import type { RoomResponse } from "../../../src/online/protocol";
 import { isResponse, loadedMemberRoom, signedInWithRoom } from "../http";
@@ -18,11 +18,12 @@ export const handleRoomState: OnlineHandler = (request, deps) =>
     const since = Number(request.query.get("since") ?? "0");
     if (!Number.isInteger(since) || since < 0 || since > 10_000) return fail(400, "invalid", "Invalid request.");
     const code = request.query.get("code");
-    const signed = await signedInWithRoom(request, deps, "roomState", code);
+    const away = request.query.get("away") === "1";
+    const signed = await signedInWithRoom(request, deps, "roomState", code, away);
     if (isResponse(signed)) return signed;
     const player = signed.player;
 
-    const member = await loadedMemberRoom(code, signed.room, player.id, deps, request.query.get("away") === "1");
+    const member = await loadedMemberRoom(code, signed.room, player.id, deps, away, signed.touchedAt);
     if (isResponse(member)) return member;
     if (member.touch) await member.touch();
     let snapshot = member.snapshot;

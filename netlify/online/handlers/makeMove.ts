@@ -10,6 +10,8 @@
 // move, stored only if the game still has the moves the checks saw; then
 // the player's sign of life and the room's last use, together. The answer
 // is the room as it was read with this move added, not read again.
+// Two rounds with migration 10 (D153): the sign of life is stored in the
+// first, and the room's last use with the move.
 import { fail, guarded, ok, parseBody } from "../../leaderboard/http";
 import type { LeaderboardResponse } from "../../leaderboard/http";
 import { decodeMove, isEncodedMove, replayMoves } from "../../../src/online/game";
@@ -35,10 +37,11 @@ export const handleMakeMove: OnlineHandler = (request, deps) =>
     const player = signed.player;
     const now = deps.now();
 
-    const member = await loadedMemberRoom(body["code"], signed.room, player.id, deps);
+    const member = await loadedMemberRoom(body["code"], signed.room, player.id, deps, false, signed.touchedAt);
     if (isResponse(member)) return member;
     const { snapshot } = member;
     let saved = false;
+    let roomUsed = false; // the room's last use was stored with the move
 
     // Every check and the move itself; the sign of life is stored after,
     // whatever the answer (as each room request does).
@@ -80,8 +83,11 @@ export const handleMakeMove: OnlineHandler = (request, deps) =>
       if (!played) return roomFail("illegal");
       const finish: Finish | null =
         played.winner === colour ? { winnerId: player.id, reason: "board" } : played.drawn ? { winnerId: null, reason: played.drawn } : null;
-      if ((await deps.online.saveMove(match.id, match.moves.length, moves, finish, now)) === "conflict") return roomFail("stale");
+      const together = deps.oneRound ? await deps.oneRound.saveMoveAndUse(match.id, snapshot.room.id, match.moves.length, moves, finish, now) : null;
+      const stored = together ?? (await deps.online.saveMove(match.id, match.moves.length, moves, finish, now));
+      if (stored === "conflict") return roomFail("stale");
       saved = true;
+      roomUsed = together !== null;
 
       // The room as stored now: the game had exactly the moves read above
       // (saveMove checks it), plus this one; the room is used now.
@@ -95,6 +101,6 @@ export const handleMakeMove: OnlineHandler = (request, deps) =>
     };
 
     const response = await play();
-    await Promise.all([member.touch?.(), saved ? deps.online.touchRoom(snapshot.room.id, now) : undefined]);
+    await Promise.all([member.touch?.(), saved && !roomUsed ? deps.online.touchRoom(snapshot.room.id, now) : undefined]);
     return response;
   });

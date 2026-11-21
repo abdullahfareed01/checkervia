@@ -8,6 +8,7 @@
 // clock, so both adapters behave the same.
 import type { EncodedMove } from "../../src/leaderboard/protocol";
 import type { FinishReason } from "../../src/online/protocol";
+import type { PlayerRecord, RateLimitResult } from "../leaderboard/store";
 
 export interface RoomRecord {
   readonly id: string;
@@ -110,4 +111,36 @@ export interface OnlineStore {
   leave(roomId: string, playerId: string, at: Date): Promise<void>;
   /** Deletes rooms (with their games and reactions) not used for `keepDays`, and old reports. */
   cleanup(now: Date, keepDays: number, reportDays: number): Promise<void>;
+}
+
+/**
+ * The start of a room request in one database round (D153, migration 10):
+ * the rate limit counters, the player of the token, the room, and the
+ * player's sign of life, stored only when the counters allow the request,
+ * the player exists and is not hidden, they are in the room, and the room
+ * has not expired (`idleHours`, as roomStatus counts it). The handlers then
+ * make every check on what comes back, exactly as without it.
+ */
+export interface RoomSignIn {
+  readonly code: string;
+  readonly tokenHash: string | null; // null: no token, so no player
+  readonly counters: readonly { readonly key: string; readonly limit: number }[];
+  readonly windowSeconds: number;
+  readonly now: Date;
+  readonly away: boolean;
+  readonly idleHours: number;
+}
+
+export interface RoomSignInAnswer {
+  readonly counters: readonly RateLimitResult[]; // in the order asked
+  readonly player: PlayerRecord | null; // hidden players come back as they are; the handler refuses them
+  readonly room: RoomSnapshot | null; // as read, before the sign of life
+  readonly touched: boolean; // the sign of life was stored
+}
+
+/** The one round steps; each answers null while the database does not have migration 10. */
+export interface OneRoundStore {
+  signInWithRoom(request: RoomSignIn): Promise<RoomSignInAnswer | null>;
+  /** saveMove and touchRoom in one step: the room's last use is stored only with the move. */
+  saveMoveAndUse(matchId: string, roomId: string, expectedCount: number, moves: readonly EncodedMove[], finish: Finish | null, at: Date): Promise<"saved" | "conflict" | null>;
 }

@@ -11,7 +11,7 @@ import { DEVICE_ID_PATTERN } from "../../src/leaderboard/protocol";
 import { NO_COUNTRY } from "../../src/leaderboard/protocol";
 import type { ErrorResponse } from "../../src/leaderboard/protocol";
 import { bearerToken, saltedHash, sha256Hex } from "./security";
-import type { LeaderboardStore, PlayerRecord } from "./store";
+import type { LeaderboardStore, PlayerRecord, RateLimitResult } from "./store";
 
 export interface LeaderboardRequest {
   readonly method: string;
@@ -78,6 +78,29 @@ export interface Limit {
   readonly perIp: number; // requests per window from one IP address
 }
 
+/** One rate limit counter a request counts against: its key and its limit per window. */
+export interface RateCounter {
+  readonly key: string;
+  readonly limit: number;
+}
+
+/** The counters of `action` for this request: its IP's, and its device's when the limit has one. */
+export async function rateLimitCounters(action: string, limit: Limit, request: LeaderboardRequest, deps: LeaderboardDeps): Promise<RateCounter[]> {
+  const counters: RateCounter[] = [{ key: `${action}:ip:${await saltedHash(deps.salt, "ip", request.ip)}`, limit: limit.perIp }];
+  if (limit.perDevice !== undefined && request.deviceId !== null) {
+    counters.push({ key: `${action}:device:${await saltedHash(deps.salt, "device", request.deviceId)}`, limit: limit.perDevice });
+  }
+  return counters;
+}
+
+/** The 429 when any counter is used up (retry after the longest wait), else null. */
+export function rateLimited(results: readonly RateLimitResult[]): LeaderboardResponse | null {
+  const refused = results.filter((result) => !result.allowed);
+  if (refused.length === 0) return null;
+  const retryAfter = Math.max(...refused.map((result) => result.retryAfterSeconds));
+  return fail(429, "rateLimited", "Too many requests. Please wait a moment.", { retryAfter });
+}
+
 /**
  * Counts the request against the device's and the IP's limits for `action`.
  * Returns a 429 response when either is used up, else null.
@@ -88,15 +111,8 @@ export async function checkRateLimits(
   request: LeaderboardRequest,
   deps: LeaderboardDeps,
 ): Promise<LeaderboardResponse | null> {
-  const checks = [deps.store.hitRateLimit(`${action}:ip:${await saltedHash(deps.salt, "ip", request.ip)}`, limit.windowSeconds, limit.perIp)];
-  if (limit.perDevice !== undefined && request.deviceId !== null) {
-    const device = await saltedHash(deps.salt, "device", request.deviceId);
-    checks.push(deps.store.hitRateLimit(`${action}:device:${device}`, limit.windowSeconds, limit.perDevice));
-  }
-  const refused = (await Promise.all(checks)).filter((result) => !result.allowed);
-  if (refused.length === 0) return null;
-  const retryAfter = Math.max(...refused.map((result) => result.retryAfterSeconds));
-  return fail(429, "rateLimited", "Too many requests. Please wait a moment.", { retryAfter });
+  const counters = await rateLimitCounters(action, limit, request, deps);
+  return rateLimited(await Promise.all(counters.map((counter) => deps.store.hitRateLimit(counter.key, limit.windowSeconds, counter.limit))));
 }
 
 /** The device id header, if it has the right shape. */

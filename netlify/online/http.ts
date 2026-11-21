@@ -1,17 +1,21 @@
 // What every room handler shares on top of the leaderboard's helpers: the
 // room store in the dependencies, the limits, the sign in (the profile
 // token, as everywhere) and loading the caller's room.
-import { isRoomCode } from "../../src/online/protocol";
+import { isRoomCode, ROOM_IDLE_HOURS } from "../../src/online/protocol";
 import type { RoomErrorCode } from "../../src/online/protocol";
-import { checkRateLimits, fail, notSignedIn, playerFromToken, validDevice } from "../leaderboard/http";
+import { checkRateLimits, fail, notSignedIn, playerFromToken, rateLimitCounters, rateLimited, validDevice } from "../leaderboard/http";
 import type { LeaderboardDeps, LeaderboardRequest, LeaderboardResponse, Limit } from "../leaderboard/http";
+import { bearerToken, sha256Hex } from "../leaderboard/security";
 import type { PlayerRecord } from "../leaderboard/store";
 import { forfeitDue, roomStatus } from "./rules";
-import type { OnlineStore, RoomSnapshot } from "./store";
+import type { OneRoundStore, OnlineStore, RoomSnapshot } from "./store";
 
 export interface OnlineDeps extends LeaderboardDeps {
   readonly online: OnlineStore;
   readonly randomBytes: (count: number) => Uint8Array;
+  // The one round steps of migration 10 (D153), on Supabase only. Without
+  // them, or while the database does not have them, the steps of D151 run.
+  readonly oneRound?: OneRoundStore;
 }
 
 export type OnlineHandler = (request: LeaderboardRequest, deps: OnlineDeps) => Promise<LeaderboardResponse>;
@@ -78,26 +82,58 @@ export async function signedIn(request: LeaderboardRequest, deps: OnlineDeps, ac
 export const isResponse = (value: unknown): value is LeaderboardResponse =>
   typeof value === "object" && value !== null && "status" in value && "body" in value;
 
+/** The signed in player and their room as read; `touchedAt`: when their sign of life was stored with it (D153). */
+export interface SignedInRoom {
+  readonly player: PlayerRecord;
+  readonly room: RoomSnapshot | null;
+  readonly touchedAt: Date | null;
+}
+
 /**
  * `signedIn` and the room read in one database round (D151): the room with
  * this code is read while the device, the rate limits and the token are
  * checked. The answers come in the same order as before: a sign in problem
  * first (nothing about the room is used or sent then), then a bad code,
  * then the room. `room` is null when there is no room with this code.
+ *
+ * With migration 10 (D153) the same steps, and the sign of life when they
+ * allow it, are one call to the database; every check is still made here,
+ * on what it answers, in the same order.
  */
 export async function signedInWithRoom(
   request: LeaderboardRequest,
   deps: OnlineDeps,
   action: keyof typeof ROOM_LIMITS,
   code: unknown,
-): Promise<{ player: PlayerRecord; room: RoomSnapshot | null } | LeaderboardResponse> {
+  away = false,
+): Promise<SignedInRoom | LeaderboardResponse> {
+  if (deps.oneRound && isRoomCode(code) && validDevice(request)) {
+    const limit = ROOM_LIMITS[action];
+    const token = bearerToken(request.authorization);
+    const now = deps.now();
+    const answer = await deps.oneRound.signInWithRoom({
+      code,
+      tokenHash: token === null ? null : await sha256Hex(token),
+      counters: await rateLimitCounters(`room:${action}`, limit, request, deps),
+      windowSeconds: limit.windowSeconds,
+      now,
+      away,
+      idleHours: ROOM_IDLE_HOURS,
+    });
+    if (answer) {
+      const limited = rateLimited(answer.counters);
+      if (limited) return limited;
+      if (!answer.player || answer.player.hidden) return notSignedIn();
+      return { player: answer.player, room: answer.room, touchedAt: answer.touched ? now : null };
+    }
+  }
   // No read for a bad code or a request signedIn refuses before any lookup.
   const read = isRoomCode(code) && validDevice(request) ? deps.online.snapshot(code) : Promise.resolve(null);
   const [player, room] = await Promise.allSettled([signedIn(request, deps, action), read]);
   if (player.status === "rejected") throw player.reason;
   if (isResponse(player.value)) return player.value;
   if (room.status === "rejected") throw room.reason;
-  return { player: player.value, room: room.value };
+  return { player: player.value, room: room.value, touchedAt: null };
 }
 
 /** The caller's room, and their sign of life still to store (null: nothing to store). */
@@ -111,16 +147,28 @@ export interface MemberRoom {
  * storing the sign of life: the caller stores it with `touch`, in the same
  * round as its own write. A forfeit that is due is settled first, as before
  * (the sign of life stored, the game ended, the room read again).
+ * `touchedAt`: the sign of life was already stored then (D153), so `touch`
+ * is null and the room as answered says that time.
  */
-export async function loadedMemberRoom(code: unknown, loaded: RoomSnapshot | null, playerId: string, deps: OnlineDeps, away = false): Promise<MemberRoom | LeaderboardResponse> {
+export async function loadedMemberRoom(
+  code: unknown,
+  loaded: RoomSnapshot | null,
+  playerId: string,
+  deps: OnlineDeps,
+  away = false,
+  touchedAt: Date | null = null,
+): Promise<MemberRoom | LeaderboardResponse> {
   if (!isRoomCode(code)) return fail(400, "invalid", "Invalid request.");
   const snapshot = loaded;
   if (!snapshot) return roomFail("roomNotFound");
   if (!snapshot.members.some((member) => member.playerId === playerId)) return roomFail("notMember");
-  const now = deps.now();
+  const now = touchedAt ?? deps.now();
   // An expired room stays as it is: looking at it is not using it.
-  if (roomStatus(snapshot, now) === "expired") return { snapshot, touch: null };
-  const touch = () => deps.online.touchMember(snapshot.room.id, playerId, now, away);
+  if (roomStatus(snapshot, now) === "expired") {
+    if (touchedAt) deps.log("rooms: the database stored a sign of life in a room seen as expired");
+    return { snapshot, touch: null };
+  }
+  const touch = touchedAt ? async () => {} : () => deps.online.touchMember(snapshot.room.id, playerId, now, away);
   const due = forfeitDue(snapshot, playerId, now);
   if (due && snapshot.match) {
     await touch();
@@ -128,7 +176,7 @@ export async function loadedMemberRoom(code: unknown, loaded: RoomSnapshot | nul
     return { snapshot: (await deps.online.snapshot(code)) ?? snapshot, touch: null };
   }
   // As stored once `touch` has run, without reading it again.
-  return { snapshot: { ...snapshot, members: snapshot.members.map((member) => (member.playerId === playerId ? { ...member, seenAt: now, away } : member)) }, touch };
+  return { snapshot: { ...snapshot, members: snapshot.members.map((member) => (member.playerId === playerId ? { ...member, seenAt: now, away } : member)) }, touch: touchedAt ? null : touch };
 }
 
 /**

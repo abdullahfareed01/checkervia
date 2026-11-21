@@ -10,8 +10,9 @@ import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EncodedMove } from "../../src/leaderboard/protocol";
 import type { FinishReason } from "../../src/online/protocol";
-import { withKeyHeaders } from "../leaderboard/supabaseStore";
-import type { MatchRecord, MemberRecord, OnlineStore, RoomSnapshot } from "./store";
+import { toPlayer, withKeyHeaders } from "../leaderboard/supabaseStore";
+import type { PlayerRow } from "../leaderboard/supabaseStore";
+import type { MatchRecord, MemberRecord, OneRoundStore, OnlineStore, RoomSnapshot } from "./store";
 
 const UNIQUE_VIOLATION = "23505";
 const DAY_MS = 86_400_000;
@@ -266,6 +267,84 @@ export function createSupabaseOnlineStore(url: string, serviceRoleKey: string, f
           p_reports_before: new Date(now.getTime() - reportDays * DAY_MS).toISOString(),
         }),
       );
+    },
+  };
+}
+
+// Migration 10 (D153): the busiest steps in one call each. A function the
+// database does not have yet answers null, and is not asked again for five
+// minutes, so the handlers use their earlier steps meanwhile at the cost of
+// one extra round per function instance every five minutes at most.
+const MISSING_FUNCTION = new Set(["PGRST202", "42883"]);
+export const MISSING_RETRY_MS = 5 * 60_000;
+const MISSING = Symbol("missing");
+
+interface PollAnswerRow {
+  counters: { allowed: boolean; retry_after_seconds: number }[];
+  player: PlayerRow | null;
+  room: RoomRow | null;
+  touched: boolean;
+}
+
+export function createSupabaseOneRound(
+  url: string,
+  serviceRoleKey: string,
+  fetchImpl: typeof fetch = (input, init) => fetch(input, init),
+  now: () => number = Date.now,
+): OneRoundStore {
+  const key = serviceRoleKey.trim();
+  const db: SupabaseClient = createClient(url, key, {
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+    global: { fetch: withKeyHeaders(fetchImpl, key) },
+  });
+  const missingUntil = new Map<string, number>();
+
+  async function call<T>(name: string, args: Record<string, unknown>): Promise<T | typeof MISSING> {
+    if ((missingUntil.get(name) ?? 0) > now()) return MISSING;
+    const result = await db.rpc(name, args);
+    if (result.error && MISSING_FUNCTION.has(result.error.code ?? "")) {
+      missingUntil.set(name, now() + MISSING_RETRY_MS);
+      return MISSING;
+    }
+    missingUntil.delete(name);
+    return check(result) as T;
+  }
+
+  return {
+    async signInWithRoom(request) {
+      const answer = await call<PollAnswerRow>("online_room_poll", {
+        p_code: request.code,
+        p_token_hash: request.tokenHash,
+        p_keys: request.counters.map((counter) => counter.key),
+        p_limits: request.counters.map((counter) => counter.limit),
+        p_window_seconds: request.windowSeconds,
+        p_now: request.now.toISOString(),
+        p_away: request.away,
+        p_idle_hours: request.idleHours,
+      });
+      if (answer === MISSING) return null;
+      if (!answer || !Array.isArray(answer.counters) || answer.counters.length !== request.counters.length) throw new StoreError("badAnswer");
+      return {
+        counters: answer.counters.map((counter) => ({ allowed: counter.allowed === true, retryAfterSeconds: Number(counter.retry_after_seconds) })),
+        player: answer.player ? toPlayer(answer.player) : null,
+        room: answer.room ? toSnapshot(answer.room) : null,
+        touched: answer.touched === true,
+      };
+    },
+
+    async saveMoveAndUse(matchId, roomId, expectedCount, moves, finish, at) {
+      const saved = await call<boolean>("online_save_move", {
+        p_match: matchId,
+        p_room: roomId,
+        p_expected: expectedCount,
+        p_moves: moves,
+        p_finished: finish !== null,
+        p_winner: finish?.winnerId ?? null,
+        p_reason: finish?.reason ?? null,
+        p_at: at.toISOString(),
+      });
+      if (saved === MISSING) return null;
+      return saved === true ? "saved" : "conflict";
     },
   };
 }
