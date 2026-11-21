@@ -11,7 +11,14 @@ export interface ChatContext {
   humanMoves?: number;
   // The AI's last few final lines this tab (D159): a new line may not repeat one.
   recentLines?: readonly string[];
+  // How a finished game ended, and whether the engine verified a blunder by
+  // the player in it (D160), for the line at the end.
+  ending?: GameEnding;
+  blunderSeen?: boolean;
 }
+
+export const GAME_ENDINGS = ["playerWon", "aiWon", "resigned", "abandoned", "aiResigned", "stubborn", "draw"] as const;
+export type GameEnding = (typeof GAME_ENDINGS)[number];
 
 const HUMAN_TURNS = ["My move. Your turn!", "Over to you.", "You are up.", "Your move. Make it count.", "The board is yours.", "On you now.", "Your turn. I am watching.", "All yours. Pick your next move."];
 // Cocky about the AI itself: a cue follows any move, so it never judges the
@@ -108,7 +115,7 @@ export function validChatLine(raw: string, context: ChatContext = { level: 1 }):
   // and already gave the turn cue. Keep older direct taunt callers compatible.
   if ((context.verdict !== undefined || context.outcome !== undefined) && (/\byour (?:move|turn|go)\b|\bon you\b|\bover to you\b|\byou(?: are|'re) up\b/i.test(line) || TURN_EVASION.test(line))) return false;
   if (context.level === 4 && context.verdict !== "great" && context.outcome !== "human-win" && PRAISE.test(line)) return false;
-  const verified = context.verdict === "blunder" || context.verdict === "great" || context.outcome === "human-win";
+  const verified = context.verdict === "blunder" || context.verdict === "great" || context.outcome === "human-win" || context.blunderSeen === true;
   if (!verified && judgesPlay(line)) return false;
   // The chip and the words agree (D157): praise only for a great move or the
   // player's win, and then the line must read as respect.

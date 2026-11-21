@@ -7,7 +7,8 @@ import type { AiLevel } from "./difficulty";
 import { AI_LEVELS } from "./difficulty";
 import { buildPrompt, describeBoard } from "./prompt";
 import { checkedReasons } from "./truth";
-import type { ChatContext } from "./chat";
+import { GAME_ENDINGS } from "./chat";
+import type { ChatContext, GameEnding } from "./chat";
 
 export type AiJob = "move" | "taunt";
 export const TAUNT_EVENTS = ["during", "start", "rematch", "end", "idle", "resign"] as const;
@@ -26,7 +27,7 @@ export interface ModelContext extends ChatContext {
 export function readContext(value: unknown): ModelContext | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const c = value as Record<string, unknown>;
-  if (Object.keys(c).some(k => !["job", "board", "player", "level", "opening", "candidates", "scores", "event", "verdict", "outcome", "humanMoves", "recentLines"].includes(k))) return null;
+  if (Object.keys(c).some(k => !["job", "board", "player", "level", "opening", "candidates", "scores", "event", "verdict", "outcome", "humanMoves", "recentLines", "ending", "blunderSeen"].includes(k))) return null;
   if (c.job !== "move" && c.job !== "taunt") return null;
   if (c.player !== "black" && c.player !== "white") return null;
   if (![1, 2, 3, 4].includes(c.level as number) || typeof c.opening !== "boolean") return null;
@@ -43,19 +44,43 @@ export function readContext(value: unknown): ModelContext | null {
   if (c.verdict !== undefined && c.verdict !== null && c.event !== undefined && c.event !== "during") return null;
   // The AI's own last lines (D159): at most 3 short single line strings.
   if (c.recentLines !== undefined && (!Array.isArray(c.recentLines) || c.recentLines.length > 3 || !c.recentLines.every(line => typeof line === "string" && line.trim() !== "" && line.length <= 140 && !/[\u0000-\u001f]/.test(line)))) return null;
+  // How the game ended (D160): only for the line at the end.
+  if (c.ending !== undefined && (!GAME_ENDINGS.includes(c.ending as GameEnding) || c.event !== "end")) return null;
+  if (c.blunderSeen !== undefined && (typeof c.blunderSeen !== "boolean" || c.event !== "end")) return null;
   if (c.job === "move" && (c.verdict !== undefined || c.outcome !== undefined || c.humanMoves !== undefined || c.recentLines !== undefined)) return null;
   return c as unknown as ModelContext;
 }
 
 // What is true about the human's play, for the taunt (D155): whether they
 // have moved, and the engine's verdict on their last move when it had one.
+// How the game ended, in words (D160).
+const ENDINGS: Readonly<Record<GameEnding, string>> = {
+  playerWon: "The human won the game by play.",
+  aiWon: "The AI won the game by play.",
+  resigned: "The human resigned.",
+  abandoned: "The human stopped moving, so the game was abandoned and the AI reported them for not playing.",
+  aiResigned: "The AI resigned because the engine proved its position lost.",
+  stubborn: "The AI won after the engine proved the human's position lost and the human played on anyway.",
+  draw: "The game was drawn.",
+};
+
+function endFacts(c: ModelContext): string {
+  if (c.event !== "end" || !c.ending) return "";
+  const blunder = c.blunderSeen === true
+    ? "The engine verified at least one blunder by the human in this game; you may roast it."
+    : "The engine verified no blunder by the human in this game; do not claim one.";
+  return ` ${ENDINGS[c.ending]} ${blunder}`;
+}
+
 function playFacts(c: ModelContext): string {
   const moved = c.humanMoves === undefined ? "" : c.humanMoves === 0 ? "The human has not made a move yet in this game, so there is no play of theirs to talk about. " : `The human has made ${c.humanMoves} ${c.humanMoves === 1 ? "move" : "moves"} in this game. `;
   const during = c.event === undefined || c.event === "during";
   if (during && c.verdict === "blunder") return `${moved}The engine verified that the human's last move was a blunder: you may roast that move.`;
   if (during && c.verdict === "great") return `${moved}The engine verified that the human's last move was excellent: give grudging respect for it.`;
-  if (c.outcome === "human-win") return `${moved}The human won this game.`;
-  return `${moved}There is no engine verdict on the human's play: never judge their strategy, plan, attempts, mistakes, skill or patterns. Talk about yourself, the game or the board in general terms.`;
+  // The player won: respect is due, so the blunder count is left out.
+  if (c.outcome === "human-win") return `${moved}The human won this game.${c.event === "end" && c.ending ? ` ${ENDINGS[c.ending]}` : ""}`;
+  if (c.event === "end" && c.blunderSeen === true) return `${moved}${endFacts(c).trim()}`;
+  return `${moved}${endFacts(c).trim()}${c.event === "end" && c.ending ? " " : ""}There is no engine verdict on the human's play: never judge their strategy, plan, attempts, mistakes, skill or patterns. Talk about yourself, the game or the board in general terms.`;
 }
 
 export function promptForContext(c: ModelContext): string {

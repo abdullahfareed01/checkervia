@@ -99,6 +99,11 @@ function pressurePart(now: { count: number; showing: boolean; text: string | nul
 // The AI's wins, whose last line ends with a random laugh (D69).
 const AI_WINS: readonly LineContext[] = ["aiWon", "aiWonBlunder", "aiWonStubborn"];
 
+/** True when the game is over and the AI's last line ends with a laugh (D69, D160). */
+export function endsWithWinLaugh(state: GameState): boolean {
+  return isGameOver(state) && AI_WINS.includes(endContext(state));
+}
+
 // True while the page is on screen (the idle timer pauses otherwise; so
 // does the abandon timer, D85).
 export function usePageVisible(): boolean {

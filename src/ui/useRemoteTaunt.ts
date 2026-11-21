@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { GameState } from "../state/gameReducer";
-import { aiSideOf } from "../state/gameReducer";
+import { aiSideOf, isGameOver } from "../state/gameReducer";
+import { withWinLaugh } from "../ai/lines";
+import type { AiLevel } from "../ai/difficulty";
+import type { GameEnding } from "../ai/chat";
+import { endContext } from "./usePersonality";
+import type { LineContext } from "../ai/lines";
 import { requestTaunt, tauntEvent } from "../ai/taunt";
 import { localChatLine, turnLine } from "../ai/chat";
 import type { ModelContext } from "../ai/request";
@@ -9,16 +14,34 @@ import { deliverChat, TURN_CUE_MS } from "./chatDelivery";
 import type { ChatFrame } from "./chatDelivery";
 import { readShownLines, rememberShownLine } from "./shownLines";
 
+// How the game ended, for the model (D160), from the end line's own bank.
+const ENDING_OF: Readonly<Partial<Record<LineContext, GameEnding>>> = {
+  draw: "draw", abandoned: "abandoned", aiResigned: "aiResigned", resigned: "resigned", playerWon: "playerWon",
+  aiWonStubborn: "stubborn", aiWonBlunder: "aiWon", aiWon: "aiWon",
+};
+
+function endFields(state: GameState, key: string): { ending?: GameEnding; blunderSeen?: boolean } {
+  if (!key.startsWith("end-") || !isGameOver(state)) return {};
+  const ending = ENDING_OF[endContext(state)];
+  return { ...(ending ? { ending } : {}), blunderSeen: state.history.some((entry) => entry.judgement?.verdict === "blunder") };
+}
+
+// A laugh after the AI's winning line (D69, D160), unless it already ends with one.
+const ENDS_LAUGHING = /\b(?:(?:ha){2,}h?|hehe|lol|lmao)\W*$/i;
+export function finishEndLine(text: string, level: AiLevel, laugh: boolean, random: () => number = Math.random): string {
+  return laugh && !ENDS_LAUGHING.test(text) ? withWinLaugh(text, level, random) : text;
+}
+
 export function chatContext(state: GameState, key: string, rematch = false, recentLines: readonly string[] = []): ModelContext {
   const verdict = key.startsWith("move-") ? state.history.at(-1)?.judgement?.verdict ?? null : null;
   const outcome = state.drawn ? "draw" : state.winner ? state.winner === aiSideOf(state) ? "ai-win" : "human-win" : undefined;
   // The player's moves so far: zero means nothing about their play is true yet (D155).
   const humanMoves = state.history.filter((entry) => entry.player === state.humanSide).length;
-  return { job: "taunt", board: state.board, player: aiSideOf(state), level: state.aiLevel, opening: false, candidates: [], event: tauntEvent(key, rematch), verdict, humanMoves, ...(outcome ? { outcome } : {}), ...(recentLines.length ? { recentLines: recentLines.slice(-3) } : {}) };
+  return { job: "taunt", board: state.board, player: aiSideOf(state), level: state.aiLevel, opening: false, candidates: [], event: tauntEvent(key, rematch), verdict, humanMoves, ...(outcome ? { outcome } : {}), ...(recentLines.length ? { recentLines: recentLines.slice(-3) } : {}), ...endFields(state, key) };
 }
 
 interface Delivery extends ChatFrame { game: GameState["history"][number] | undefined; turn: number; key: string; cue: string | null; waiting: boolean }
-function useDeliveredLine(state: GameState, key: string, local: string | null, enabled: boolean, rematch: boolean, cue: string | null = null, waiting = false): ChatFrame {
+function useDeliveredLine(state: GameState, key: string, local: string | null, enabled: boolean, rematch: boolean, cue: string | null = null, waiting = false, laugh = false): ChatFrame {
   const game = state.history[0], turn = state.aiRequestId;
   const [shown, setShown] = useState<Delivery | null>(null);
   const sealed = useRef<Delivery | null>(null);
@@ -39,15 +62,16 @@ function useDeliveredLine(state: GameState, key: string, local: string | null, e
       return () => clearTimeout(timer);
     }
     if (!local) return undefined;
-    return deliverChat(cue, local, enabled && state.mode === "vs-ai" && state.viewIndex === null ? signal => requestTaunt(chatContext(state, key, rematch, readShownLines()), signal) : null, show);
-  }, [game, turn, key, local, enabled, rematch, state.aiLevel, cue, waiting]);
+    return deliverChat(cue, local, enabled && state.mode === "vs-ai" && state.viewIndex === null ? signal => requestTaunt(chatContext(state, key, rematch, readShownLines()), signal).then(text => text && finishEndLine(text, state.aiLevel, laugh)) : null, show);
+  }, [game, turn, key, local, enabled, rematch, state.aiLevel, cue, waiting, laugh]);
   if (matches(sealed.current)) return sealed.current!;
   return matches(shown) && shown!.cue === cue && shown!.waiting === waiting ? shown! : { phase: cue ? "cue" : "typing", text: cue };
 }
 
 // Pick one result line before showing it, rather than replacing a spoken line.
-export function useRemoteLine(state: GameState, key: string, local: string | null, enabled: boolean, rematch = false): string | null {
-  return useDeliveredLine(state, key, local, enabled, rematch).text;
+// `laugh`: the AI won, so a model line gets the laugh the local line has (D160).
+export function useRemoteLine(state: GameState, key: string, local: string | null, enabled: boolean, rematch = false, laugh = false): string | null {
+  return useDeliveredLine(state, key, local, enabled, rematch, null, false, laugh).text;
 }
 
 /** How one bubble is delivered: what shows first, the local line, and whether the model is asked. */

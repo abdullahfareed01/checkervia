@@ -2,6 +2,13 @@
 
 Format: decision, reason, consequence.
 
+## D160. The end line is told how the game really ended (21 Nov 2026)
+- Reason: the AI talk audit (section 3). The model's end line was told only who won, so "That blunder sealed it." passed after a game with no blunder and an abandoned game looked like a game won by play; and the D69 laugh was only on the local line, so it was lost whenever the model answered.
+- The end line's context carries `ending` (`playerWon`, `aiWon`, `resigned`, `abandoned`, `aiResigned`, `stubborn` or `draw`, from the same `endContext` that picks the local bank) and `blunderSeen` (any engine verified blunder by the player in the game). `readContext` accepts them only for the `end` event. The prompt says how the game ended in words, and whether a blunder was verified ("do not claim one" when none was). After the player's win the blunder count is left out, because respect is due (D157).
+- `validChatLine` lets an end line judge the play only when `blunderSeen` is true (D155's rule, with the game's verdicts as the evidence).
+- A model line for the AI's win by play (`aiWon`, `aiWonBlunder`, `aiWonStubborn`, as in D69) gets the same random laugh as the local line, at every level but Easy, unless it already ends with a laugh (`finishEndLine`, `endsWithWinLaugh`). Supersedes the part of D107 under which a model end line replaced the laugh.
+- Tests: `tests/ai-talk-ending.test.ts` (every ending in the context and the prompt, the abandoned game named, the blunder facts and "That blunder sealed it." refused without one, the context checks, the laugh kept, Easy kind, no double laugh, which endings laugh).
+
 ## D159. The taunt prompt has the move prompt's variety rules and the last lines (21 Nov 2026)
 - Reason: the AI talk audit (section 4). The variety rules, the "Nice try" ban and the AI's recent lines lived only in the move prompt, whose reaction production discards, so the taunt model could repeat itself and opened with "Nice try".
 - The taunt prompt now says to vary the wording, never to open with "Nice try", that a laugh may fit, and quotes the AI's last 3 final lines with "Say something new". The browser keeps those lines per tab (`src/ui/shownLines.ts`, sessionStorage, the last 3 final lines of the bubble and the result) and sends them as `recentLines`; `readContext` accepts at most 3 strings of at most 140 characters on one line, for taunts only. This is the only browser text forwarded to the model, and it is the AI's own words.
