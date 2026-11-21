@@ -5,7 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { AWAY_AFTER_MS } from "../../src/online/protocol";
 import type { RoomView } from "../../src/online/protocol";
-import { HIDDEN_POLL_MS, MY_TURN_POLL_MS, pollDelay, POLL_MS, THEIR_TURN_POLL_MS, turnOf } from "../../src/ui/online/roomSync";
+import { HIDDEN_POLL_MS, MY_TURN_CYCLE_MS, MY_TURN_POLL_MS, pollDelay, POLL_MS, THEIR_TURN_CYCLE_MS, THEIR_TURN_POLL_MS, turnOf } from "../../src/ui/online/roomSync";
 import { roomView } from "./views";
 
 const playing = (toMove: "black" | "white", extra: Partial<NonNullable<RoomView["match"]>> = {}): RoomView => {
@@ -47,6 +47,21 @@ describe("how often the browser asks (D152)", () => {
     expect(pollDelay("playing", true, "mine")).toBe(HIDDEN_POLL_MS);
   });
 
+  it("with faster answers the waits grow, so a question starts no more often than once a cycle (D152 follow up)", () => {
+    expect(pollDelay("playing", false, "theirs", 600)).toBe(THEIR_TURN_CYCLE_MS - 600);
+    expect(pollDelay("playing", false, "mine", 600)).toBe(MY_TURN_CYCLE_MS - 600);
+    expect(pollDelay("playing", false, "theirs", 50)).toBe(THEIR_TURN_CYCLE_MS - 50);
+    // Slower answers: the plain waits, never less.
+    expect(pollDelay("playing", false, "theirs", 1000)).toBe(THEIR_TURN_POLL_MS);
+    expect(pollDelay("playing", false, "mine", 2500)).toBe(MY_TURN_POLL_MS);
+    // Not known yet: the plain waits.
+    expect(pollDelay("playing", false, "theirs", null)).toBe(THEIR_TURN_POLL_MS);
+    // Outside a game and while hidden, the answer time changes nothing.
+    expect(pollDelay("ready", false, null, 100)).toBe(1000);
+    expect(pollDelay("waiting", false, null, 100)).toBe(2000);
+    expect(pollDelay("playing", true, "theirs", 100)).toBe(HIDDEN_POLL_MS);
+  });
+
   it("stays far inside the away limit on my own turn, even if one answer is lost", () => {
     expect(2 * MY_TURN_POLL_MS).toBeLessThan(AWAY_AFTER_MS);
     expect(HIDDEN_POLL_MS * 2).toBeLessThan(AWAY_AFTER_MS);
@@ -57,7 +72,7 @@ describe("how often the browser asks (D152)", () => {
   // 1 / (interval + time for an answer) over both turns.
   const perHour = (intervals: number[], answerMs: number) => (intervals.reduce((sum, ms) => sum + 1 / (ms + answerMs), 0) / intervals.length) * 3_600_000 * 2;
   const before = (answerMs: number) => perHour([1000, 1000], answerMs);
-  const after = (answerMs: number) => perHour([MY_TURN_POLL_MS, THEIR_TURN_POLL_MS], answerMs);
+  const after = (answerMs: number) => perHour([pollDelay("playing", false, "mine", answerMs)!, pollDelay("playing", false, "theirs", answerMs)!], answerMs);
 
   it("asks no more often per game hour than before, at the answer times measured on 21 Nov 2026", () => {
     // Answer times seen by the player with today's regions (latency harness):
@@ -66,7 +81,14 @@ describe("how often the browser asks (D152)", () => {
     expect(after(792)).toBeLessThanOrEqual(before(1000));
   });
 
-  it("and no more often than once a second would with the same answer time, from 0.6 s up", () => {
-    for (let answerMs = 600; answerMs <= 2000; answerMs += 100) expect(after(answerMs)).toBeLessThan(before(answerMs));
+  it("and never more often than before, however fast the answers get (migration 10, D153)", () => {
+    for (let answerMs = 20; answerMs <= 3000; answerMs += 20) expect(after(answerMs)).toBeLessThanOrEqual(before(1000));
+    // About 3,500 a game hour for any answer up to 0.8 s.
+    expect(Math.round(after(100))).toBe(Math.round(after(600)));
+    expect(after(600)).toBeLessThan(3510);
+  });
+
+  it("and no more often than once a second would with the same answer time", () => {
+    for (let answerMs = 20; answerMs <= 2000; answerMs += 20) expect(after(answerMs)).toBeLessThan(before(answerMs));
   });
 });

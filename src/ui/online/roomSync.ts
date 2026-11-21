@@ -55,6 +55,13 @@ export const WAIT_LIMIT_MS = 15 * 60_000;
 // Together they ask less often than once a second did, per game hour.
 export const THEIR_TURN_POLL_MS = 550;
 export const MY_TURN_POLL_MS = 3500;
+// And never more often than this, counted from one question to the next,
+// whatever the speed of the answers (D152 follow up): when answers come
+// faster (D153), the waits grow, so the count per game hour stays where
+// D152 measured it. These are the waits above plus the 0.8 s answers of
+// D151; with slower answers the waits above apply as they are.
+export const THEIR_TURN_CYCLE_MS = 1350;
+export const MY_TURN_CYCLE_MS = 4300;
 
 /** Whose move the game waits for: null outside a game that is on (countdown, over, no game). */
 export type Turn = "mine" | "theirs" | null;
@@ -65,9 +72,18 @@ export function turnOf(view: RoomView): Turn {
   return match.toMove === you.colour ? "mine" : "theirs";
 }
 
-export function pollDelay(status: RoomStatus, hidden: boolean, turn: Turn = null): number | null {
+/**
+ * The wait after an answer. During a game it makes up the rest of the
+ * turn's cycle, from `answerMs`, how long the last poll's answer took
+ * (null while not known: then the plain waits apply).
+ */
+export function pollDelay(status: RoomStatus, hidden: boolean, turn: Turn = null, answerMs: number | null = null): number | null {
   const base = POLL_MS[status];
   if (base === null) return null;
-  const delay = status === "playing" && turn ? (turn === "mine" ? MY_TURN_POLL_MS : THEIR_TURN_POLL_MS) : base;
+  let delay = base;
+  if (status === "playing" && turn) {
+    const [least, cycle] = turn === "mine" ? [MY_TURN_POLL_MS, MY_TURN_CYCLE_MS] : [THEIR_TURN_POLL_MS, THEIR_TURN_CYCLE_MS];
+    delay = answerMs === null ? least : Math.max(least, Math.round(cycle - Math.max(0, answerMs)));
+  }
   return hidden ? Math.max(delay, HIDDEN_POLL_MS) : delay;
 }

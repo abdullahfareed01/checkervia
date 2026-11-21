@@ -74,6 +74,8 @@ export function useRoom(code: string, first: RoomView | null) {
     let stopped = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let controller: AbortController | null = null;
+    // How long the last poll's answer took: the wait makes up the rest of the turn's cycle.
+    let answerMs: number | null = null;
 
     const run = async () => {
       clearTimeout(timer);
@@ -82,12 +84,14 @@ export function useRoom(code: string, first: RoomView | null) {
       controller = new AbortController();
       const hidden = document.visibilityState === "hidden";
       let result: ApiResult<{ room: RoomView }>;
+      const asked = performance.now();
       try {
         result = await roomApi.state(code, known.current.moves.length, hidden, controller.signal);
       } catch {
         return; // cancelled: a newer request is on its way
       }
       if (stopped) return;
+      if (result.kind === "ok") answerMs = performance.now() - asked;
       let delay: number | null;
       if (result.kind === "ok") {
         const view = result.value.room;
@@ -98,7 +102,7 @@ export function useRoom(code: string, first: RoomView | null) {
           setState((current) => ({ ...current, paused: true }));
           return;
         }
-        delay = gap ? 0 : pollDelay(view.status, hidden, turnOf(view));
+        delay = gap ? 0 : pollDelay(view.status, hidden, turnOf(view), answerMs);
       } else {
         delay = failed(result);
       }
@@ -115,7 +119,7 @@ export function useRoom(code: string, first: RoomView | null) {
       controller?.abort();
       controller = null;
       clearTimeout(timer);
-      const delay = pollDelay(view.status, document.visibilityState === "hidden", turnOf(view));
+      const delay = pollDelay(view.status, document.visibilityState === "hidden", turnOf(view), answerMs);
       if (delay !== null) timer = setTimeout(() => void run(), delay);
     };
     void run();
