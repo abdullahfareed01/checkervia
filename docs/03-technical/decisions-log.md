@@ -2,6 +2,12 @@
 
 Format: decision, reason, consequence.
 
+## D158. Model lines are checked in the form players see (21 Nov 2026)
+- Reason: the AI talk audit (bugs 2 to 4). The rules matched exact spellings, so "Your 'move' was predictable." got past the turn word rule, "Oh you. Less staring, more strategy." got past "On you", and a line could start in lower case.
+- `normaliseLine` (in `chat.ts`) runs before every rule in `validChatLine`, on the server and in the browser: curly quotes become straight, quotes around the whole line or around a single word are removed, spaces are tidied and the first letter becomes a capital. `readTaunt` shows that form. A quote left after this (a double quote, or a single quote that is not an apostrophe inside a word) refuses the line.
+- The turn word rule reads the normal form and now also covers "your go", "over to you" and "Oh you." as a sentence of its own (the audit's evasion). It still applies only to the current UI's events (with a verdict or an outcome).
+- Tests: `tests/ai-talk-form.test.ts` (every audit example normalised and refused, wrapping and curly quotes, the capital letter, quotes left over, apostrophes kept).
+
 ## D157. The chip and the words agree at every level (21 Nov 2026)
 - Reason: the AI talk audit (bug 4). The chip comes from the engine's verdict and the words from the model, and nothing tied them together: a green "Respect" chip sat above "nice try, but your plan is already outdated, stuck in a predictable loop", and at Easy to Hard "Great move, well played!" passed after a blunder. The owner's rule (A): a roast only after a blunder, respect only after a great move.
 - `validChatLine` (server and browser): no praise of the player at any level (`praisesPlayer`) unless the verdict is great or the player won; after a great move, or for the player's win, the line must read as respect (`readsAsRespect`: respect words, and no taunt words such as "nice try", "predictable", "luck", "gift", and no insult). A refused model line leaves the local line, which agrees with its chip. With no verdict D155 already forbids judging the play, so there is no chip and no judgement. The taunt prompt now asks for respect instead of allowing it.

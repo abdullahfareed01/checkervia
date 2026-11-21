@@ -72,12 +72,34 @@ export function judgesPlay(line: string): boolean {
   return PLAY_CLAIM.test(line) || classify(line).includes("insult");
 }
 
-export function validChatLine(line: string, context: ChatContext = { level: 1 }): boolean {
+/**
+ * A model line in the form players see (D158): curly quotes made straight,
+ * quotes around the whole line or around one word removed ("Your 'move'" is
+ * "Your move"), spaces tidied and the first letter a capital. Every rule
+ * below reads this form, so quotes cannot hide a word from them.
+ */
+export function normaliseLine(line: string): string {
+  let text = line.replace(/[\u2018\u2019\u201b\u2032]/g, "'").replace(/[\u201c\u201d\u201f\u2033]/g, '"').replace(/\s+/g, " ").trim();
+  const wrapped = /^(["'])(.*)\1$/.exec(text);
+  if (wrapped && !wrapped[2]!.includes(wrapped[1]!)) text = wrapped[2]!.trim();
+  text = text.replace(/(^|[\s(])(["'])([\p{L}\p{N}]+)\2(?=[\s.,!?;:)]|$)/gu, "$1$3");
+  return text.replace(/^\p{Ll}/u, (letter) => letter.toUpperCase());
+}
+
+// Quotes left after normalising: a double quote, or a single quote that is
+// not an apostrophe inside a word ("you're" is fine).
+const STRAY_QUOTE = /"|(?:^|[^\p{L}])'|'(?!\p{L})/u;
+// "Oh you." in place of the turn cue "On you." (the audit's evasion).
+const TURN_EVASION = /(?:^|[.!?]\s*)(?:oh|0n),? you(?:[.!?]|$)/i;
+
+export function validChatLine(raw: string, context: ChatContext = { level: 1 }): boolean {
+  const line = normaliseLine(raw);
+  if (STRAY_QUOTE.test(line)) return false;
   if (!line.trim() || line.length > 140 || line.trim().split(/\s+/).length > 20 || /[-\u2013\u2014]/.test(line)) return false;
   if (checkReaction(line, context.level, context.verdict ?? null) !== line || BOARD_CLAIM.test(line) || TURN_CLAIM.test(line)) return false;
   // The current UI supplies an explicit verdict (null for an ordinary move)
   // and already gave the turn cue. Keep older direct taunt callers compatible.
-  if ((context.verdict !== undefined || context.outcome !== undefined) && /\byour (?:move|turn)\b|\bon you\b|\byou(?: are|'re|’re) up\b/i.test(line)) return false;
+  if ((context.verdict !== undefined || context.outcome !== undefined) && (/\byour (?:move|turn|go)\b|\bon you\b|\bover to you\b|\byou(?: are|'re) up\b/i.test(line) || TURN_EVASION.test(line))) return false;
   if (context.level === 4 && context.verdict !== "great" && context.outcome !== "human-win" && PRAISE.test(line)) return false;
   const verified = context.verdict === "blunder" || context.verdict === "great" || context.outcome === "human-win";
   if (!verified && judgesPlay(line)) return false;

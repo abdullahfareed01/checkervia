@@ -1,6 +1,6 @@
 import { createCallModel } from "./client";
 import type { CallModel } from "./chooseMove";
-import { validChatLine } from "./chat";
+import { normaliseLine, validChatLine } from "./chat";
 import type { ChatContext } from "./chat";
 import type { ModelContext, TauntEvent } from "./request";
 
@@ -15,7 +15,8 @@ export function readTaunt(text: string, context?: ChatContext): string | null {
   try {
     const value: unknown = JSON.parse(text);
     const line = (value as { reaction?: unknown } | null)?.reaction;
-    return typeof line === "string" && validChatLine(line, context) ? line : null;
+    // The line as players see it (D158): straight quotes, a capital first letter.
+    return typeof line === "string" && validChatLine(line, context) ? normaliseLine(line) : null;
   } catch { return null; }
 }
 const remoteTaunt = createCallModel({ chain: true });
